@@ -1,0 +1,1 @@
+# Certificate rotation script

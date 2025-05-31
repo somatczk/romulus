@@ -1,22 +1,22 @@
 resource "libvirt_volume" "master_disks" {
-  count          = 2
+  count          = var.master_count
   name           = "k8s-master-${count.index + 1}-disk"
   base_volume_id = libvirt_volume.base_image.id
   pool           = libvirt_pool.k8s_pool.name
-  size           = 53687091200  # 50GB
+  size           = var.master_disk_size
 }
 
 
 resource "libvirt_volume" "worker_disks" {
-  count          = 3
+  count          = var.worker_count
   name           = "k8s-worker-${count.index + 1}-disk"
   base_volume_id = libvirt_volume.base_image.id
   pool           = libvirt_pool.k8s_pool.name
-  size           = 107374182400  # 100GB
+  size           = var.worker_disk_size
 }
 
 resource "libvirt_cloudinit_disk" "master_init" {
-  count = 2
+  count = var.master_count
   name  = "k8s-master-${count.index + 1}-init.iso"
   pool  = libvirt_pool.k8s_pool.name
 
@@ -33,7 +33,7 @@ resource "libvirt_cloudinit_disk" "master_init" {
 
 
 resource "libvirt_cloudinit_disk" "worker_init" {
-  count = 3
+  count = var.worker_count
   name  = "k8s-worker-${count.index + 1}-init.iso"
   pool  = libvirt_pool.k8s_pool.name
 
@@ -51,10 +51,10 @@ resource "libvirt_cloudinit_disk" "worker_init" {
 
 # Master nodes
 resource "libvirt_domain" "k8s_masters" {
-  count  = 2
+  count  = var.master_count
   name   = "k8s-master-${count.index + 1}"
-  memory = "1024"  # 1GB RAM
-  vcpu   = 1       # 4 vCPUs
+  memory = var.master_memory
+  vcpu   = var.master_vcpu
 
   cloudinit = libvirt_cloudinit_disk.master_init[count.index].id
 
@@ -90,10 +90,10 @@ resource "libvirt_domain" "k8s_masters" {
 
 # Worker nodes
 resource "libvirt_domain" "k8s_workers" {
-  count  = 3
+  count  = var.worker_count
   name   = "k8s-worker-${count.index + 1}"
-  memory = "24576"  # 24GB RAM
-  vcpu   = 6        # 6 vCPUs
+  memory = var.worker_memory
+  vcpu   = var.worker_vcpu
 
   cloudinit = libvirt_cloudinit_disk.worker_init[count.index].id
 

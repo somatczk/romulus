@@ -20,13 +20,13 @@ resource "libvirt_cloudinit_disk" "master_init" {
   name  = "k8s-master-${count.index + 1}-init.iso"
   pool  = libvirt_pool.k8s_pool.name
 
-  user_data = templatefile("${path.module}/cloud-init-master.yml", {
+  user_data = templatefile("${path.module}/../cloud-init/cloud-init-master.yml", {
     hostname = "k8s-master-${count.index + 1}"
     ssh_key  = file(var.ssh_public_key_path)
     node_ip  = "10.10.10.1${count.index + 1}"
   })
 
-  network_config = templatefile("${path.module}/network-config.yml", {
+  network_config = templatefile("${path.module}/../cloud-init/network-config.yml", {
     ip_address = "10.10.10.1${count.index + 1}"
   })
 }
@@ -37,13 +37,13 @@ resource "libvirt_cloudinit_disk" "worker_init" {
   name  = "k8s-worker-${count.index + 1}-init.iso"
   pool  = libvirt_pool.k8s_pool.name
 
-  user_data = templatefile("${path.module}/cloud-init-worker.yml", {
+  user_data = templatefile("${path.module}/../cloud-init/cloud-init-worker.yml", {
     hostname = "k8s-worker-${count.index + 1}"
     ssh_key  = file(var.ssh_public_key_path)
     node_ip  = "10.10.10.2${count.index + 1}"
   })
 
-  network_config = templatefile("${path.module}/network-config.yml", {
+  network_config = templatefile("${path.module}/../cloud-init/network-config.yml", {
     ip_address = "10.10.10.2${count.index + 1}"
   })
 }

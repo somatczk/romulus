@@ -10,7 +10,7 @@
 variable "ssh_public_key_path" {
   description = "Path to SSH public key"
   type        = string
-  default     = "~/.ssh/id_rsa.pub"
+  default     = "/etc/ssh/ssh_host_rsa_key.pub"
 }
 
 variable "base_image_url" {

@@ -23,7 +23,7 @@ master_disk_size = 53687091200  # 50GB
 worker_disk_size = 107374182400  # 100GB    
 
 # SSH key for accessing VMs
-ssh_public_key_path = "~/.ssh/id_rsa.pub"
+ssh_public_key_path ="/etc/ssh/ssh_host_rsa_key.pub"
 
 # Base image - Debian 12
 base_image_url = "https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-nocloud-amd64.qcow2"

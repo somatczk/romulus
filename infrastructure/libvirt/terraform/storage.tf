@@ -5,7 +5,7 @@ resource "libvirt_pool" "k8s_pool" {
 }
 
 resource "libvirt_volume" "base_image" {
-  name   = "ubuntu-22.04-base"
+  name   = "debian-12-base"
   pool   = libvirt_pool.k8s_pool.name
   source = var.base_image_url
   format = "qcow2"

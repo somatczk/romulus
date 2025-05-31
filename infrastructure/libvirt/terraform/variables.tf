@@ -16,5 +16,52 @@ variable "ssh_public_key_path" {
 variable "base_image_url" {
   description = "URL of the base image"
   type        = string
-  default     = "https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-nocloud-amd64.qcow2"
+}
+
+variable "master_count" {
+  description = "Number of master nodes"
+  type        = number
+  default     = 2
+}
+
+variable "worker_count" {
+  description = "Number of worker nodes"
+  type        = number
+  default     = 3
+}
+
+variable "master_memory" {
+  description = "Memory for master nodes"
+  type        = number
+  default     = 1024
+}
+
+variable "worker_memory" {
+  description = "Memory for worker nodes"
+  type        = number
+  default     = 18432
+}
+
+variable "master_vcpu" {
+  description = "vCPUs for master nodes"
+  type        = number
+  default     = 1
+}
+
+variable "worker_vcpu" {
+  description = "vCPUs for worker nodes"
+  type        = number
+  default     = 4
+}
+
+variable "master_disk_size" {
+  description = "Disk size for master nodes"
+  type        = number
+  default     = 53687091200
+}
+
+variable "worker_disk_size" {
+  description = "Disk size for worker nodes"
+  type        = number
+  default     = 107374182400
 }

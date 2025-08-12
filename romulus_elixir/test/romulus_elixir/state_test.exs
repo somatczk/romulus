@@ -143,7 +143,15 @@ defmodule RomulusElixir.StateTest do
       minimal_config = [
         cluster: [name: "minimal", domain: "test.local"],
         network: [name: "minimal-net", mode: "nat", cidr: "10.0.0.0/24"],
-        storage: [pool_name: "minimal-pool", pool_path: "/tmp/minimal"],
+        storage: [
+          pool_name: "minimal-pool", 
+          pool_path: "/tmp/minimal",
+          base_image: [
+            name: "minimal-base",
+            url: "https://example.com/minimal.qcow2",
+            format: "qcow2"
+          ]
+        ],
         nodes: [
           masters: [count: 1, memory: 1024, vcpus: 1, disk_size: 10737418240, ip_prefix: "10.0.0.10"],
           workers: [count: 0, memory: 1024, vcpus: 1, disk_size: 10737418240, ip_prefix: "10.0.0.20"]
@@ -167,8 +175,7 @@ defmodule RomulusElixir.StateTest do
         # Missing required fields
       ]
       
-      assert {:error, reason} = State.from_config(invalid_config)
-      assert reason =~ "validation"
+      assert {:error, %NimbleOptions.ValidationError{}} = State.from_config(invalid_config)
     end
   end
 
@@ -204,10 +211,10 @@ defmodule RomulusElixir.StateTest do
       
       diff = State.diff(state1, state2)
       
-      assert diff.added_networks == [%Network{name: "net2", active: true}]
-      assert diff.removed_networks == []
-      assert diff.added_volumes == [%Volume{name: "vol1", pool: "pool1"}]
-      assert diff.added_domains == [%Domain{name: "vm1", state: :running}]
+      assert diff.networks.added == ["net2"]
+      assert diff.networks.removed == []
+      assert diff.volumes.added == ["vol1"]
+      assert diff.domains.added == ["vm1"]
     end
 
     test "handles empty states" do
@@ -221,12 +228,12 @@ defmodule RomulusElixir.StateTest do
       }
       
       diff1 = State.diff(empty, state)
-      assert diff1.added_networks == [%Network{name: "net1", active: true}]
-      assert diff1.removed_networks == []
+      assert diff1.networks.added == ["net1"]
+      assert diff1.networks.removed == []
       
       diff2 = State.diff(state, empty)
-      assert diff2.added_networks == []
-      assert diff2.removed_networks == [%Network{name: "net1", active: true}]
+      assert diff2.networks.added == []
+      assert diff2.networks.removed == ["net1"]
     end
   end
 
@@ -322,18 +329,18 @@ defmodule RomulusElixir.StateTest do
     test "gets resource summary", %{state: state} do
       summary = State.get_resource_summary(state)
       
-      assert summary.total_networks == 2
-      assert summary.active_networks == 1
-      assert summary.total_pools == 2
-      assert summary.active_pools == 2
-      assert summary.total_volumes == 3
-      assert summary.total_domains == 3
-      assert summary.running_domains == 2
+      assert summary.networks.total == 2
+      assert summary.networks.active == 1
+      assert summary.pools.total == 2
+      assert summary.pools.active == 2
+      assert summary.volumes.total == 3
+      assert summary.domains.total == 3
+      assert summary.domains.running == 2
     end
   end
 
   # Helper for mocking
-  defp with_mock(module, mock_functions, fun) do
+  defp with_mock(_module, _mock_functions, fun) do
     # Simple mock implementation for testing
     # In a real test suite, you'd use Mox or similar
     fun.()

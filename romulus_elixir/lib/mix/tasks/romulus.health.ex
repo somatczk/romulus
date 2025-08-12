@@ -310,7 +310,7 @@ defmodule Mix.Tasks.Romulus.Health do
           []
         end
         
-        capacity_issue = if pool.capacity && pool.allocation do
+        capacity_issue = if pool.capacity && pool.allocation && pool.capacity > 0 do
           usage_percent = (pool.allocation / pool.capacity) * 100
           
           cond do

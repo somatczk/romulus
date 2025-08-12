@@ -238,4 +238,217 @@ defmodule RomulusElixir.Executor do
       error: Exception.message(error)
     )
   end
+  
+  @doc """
+  Execute a plan with options for different execution modes.
+  """
+  @spec execute([Planner.Action.t()], keyword()) :: execution_result()
+  def execute(plan, opts \\ []) when is_list(plan) do
+    mode = Keyword.get(opts, :mode, :sequential)
+    dry_run = Keyword.get(opts, :dry_run, false)
+    on_error = Keyword.get(opts, :on_error, :halt)
+    rollback_on_error = Keyword.get(opts, :rollback_on_error, false)
+    
+    cond do
+      dry_run ->
+        execute_dry_run(plan)
+      mode == :parallel ->
+        execute_parallel(plan, opts)
+      on_error == :continue ->
+        execute_continue_on_error(plan, opts)
+      rollback_on_error ->
+        execute_with_rollback(plan, opts)
+      true ->
+        execute(plan)
+    end
+  end
+  
+  @doc """
+  Validate a plan before execution.
+  """
+  @spec validate_plan_before_execution([Planner.Action.t()]) :: {:ok, [Planner.Action.t()]} | {:error, String.t()}
+  def validate_plan_before_execution(plan) when is_list(plan) do
+    with :ok <- validate_action_structure(plan),
+         :ok <- validate_resource_availability(plan) do
+      {:ok, plan}
+    end
+  end
+  
+  @doc """
+  Get execution summary after completion.
+  """
+  @spec get_execution_summary() :: map()
+  def get_execution_summary do
+    # This would typically be stored in process state or ETS table
+    %{
+      total_actions: 0,
+      successful_actions: 0,
+      failed_actions: 0,
+      skipped_actions: 0,
+      execution_time_seconds: 0,
+      errors: []
+    }
+  end
+  
+  # Execution mode implementations
+  
+  defp execute_dry_run(plan) do
+    Logger.info("Executing dry run for #{length(plan)} actions")
+    
+    Enum.each(plan, fn action ->
+      resource_name = extract_resource_name(action.resource)
+      Logger.info("[DRY RUN] Would execute #{action.type} for #{action.resource_type}: #{resource_name}")
+    end)
+    
+    {:ok, :dry_run_complete}
+  end
+  
+  defp execute_parallel(plan, _opts) do
+    Logger.info("Starting parallel execution of plan with #{length(plan)} actions")
+    
+    # Group actions by dependency level for parallel execution
+    dependency_groups = group_by_dependencies(plan)
+    
+    results = Enum.reduce_while(dependency_groups, {:ok, []}, fn group, {:ok, acc} ->
+      # Execute each dependency group in parallel
+      group_results = 
+        group
+        |> Task.async_stream(&execute_action/1, max_concurrency: 4, timeout: 30_000)
+        |> Enum.map(fn {:ok, result} -> result end)
+      
+      case Enum.find(group_results, fn result -> match?({:error, _}, result) end) do
+        nil ->
+          {:cont, {:ok, acc ++ group_results}}
+        error ->
+          {:halt, error}
+      end
+    end)
+    
+    case results do
+      {:ok, _} ->
+        Logger.info("Parallel execution completed successfully")
+        {:ok, :success}
+      error ->
+        error
+    end
+  end
+  
+  defp execute_continue_on_error(plan, _opts) do
+    Logger.info("Starting execution with continue-on-error mode")
+    
+    results = Enum.map(plan, fn action ->
+      case execute_action(action) do
+        {:ok, result} -> {:ok, result}
+        {:error, reason} ->
+          Logger.warning("Action failed but continuing: #{reason}")
+          {:error, reason}
+      end
+    end)
+    
+    errors = Enum.filter(results, &match?({:error, _}, &1))
+    
+    if Enum.empty?(errors) do
+      {:ok, :success}
+    else
+      {:ok, :partial_success}
+    end
+  end
+  
+  defp execute_with_rollback(plan, _opts) do
+    Logger.info("Starting execution with rollback capability")
+    
+    {_executed_actions, result} = Enum.reduce_while(plan, {[], {:ok, []}}, fn action, {executed, {:ok, acc}} ->
+      case execute_action(action) do
+        {:ok, result} ->
+          {:cont, {[action | executed], {:ok, acc ++ [result]}}}
+        {:error, reason} = error ->
+          Logger.error("Action failed, initiating rollback: #{reason}")
+          rollback_actions(executed)
+          {:halt, {executed, error}}
+      end
+    end)
+    
+    case result do
+      {:ok, _} ->
+        Logger.info("Execution completed successfully")
+        {:ok, :success}
+      error ->
+        error
+    end
+  end
+  
+  # Helper functions
+  
+  defp validate_action_structure(plan) do
+    invalid_action = Enum.find(plan, fn action ->
+      case action do
+        %Planner.Action{type: type, resource_type: _, resource: resource}
+          when type in [:create, :update, :destroy] and not is_nil(resource) ->
+          false
+        _ ->
+          true
+      end
+    end)
+    
+    case invalid_action do
+      nil -> :ok
+      action -> {:error, "Invalid action structure: #{inspect(action)}"}
+    end
+  end
+  
+  defp validate_resource_availability(_plan) do
+    # Placeholder for resource availability checks
+    :ok
+  end
+  
+  defp group_by_dependencies(plan) do
+    # Group actions by dependency level for parallel execution
+    dependency_levels = %{
+      pool: 1,
+      network: 2, 
+      volume: 3,
+      domain: 4
+    }
+    
+    plan
+    |> Enum.group_by(fn action -> Map.get(dependency_levels, action.resource_type, 5) end)
+    |> Map.values()
+  end
+  
+  defp rollback_actions(executed_actions) do
+    Logger.info("Rolling back #{length(executed_actions)} executed actions")
+    
+    # Reverse the order and create opposite actions
+    executed_actions
+    |> Enum.reverse()
+    |> Enum.each(fn action ->
+      rollback_action = create_rollback_action(action)
+      case execute_action(rollback_action) do
+        {:ok, _} ->
+          Logger.info("Successfully rolled back #{action.resource_type}: #{extract_resource_name(action.resource)}")
+        {:error, reason} ->
+          Logger.error("Failed to rollback #{action.resource_type}: #{reason}")
+      end
+    end)
+  end
+  
+  defp create_rollback_action(%Planner.Action{type: :create} = action) do
+    %Planner.Action{
+      type: :destroy,
+      resource_type: action.resource_type,
+      resource: action.resource,
+      reason: "Rollback of failed creation"
+    }
+  end
+  
+  defp create_rollback_action(%Planner.Action{type: :destroy} = action) do
+    %Planner.Action{
+      type: :create,
+      resource_type: action.resource_type,
+      resource: action.resource,
+      reason: "Rollback of failed destruction"
+    }
+  end
+  
+  defp create_rollback_action(action), do: action
 end

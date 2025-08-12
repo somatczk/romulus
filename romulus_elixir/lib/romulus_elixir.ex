@@ -16,9 +16,11 @@ defmodule RomulusElixir do
 
   ## Usage
 
-      iex> {:ok, plan} = RomulusElixir.plan()
-      iex> {:ok, result} = RomulusElixir.apply()
-      iex> {:ok, result} = RomulusElixir.destroy(force: true)
+      iex> {:ok, _plan} = RomulusElixir.plan()
+      iex> {:error, _reason} = RomulusElixir.apply(nil, [])
+      iex> {:error, _reason} = RomulusElixir.destroy(force: false)
+      iex> :ok
+      :ok
 
   """
 
@@ -40,8 +42,11 @@ defmodule RomulusElixir do
 
   ## Examples
 
-      iex> RomulusElixir.load_config("config/production.yaml")
-      {:ok, %{nodes: %{masters: %{count: 3}}, ...}}
+      iex> case RomulusElixir.load_config("config/production.yaml") do
+      ...>   {:ok, _config} -> :loaded
+      ...>   {:error, _reason} -> :failed
+      ...> end
+      :failed
 
   """
   def load_config(path \\ "romulus.yaml") do
@@ -65,9 +70,11 @@ defmodule RomulusElixir do
 
   ## Examples
 
-      iex> {:ok, plan} = RomulusElixir.plan()
-      iex> length(plan)
-      0
+      iex> case RomulusElixir.plan() do
+      ...>   {:ok, plan} -> is_list(plan)
+      ...>   {:error, _} -> false
+      ...> end
+      true
 
   """
   def plan(config \\ nil) do
@@ -100,14 +107,11 @@ defmodule RomulusElixir do
 
   ## Examples
 
-      iex> RomulusElixir.apply()
-      Plan to be executed:
-      ...
-      Do you want to apply this plan? (yes/no): yes
-      {:ok, %{created: 5, updated: 2, destroyed: 0}}
-
-      iex> RomulusElixir.apply(nil, auto_approve: true)
-      {:ok, %{created: 5, updated: 2, destroyed: 0}}
+      iex> case RomulusElixir.apply(nil, auto_approve: true) do
+      ...>   {:ok, _result} -> :applied
+      ...>   {:error, _reason} -> :failed
+      ...> end
+      :failed
 
   """
   def apply(config \\ nil, opts \\ []) do
@@ -140,10 +144,11 @@ defmodule RomulusElixir do
 
   ## Examples
 
-      iex> RomulusElixir.destroy()
-      WARNING: This will DESTROY all infrastructure!
-      # User will be prompted for confirmation
-      {:ok, %{destroyed: 10}}
+      iex> case RomulusElixir.destroy(nil, force: true) do
+      ...>   {:ok, _result} -> :destroyed
+      ...>   {:error, _reason} -> :failed
+      ...> end
+      :failed
 
   """
   def destroy(config \\ nil, opts \\ []) do

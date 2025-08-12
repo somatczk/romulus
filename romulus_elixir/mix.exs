@@ -15,7 +15,8 @@ defmodule RomulusElixir.MixProject do
         coveralls: :test,
         "coveralls.detail": :test,
         "coveralls.post": :test,
-        "coveralls.html": :test
+        "coveralls.html": :test,
+        "coveralls.github": :test
       ],
       dialyzer: [
         plt_file: {:no_warn, "priv/plts/dialyzer.plt"},
@@ -66,6 +67,7 @@ defmodule RomulusElixir.MixProject do
       {:excoveralls, "~> 0.18", only: :test},
       {:mock, "~> 0.3", only: :test},
       {:stream_data, "~> 1.1", only: [:dev, :test]},
+      {:benchee, "~> 1.3", only: [:dev, :test]},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:ex_doc, "~> 0.34", only: :dev, runtime: false},
@@ -79,7 +81,10 @@ defmodule RomulusElixir.MixProject do
       test: ["test --no-start"],
       "test.unit": ["test test/unit --no-start"],
       "test.integration": ["test test/integration --no-start --include integration"],
-      "test.all": ["test --include integration"],
+      "test.e2e": ["test test/e2e --no-start --include e2e"],
+      "test.performance": ["test --include performance"],
+      "test.all": ["test --include integration --include e2e --include performance"],
+      benchmark: ["romulus.benchmark"],
       quality: ["format --check-formatted", "credo --strict", "dialyzer", "sobelow"],
       
       # Romulus-specific tasks

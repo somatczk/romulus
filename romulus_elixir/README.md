@@ -96,25 +96,25 @@ mix romulus.plan
 
 Output:
 ```
-🔍 Generating infrastructure plan...
+Generating infrastructure plan...
 
-📋 Plan Summary:
+Plan Summary:
 ============================================================
 
-🆕 To create:
-  💾 pool: k8s-cluster-pool
-  🌐 network: k8s-network
-  📦 volume: debian-12-base
-  📦 volume: k8s-master-1-disk
-  📦 volume: k8s-master-2-disk
-  📦 volume: k8s-worker-1-disk
-  📦 volume: k8s-worker-2-disk
-  📦 volume: k8s-worker-3-disk
-  🖥️ domain: k8s-master-1
-  🖥️ domain: k8s-master-2
-  🖥️ domain: k8s-worker-1
-  🖥️ domain: k8s-worker-2
-  🖥️ domain: k8s-worker-3
+To create:
+  pool: k8s-cluster-pool
+  network: k8s-network
+  volume: debian-12-base
+  volume: k8s-master-1-disk
+  volume: k8s-master-2-disk
+  volume: k8s-worker-1-disk
+  volume: k8s-worker-2-disk
+  volume: k8s-worker-3-disk
+  domain: k8s-master-1
+  domain: k8s-master-2
+  domain: k8s-worker-1
+  domain: k8s-worker-2
+  domain: k8s-worker-3
 
 ============================================================
 Total: 13 change(s)
@@ -191,18 +191,50 @@ romulus_elixir/
 
 ### Running Tests
 
+Romulus Elixir includes a comprehensive test suite with multiple test categories:
+
+#### Test Categories
+
+- **Unit Tests**: Fast, isolated tests with mocked dependencies
+- **Integration Tests**: Tests against real libvirt/KVM with nested virtualization
+- **End-to-End Tests**: Full infrastructure lifecycle validation
+- **Performance Tests**: Benchmarking and performance validation
+
+#### Running Tests
+
 ```bash
-# All tests
+# Unit tests only (fast, no external dependencies)
 mix test
 
-# Unit tests only
-mix test.unit
+# Specific test categories
+mix test.unit                    # Unit tests only
+mix test.integration             # Integration tests (requires libvirt/KVM)
+mix test.e2e                     # End-to-end tests (requires libvirt/KVM)
+mix test.performance             # Performance and benchmark tests
 
-# Integration tests
-mix test.integration
+# Run all test types
+mix test.all                     # All test types (unit, integration, e2e, performance)
 
-# With coverage
-mix coveralls.html
+# Test coverage reporting
+mix coveralls.html               # Generate HTML coverage report
+mix coveralls.github             # Coverage for CI/CD
+
+# Integration tests with specific environment
+MIX_ENV=test_integration mix test.integration
+```
+
+#### Prerequisites for Integration/E2E Tests
+
+```bash
+# Ubuntu/Debian
+sudo apt-get install qemu-kvm libvirt-daemon-system libvirt-clients
+sudo usermod -aG libvirt $USER
+newgrp libvirt
+
+# CentOS/RHEL/Fedora
+sudo yum install libvirt libvirt-client qemu-kvm
+sudo usermod -aG libvirt $USER
+newgrp libvirt
 ```
 
 ### Code Quality
@@ -247,6 +279,47 @@ Romulus uses pure YAML configuration files for infrastructure definition:
 - **Comprehensive Testing**: Unit, integration, and property-based tests ensure reliability
 - **Built-in Observability**: Structured logging and telemetry out of the box
 - **Interactive Development**: Use IEx REPL for debugging and experimentation
+
+## CI/CD
+
+The project uses GitHub Actions for continuous integration with the following requirements:
+
+### Test Coverage Requirements
+
+- **Minimum Coverage**: 90% code coverage required for all PRs
+- **Coverage Types**: Unit, integration, and end-to-end tests included in coverage calculation
+- **Reporting**: Coverage reports are automatically uploaded to GitHub using `mix coveralls.github`
+- **Gate**: PRs cannot be merged without meeting the 90% coverage threshold
+
+### CI Pipeline
+
+1. **Unit Tests**: Fast feedback loop with mocked dependencies
+2. **Integration Tests**: Tests against real libvirt/KVM with nested virtualization
+3. **End-to-End Tests**: Full infrastructure lifecycle tests
+4. **Coverage Analysis**: Comprehensive coverage across all test types
+5. **Code Quality**: Credo, Dialyzer, and Sobelow security analysis
+6. **Release Build**: Production release artifact generation
+
+### Virtualization Support
+
+- **KVM Enabled**: GitHub Actions runners configured with nested virtualization
+- **Cirros Images**: Cached lightweight OS images for fast test execution
+- **Libvirt Integration**: Full libvirt/QEMU stack available in CI environment
+
+### Running CI Locally
+
+```bash
+# Install libvirt (Ubuntu/Debian)
+sudo apt-get install qemu-kvm libvirt-daemon-system libvirt-clients
+
+# Run all CI checks
+mix quality
+mix test.all
+mix coveralls.html
+
+# Check coverage threshold
+mix coveralls.github
+```
 
 ## Troubleshooting
 

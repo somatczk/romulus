@@ -39,7 +39,7 @@ defmodule RomulusElixir.CloudInit.Renderer do
     
     case File.read(template_path) do
       {:ok, template} ->
-        rendered = EEx.eval_string(template, variables)
+        rendered = substitute_variables(template, variables)
         {:ok, rendered}
         
       {:error, reason} ->
@@ -55,7 +55,7 @@ defmodule RomulusElixir.CloudInit.Renderer do
     
     case File.read(template_path) do
       {:ok, template} ->
-        rendered = EEx.eval_string(template, variables)
+        rendered = substitute_variables(template, variables)
         {:ok, rendered}
         
       {:error, reason} ->
@@ -146,6 +146,38 @@ defmodule RomulusElixir.CloudInit.Renderer do
     end
   end
   
+  
+  @doc """
+  Substitutes ${variable} placeholders with values from the variables keyword list.
+  
+  This function handles shell-style variable substitution used in cloud-init templates.
+  """
+  def substitute_variables(template, variables) do
+    Enum.reduce(variables, template, fn {key, value}, acc ->
+      variable_pattern = "${#{key}}"
+      String.replace(acc, variable_pattern, to_string(value))
+    end)
+  end
+  
+  @doc """
+  Validates that all variable placeholders in a template are satisfied by the provided variables.
+  
+  Returns a list of missing variable names, or empty list if all are satisfied.
+  """
+  def validate_template_variables(template, variables) do
+    # Extract all ${variable} patterns from template
+    variable_patterns = Regex.scan(~r/\$\{([^}]+)\}/, template)
+    template_variables = 
+      variable_patterns
+      |> Enum.map(fn [_, var] -> String.to_atom(var) end)
+      |> Enum.uniq()
+    
+    # Get provided variable keys
+    provided_variables = Keyword.keys(variables)
+    
+    # Find missing variables
+    template_variables -- provided_variables
+  end
   
   defp get_pool_path(pool_name) do
     # Default pool path - in production, query from libvirt

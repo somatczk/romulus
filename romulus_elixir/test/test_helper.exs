@@ -4,7 +4,7 @@
 ExUnit.start(
   capture_log: true,
   max_cases: System.schedulers_online(),
-  exclude: [:slow, :integration],
+  exclude: [:slow, :integration, :performance],
   timeout: 30_000
 )
 

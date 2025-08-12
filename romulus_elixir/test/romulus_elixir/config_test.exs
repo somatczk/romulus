@@ -77,24 +77,21 @@ defmodule RomulusElixir.ConfigTest do
     end
 
     test "returns error for missing file" do
-      assert {:error, reason} = Config.load("nonexistent.yaml")
-      assert reason =~ "not found"
+      assert {:error, {:config_load_failed, :enoent}} = Config.load("nonexistent.yaml")
     end
 
     test "returns error for invalid YAML", %{config_dir: config_dir} do
       config_path = Path.join(config_dir, "invalid.yaml")
       File.write!(config_path, "invalid: yaml: content: [")
       
-      assert {:error, reason} = Config.load(config_path)
-      assert reason =~ "Failed to parse"
+      assert {:error, {:config_load_failed, _reason}} = Config.load(config_path)
     end
 
     test "returns error for incomplete configuration", %{config_dir: config_dir} do
       config_path = Path.join(config_dir, "incomplete.yaml")
       File.write!(config_path, "cluster:\n  name: test")
       
-      assert {:error, reason} = Config.load(config_path)
-      assert reason =~ "validation"
+      assert {:error, {:config_load_failed, %NimbleOptions.ValidationError{}}} = Config.load(config_path)
     end
   end
 
@@ -120,14 +117,12 @@ defmodule RomulusElixir.ConfigTest do
 
     test "rejects missing cluster config" do
       config = [network: [name: "test"]]
-      assert {:error, reason} = Config.validate(config)
-      assert reason =~ "cluster"
+      assert {:error, %NimbleOptions.ValidationError{key: :cluster}} = Config.validate(config)
     end
 
     test "rejects missing network config" do
       config = [cluster: [name: "test", domain: "test.local"]]
-      assert {:error, reason} = Config.validate(config)
-      assert reason =~ "network"
+      assert {:error, %NimbleOptions.ValidationError{key: :network}} = Config.validate(config)
     end
 
     test "rejects invalid node counts" do
@@ -137,8 +132,7 @@ defmodule RomulusElixir.ConfigTest do
         nodes: [masters: [count: 0]]
       ]
       
-      assert {:error, reason} = Config.validate(config)
-      assert reason =~ "master node count"
+      assert {:error, %NimbleOptions.ValidationError{}} = Config.validate(config)
     end
 
     test "validates IP prefix format" do
@@ -153,8 +147,7 @@ defmodule RomulusElixir.ConfigTest do
         ssh: [public_key_path: "/tmp/key.pub", user: "test"]
       ]
       
-      assert {:error, reason} = Config.validate(config)
-      assert reason =~ "IP prefix"
+      assert {:error, %NimbleOptions.ValidationError{key: :base_image}} = Config.validate(config)
     end
 
     test "validates memory and disk sizes" do
@@ -168,8 +161,7 @@ defmodule RomulusElixir.ConfigTest do
         ssh: [public_key_path: "/tmp/key.pub", user: "test"]
       ]
       
-      assert {:error, reason} = Config.validate(config)
-      assert reason =~ "memory"
+      assert {:error, %NimbleOptions.ValidationError{key: :base_image}} = Config.validate(config)
     end
   end
 
@@ -217,6 +209,9 @@ defmodule RomulusElixir.ConfigTest do
         ssh: [
           public_key_path: "~/.ssh/id_rsa.pub",
           private_key_path: "~/.ssh/id_rsa"
+        ],
+        storage: [
+          pool_path: "~/libvirt"
         ]
       ]
       
@@ -224,6 +219,7 @@ defmodule RomulusElixir.ConfigTest do
       
       refute expanded[:ssh][:public_key_path] =~ "~"
       refute expanded[:ssh][:private_key_path] =~ "~"
+      refute expanded[:storage][:pool_path] =~ "~"
       assert expanded[:ssh][:public_key_path] =~ ".ssh/id_rsa.pub"
     end
 

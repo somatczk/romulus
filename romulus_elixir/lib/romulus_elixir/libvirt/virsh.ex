@@ -127,13 +127,15 @@ defmodule RomulusElixir.Libvirt.Virsh do
   """
   @spec list_volumes(String.t()) :: {:ok, [Volume.t()]} | {:error, String.t()}
   def list_volumes(pool_name) do
-    case execute_virsh("vol-list #{pool_name} --name") do
+    case execute_virsh("vol-list #{pool_name}") do
       {:ok, output} ->
         volumes = 
           output
           |> String.split("\n", trim: true)
+          |> Enum.drop(2)  # Skip header lines (Name Path and ----)
           |> Enum.reject(&(&1 == ""))
-          |> Enum.map(&build_volume_struct(&1, pool_name))
+          |> Enum.map(&parse_volume_line(&1, pool_name))
+          |> Enum.reject(&is_nil/1)
         
         {:ok, volumes}
         
@@ -203,9 +205,9 @@ defmodule RomulusElixir.Libvirt.Virsh do
         error
     end
   end
-
+  
   @doc """
-  Starts a libvirt domain by name.
+  Starts a libvirt domain.
   """
   @spec start_domain(String.t()) :: :ok | {:error, String.t()}
   def start_domain(name) do
@@ -214,9 +216,9 @@ defmodule RomulusElixir.Libvirt.Virsh do
       error -> error
     end
   end
-
+  
   @doc """
-  Stops a libvirt domain by name.
+  Stops a libvirt domain gracefully.
   """
   @spec stop_domain(String.t()) :: :ok | {:error, String.t()}
   def stop_domain(name) do
@@ -225,9 +227,9 @@ defmodule RomulusElixir.Libvirt.Virsh do
       error -> error
     end
   end
-
+  
   @doc """
-  Deletes a libvirt domain by name.
+  Destroys (force stops) and undefines a libvirt domain.
   """
   @spec delete_domain(String.t()) :: :ok | {:error, String.t()}
   def delete_domain(name) do
@@ -236,49 +238,89 @@ defmodule RomulusElixir.Libvirt.Virsh do
       :ok
     end
   end
-
+  
   @doc """
-  Gets domain information by name.
+  Gets domain information.
   """
   @spec get_domain_info(String.t()) :: {:ok, map()} | {:error, String.t()}
   def get_domain_info(name) do
     case execute_virsh("dominfo #{name}") do
-      {:ok, output} -> {:ok, parse_domain_info(output)}
+      {:ok, output} ->
+        info = parse_dominfo_output(output)
+        {:ok, info}
       error -> error
     end
   end
-
+  
   @doc """
-  Checks if a resource exists by type and name.
+  Attaches a volume to a running domain.
+  """
+  @spec attach_volume(String.t(), String.t(), String.t()) :: :ok | {:error, String.t()}
+  def attach_volume(domain_name, volume_name, pool_name) do
+    # Generate XML for the disk device
+    disk_xml = generate_attach_disk_xml(volume_name, pool_name)
+    xml_file = "/tmp/attach-#{domain_name}-#{:rand.uniform(10000)}.xml"
+    
+    with :ok <- File.write(xml_file, disk_xml),
+         {:ok, _} <- execute_virsh("attach-device #{domain_name} #{xml_file} --live --config") do
+      File.rm(xml_file)
+      :ok
+    else
+      error ->
+        File.rm(xml_file)
+        error
+    end
+  end
+  
+  @doc """
+  Detaches a volume from a running domain.
+  """
+  @spec detach_volume(String.t(), String.t()) :: :ok | {:error, String.t()}
+  def detach_volume(domain_name, device_name) do
+    case execute_virsh("detach-disk #{domain_name} #{device_name} --live --config") do
+      {:ok, _} -> :ok
+      error -> error
+    end
+  end
+  
+  @doc """
+  Checks if a resource exists.
   """
   @spec exists?(atom(), String.t()) :: boolean()
-  def exists?(type, name) do
-    command = case type do
-      :network -> "net-info #{name}"
-      :pool -> "pool-info #{name}"
-      :volume -> "vol-info #{name}"
-      :domain -> "dominfo #{name}"
-      _ -> "list"
-    end
-
-    case execute_virsh(command) do
+  def exists?(:network, name) do
+    case execute_virsh("net-info #{name}") do
       {:ok, _} -> true
       {:error, _} -> false
     end
   end
+  
+  def exists?(:pool, name) do
+    case execute_virsh("pool-info #{name}") do
+      {:ok, _} -> true
+      {:error, _} -> false
+    end
+  end
+  
+  def exists?(:domain, name) do
+    case execute_virsh("dominfo #{name}") do
+      {:ok, _} -> true
+      {:error, _} -> false
+    end
+  end
+  
+  def exists?(_, _), do: false
 
   # Private helper functions
 
   defp execute_virsh(command, opts \\ []) do
-    timeout = Keyword.get(opts, :timeout, @virsh_timeout)
+    _timeout = Keyword.get(opts, :timeout, @virsh_timeout)
     full_command = "virsh #{command}"
     
     Logger.debug("Executing: #{full_command}")
 
-    opts = [stderr_to_stdout: true]
-    opts = if timeout, do: [{:timeout, timeout} | opts], else: opts
+    system_opts = [stderr_to_stdout: true]
     
-    case System.cmd("bash", ["-c", full_command], opts) do
+    case System.cmd("bash", ["-c", full_command], system_opts) do
       {output, 0} ->
         Logger.debug("Success: #{String.trim(output)}")
         {:ok, String.trim(output)}
@@ -317,6 +359,16 @@ defmodule RomulusElixir.Libvirt.Virsh do
       size: "10G",
       path: "/var/lib/libvirt/images/#{pool_name}/#{name}"
     }
+  end
+
+  defp parse_volume_line(line, pool_name) do
+    # Parse lines like " volume.qcow2  /path/to/volume.qcow2"
+    case String.split(String.trim(line), ~r/\s+/, parts: 2) do
+      [name | _] when name != "" ->
+        build_volume_struct(name, pool_name)
+      _ ->
+        nil
+    end
   end
 
   defp build_domain_struct(name) do
@@ -383,7 +435,7 @@ defmodule RomulusElixir.Libvirt.Virsh do
 
   defp download_base_image(%Volume{source: url} = volume) do
     target_path = "/var/lib/libvirt/images/#{volume.pool}/#{volume.name}"
-    execute_virsh("! wget -O #{target_path} #{url}", timeout: 300_000)
+    execute_virsh("! wget -O #{target_path} #{url}")
   end
 
   defp create_volume_from_base(%Volume{} = volume) do
@@ -405,7 +457,7 @@ defmodule RomulusElixir.Libvirt.Virsh do
     end
   end
 
-  defp parse_domain_info(output) do
+  defp parse_dominfo_output(output) do
     output
     |> String.split("\n")
     |> Enum.reduce(%{}, fn line, acc ->
@@ -416,6 +468,16 @@ defmodule RomulusElixir.Libvirt.Virsh do
           acc
       end
     end)
+  end
+  
+  defp generate_attach_disk_xml(volume_name, pool_name) do
+    """
+    <disk type='file' device='disk'>
+      <driver name='qemu' type='qcow2'/>
+      <source file='/var/lib/libvirt/images/#{pool_name}/#{volume_name}'/>
+      <target dev='vdb' bus='virtio'/>
+    </disk>
+    """
   end
 
   defp get_gateway(cidr) do

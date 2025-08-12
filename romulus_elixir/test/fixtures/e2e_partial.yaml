@@ -1,0 +1,30 @@
+cluster:
+  name: romulus-e2e-smoke
+  domain: partial.test.local
+
+network:
+  name: romulus-e2e-smoke-network
+  mode: nat
+  cidr: "192.168.250.0/24"
+  dhcp: true
+  dns: true
+
+storage:
+  pool_name: romulus-e2e-smoke-pool
+  pool_path: /tmp/romulus-e2e-test
+  pool_type: dir
+  base_image:
+    name: debian-12-partial-base
+    url: https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-nocloud-amd64.qcow2
+    format: qcow2
+
+# No nodes defined for partial config
+nodes:
+  masters:
+    count: 0
+  workers:
+    count: 0
+
+ssh:
+  public_key_path: /tmp/romulus_e2e_test.pub
+  user: debian

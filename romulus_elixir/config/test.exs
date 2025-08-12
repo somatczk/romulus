@@ -96,6 +96,29 @@ config :romulus_elixir, :libvirt,
   # Test libvirt URI (won't be used with mock)
   uri: "test:///default"
 
+# E2E test configuration
+config :romulus_elixir, :e2e,
+  # E2E test timeout (10 minutes)
+  timeout: 600_000,
+  
+  # Use real libvirt for E2E tests
+  use_real_libvirt: true,
+  
+  # E2E test cleanup
+  cleanup_after_test: true,
+  
+  # SSH connectivity timeout
+  ssh_timeout: 30_000,
+  
+  # VM boot timeout
+  vm_boot_timeout: 300_000,  # 5 minutes
+  
+  # Infrastructure apply timeout
+  apply_timeout: 600_000,    # 10 minutes
+  
+  # Infrastructure destroy timeout  
+  destroy_timeout: 300_000   # 5 minutes
+
 # Test database configuration (if using a database for state)
 config :romulus_elixir, :database,
   # Use in-memory database for tests
@@ -140,8 +163,8 @@ config :ex_unit,
   # Maximum test cases to run in parallel
   max_cases: System.schedulers_online(),
   
-  # Exclude slow tests by default
-  exclude: [:slow, :integration],
+  # Exclude slow and E2E tests by default
+  exclude: [:slow, :integration, :e2e],
   
   # Test formatters
   formatters: [ExUnit.CLIFormatter],

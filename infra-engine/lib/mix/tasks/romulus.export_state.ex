@@ -33,7 +33,7 @@ defmodule Mix.Tasks.Romulus.ExportState do
   
   use Mix.Task
   
-  alias RomulusElixir.State
+  alias Romulus.Core.State
   
   @shortdoc "Export current infrastructure state"
   
@@ -154,7 +154,7 @@ defmodule Mix.Tasks.Romulus.ExportState do
   @doc false
   @spec export_state(format()) :: {:ok, String.t()} | {:error, String.t()}
   defp export_state(format) do
-    with {:ok, state} <- State.fetch_current(),
+    with {:ok, state} <- Romulus.Core.State.fetch_current(),
          {:ok, export_data} <- build_export_data(state),
          {:ok, content} <- format_export(export_data, format) do
       {:ok, content}

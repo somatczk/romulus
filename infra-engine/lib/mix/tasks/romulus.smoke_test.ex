@@ -39,7 +39,7 @@ defmodule Mix.Tasks.Romulus.SmokeTest do
   use Mix.Task
   require Logger
 
-  alias RomulusElixir.{Config, State}
+  alias Romulus.Core.{Config, State}
 
   @shortdoc "Run comprehensive infrastructure smoke tests"
 
@@ -120,7 +120,7 @@ defmodule Mix.Tasks.Romulus.SmokeTest do
 
   @spec load_config() :: {:ok, map()} | {:error, String.t()}
   defp load_config do
-    case Config.load("romulus.yaml") do
+    case Romulus.Core.Config.load("romulus.yaml") do
       {:ok, config} -> {:ok, config}
       {:error, reason} -> {:error, "Failed to load configuration: #{inspect(reason)}"}
     end
@@ -128,7 +128,7 @@ defmodule Mix.Tasks.Romulus.SmokeTest do
 
   @spec load_state() :: {:ok, State.t()} | {:error, String.t()}
   defp load_state do
-    case State.fetch_current() do
+    case Romulus.Core.State.fetch_current() do
       {:ok, state} -> {:ok, state}
       {:error, reason} -> {:error, "Failed to fetch current state: #{inspect(reason)}"}
     end

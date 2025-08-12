@@ -28,7 +28,8 @@ defmodule Mix.Tasks.Romulus.Heal do
   use Mix.Task
   require Logger
   
-  alias RomulusElixir.{State, Config, Libvirt}
+  alias Romulus.Core.{Config, State}
+  alias Romulus.Infra.Libvirt
   
   @shortdoc "Auto-heal infrastructure issues"
   

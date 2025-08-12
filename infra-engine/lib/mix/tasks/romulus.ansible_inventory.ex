@@ -8,7 +8,7 @@ defmodule Mix.Tasks.Romulus.AnsibleInventory do
   
   use Mix.Task
   
-  alias RomulusElixir.{State, Config}
+  alias Romulus.Core.{State, Config}
   
   @shortdoc "Generate Ansible inventory"
   
@@ -39,8 +39,8 @@ defmodule Mix.Tasks.Romulus.AnsibleInventory do
   end
   
   defp generate_inventory(format) do
-    with {:ok, config} <- Config.load("romulus.yaml"),
-         {:ok, state} <- State.fetch_current() do
+    with {:ok, config} <- Romulus.Core.Config.load("romulus.yaml"),
+         {:ok, state} <- Romulus.Core.State.fetch_current() do
       
       inventory = build_inventory(config, state)
       

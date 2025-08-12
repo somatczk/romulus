@@ -1,0 +1,129 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'romulus_elixir/**'
+      - '.github/workflows/ci.yml'
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - 'romulus_elixir/**'
+      - '.github/workflows/ci.yml'
+
+defaults:
+  run:
+    working-directory: romulus_elixir
+
+jobs:
+  test:
+    name: Test on OTP ${{ matrix.otp }} / Elixir ${{ matrix.elixir }}
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        otp: ['26.0']
+        elixir: ['1.17']
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Elixir
+      uses: erlef/setup-beam@v1
+      with:
+        otp-version: ${{ matrix.otp }}
+        elixir-version: ${{ matrix.elixir }}
+    
+    - name: Restore dependencies cache
+      uses: actions/cache@v3
+      with:
+        path: |
+          romulus_elixir/deps
+          romulus_elixir/_build
+        key: ${{ runner.os }}-mix-${{ hashFiles('romulus_elixir/mix.lock') }}
+        restore-keys: ${{ runner.os }}-mix-
+    
+    - name: Install dependencies
+      run: |
+        mix local.hex --force
+        mix local.rebar --force
+        mix deps.get
+    
+    - name: Check formatting
+      run: mix format --check-formatted
+    
+    - name: Compile with warnings as errors
+      run: mix compile --warnings-as-errors
+    
+    - name: Run tests
+      run: mix test
+    
+    - name: Run Credo
+      run: mix credo --strict
+    
+    - name: Run Dialyzer
+      run: mix dialyzer
+      continue-on-error: true  # Dialyzer can be slow on first run
+    
+    - name: Check security with Sobelow
+      run: mix sobelow --config
+      continue-on-error: true  # Some warnings may be acceptable
+
+  coverage:
+    name: Test Coverage
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Elixir
+      uses: erlef/setup-beam@v1
+      with:
+        otp-version: '26.0'
+        elixir-version: '1.17'
+    
+    - name: Install dependencies
+      run: |
+        mix local.hex --force
+        mix local.rebar --force
+        mix deps.get
+    
+    - name: Run tests with coverage
+      run: mix coveralls.html
+    
+    - name: Upload coverage reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage-report
+        path: romulus_elixir/cover/
+
+  release:
+    name: Build Release
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Elixir
+      uses: erlef/setup-beam@v1
+      with:
+        otp-version: '26.0'
+        elixir-version: '1.17'
+    
+    - name: Install dependencies
+      run: |
+        mix local.hex --force
+        mix local.rebar --force
+        mix deps.get --only prod
+    
+    - name: Build release
+      run: |
+        MIX_ENV=prod mix compile
+        MIX_ENV=prod mix release
+    
+    - name: Upload release artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: romulus-release
+        path: romulus_elixir/_build/prod/rel/

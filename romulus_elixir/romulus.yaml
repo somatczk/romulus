@@ -1,0 +1,52 @@
+# Romulus Configuration File
+# Pure YAML infrastructure configuration for Kubernetes clusters
+
+cluster:
+  name: k8s-cluster
+  domain: k8s.local
+  
+network:
+  name: k8s-network
+  mode: nat
+  cidr: 10.10.10.0/24
+  dhcp: true
+  dns: true
+
+storage:
+  pool_name: k8s-cluster-pool
+  pool_path: /var/lib/libvirt/images/k8s-cluster
+  base_image:
+    name: debian-12-base
+    url: https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-nocloud-amd64.qcow2
+    format: qcow2
+
+nodes:
+  masters:
+    count: 2
+    memory: 1024  # MB
+    vcpus: 1
+    disk_size: 53687091200  # 50GB in bytes
+    ip_prefix: "10.10.10.1"  # Will be 10.10.10.11, 10.10.10.12, etc.
+    
+  workers:
+    count: 3
+    memory: 18432  # MB  
+    vcpus: 6
+    disk_size: 107374182400  # 100GB in bytes
+    ip_prefix: "10.10.10.2"  # Will be 10.10.10.21, 10.10.10.22, etc.
+
+ssh:
+  public_key_path: /etc/ssh/ssh_host_rsa_key.pub
+  user: debian
+
+kubernetes:
+  version: "1.28"
+  pod_subnet: "10.244.0.0/16"
+  service_subnet: "10.96.0.0/12"
+  
+bootstrap:
+  cni: flannel
+  ingress: nginx
+  storage: rook-ceph
+  monitoring: prometheus
+  logging: loki

@@ -5,9 +5,9 @@ This repository contains the infrastructure as code and configuration for a home
 ## Repository Structure
 
 ### Infrastructure
-- `infrastructure/libvirt/`: VM infrastructure using libvirt
-  - `terraform/`: Terraform configurations for provisioning VMs
-  - `cloud-init/`: Cloud-init templates for VM configuration
+- `romulus_elixir/`: VM infrastructure using Elixir
+- `romulus_elixir/priv/cloud-init/`: Cloud-init templates for VM configuration
+- `infrastructure/ansible/`: Ansible playbooks for configuration management
 
 ### Kubernetes
 - `kubernetes/bootstrap/`: Initial cluster setup
@@ -28,9 +28,9 @@ This repository contains the infrastructure as code and configuration for a home
 
 1. Set up libvirt infrastructure:
 ```
-cd infrastructure/libvirt/terraform
-terraform init
-terraform apply
+cd romulus_elixir
+mix deps.get
+make apply
 ```
 
 2. Configure and bootstrap the Kubernetes cluster following the runbooks in the documentation folder.

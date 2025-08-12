@@ -1,0 +1,124 @@
+#cloud-config
+hostname: ${hostname}
+fqdn: ${hostname}.k8s.local
+
+# Create users
+users:
+  - name: debian
+    ssh_authorized_keys:
+      - ${ssh_key}
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    groups: sudo
+    shell: /bin/bash
+    lock_passwd: false
+
+# Package management
+package_update: true
+package_upgrade: true
+
+# Install essential packages
+packages:
+  - curl
+  - wget
+  - git
+  - vim
+  - htop
+  - net-tools
+  - apt-transport-https
+  - ca-certificates
+  - gnupg
+  - lsb-release
+  - software-properties-common
+  - iptables
+  - arptables
+  - ebtables
+
+# Write configuration files
+write_files:
+  # # Kubernetes modules
+  # - path: /etc/modules-load.d/k8s.conf
+  #   content: |
+  #     overlay
+  #     br_netfilter
+  #   owner: root:root
+  #   permissions: '0644'
+  
+  # # Kubernetes sysctl settings
+  # - path: /etc/sysctl.d/k8s.conf
+  #   content: |
+  #     net.bridge.bridge-nf-call-iptables  = 1
+  #     net.bridge.bridge-nf-call-ip6tables = 1
+  #     net.ipv4.ip_forward                 = 1
+  #   owner: root:root
+  #   permissions: '0644'
+  
+  # Add node to hosts file
+  - path: /etc/hosts
+    content: |
+      127.0.0.1 localhost
+      ${node_ip} ${hostname} ${hostname}.k8s.local
+      
+      # Kubernetes cluster nodes
+      10.10.10.11 k8s-master-1.k8s.local k8s-master-1
+      10.10.10.12 k8s-master-2.k8s.local k8s-master-2
+      10.10.10.21 k8s-worker-1.k8s.local k8s-worker-1
+      10.10.10.22 k8s-worker-2.k8s.local k8s-worker-2
+      10.10.10.23 k8s-worker-3.k8s.local k8s-worker-3
+    append: false
+    owner: root:root
+    permissions: '0644'
+
+# Commands to run during first boot
+runcmd:
+  # Load kernel modules
+  - modprobe overlay
+  - modprobe br_netfilter
+  
+  # Apply sysctl settings
+  - sysctl --system
+  
+  # Disable swap completely
+  - swapoff -a
+  - sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
+  
+  # Update iptables alternatives to legacy (required for Kubernetes)
+  - update-alternatives --set iptables /usr/sbin/iptables-legacy
+  - update-alternatives --set ip6tables /usr/sbin/ip6tables-legacy
+  - update-alternatives --set arptables /usr/sbin/arptables-legacy
+  - update-alternatives --set ebtables /usr/sbin/ebtables-legacy
+  
+  # Install Docker
+  - curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+  - echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
+  - apt-get update
+  - apt-get install -y docker-ce docker-ce-cli containerd.io
+  
+  # Configure containerd
+  - mkdir -p /etc/containerd
+  - containerd config default | tee /etc/containerd/config.toml
+  - sed -i 's/SystemdCgroup = false/SystemdCgroup = true/' /etc/containerd/config.toml
+  - systemctl restart containerd
+  - systemctl enable containerd
+  
+  # Add user to docker group
+  - usermod -aG docker debian
+  
+  # # Install Kubernetes components (kubelet and kubeadm only for workers)
+  # - curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key | gpg --dearmor -o /usr/share/keyrings/kubernetes-apt-keyring.gpg
+  # - echo "deb [signed-by=/usr/share/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.28/deb/ /" | tee /etc/apt/sources.list.d/kubernetes.list
+  # - apt-get update
+  # - apt-get install -y kubelet kubeadm
+  # - apt-mark hold kubelet kubeadm
+  
+  # # Enable kubelet
+  # - systemctl enable kubelet
+
+# Final message
+final_message: "Worker node ${hostname} is ready! IP: ${node_ip}"
+
+# Reboot to ensure all changes take effect
+power_state:
+  delay: 60
+  mode: reboot
+  message: "Rebooting to complete setup"
+  condition: true 

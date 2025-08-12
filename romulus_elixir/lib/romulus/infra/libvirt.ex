@@ -1,10 +1,10 @@
-defmodule RomulusElixir.Libvirt do
+defmodule Romulus.Infra.Libvirt do
   @moduledoc """
   Main interface for libvirt operations.
   Delegates to the configured adapter (Virsh or NIF).
   """
   
-  alias RomulusElixir.Libvirt.Virsh
+  alias Romulus.Infra.Libvirt.Virsh
   
   # Resource structs
   defmodule Network do
@@ -27,7 +27,7 @@ defmodule RomulusElixir.Libvirt do
     defstruct [:name, :memory, :vcpu, :network, :disk_volume, :cloudinit_volume, :pool, :ip_address, :uuid, :state, :mac_address]
   end
   
-  @adapter Application.compile_env(:romulus_elixir, :libvirt_adapter, Virsh)
+  @adapter Application.compile_env(:romulus_elixir, :libvirt_adapter, Romulus.Infra.Libvirt.Virsh)
   
   @doc """
   List all networks.

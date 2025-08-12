@@ -1,4 +1,4 @@
-defmodule RomulusElixir.Planner do
+defmodule Romulus.Core.Planner do
   @moduledoc """
   Plans infrastructure changes by comparing current and desired states.
 
@@ -25,7 +25,8 @@ defmodule RomulusElixir.Planner do
 
   """
 
-  alias RomulusElixir.State
+  alias Romulus.Core.{Config, State}
+  alias Romulus.Error
 
   require Logger
   

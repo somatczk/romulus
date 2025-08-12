@@ -1,4 +1,4 @@
-defmodule RomulusElixir.Libvirt.Virsh do
+defmodule Romulus.Infra.Libvirt.Virsh do
   @moduledoc """
   Virsh adapter for libvirt operations in the RomulusElixir application.
   Uses shell commands to interact with libvirt via virsh CLI.
@@ -12,7 +12,7 @@ defmodule RomulusElixir.Libvirt.Virsh do
   """
 
   require Logger
-  alias RomulusElixir.Libvirt.{Network, Pool, Volume, Domain}
+  alias Romulus.Infra.Libvirt.{Network, Pool, Volume, Domain}
 
   @virsh_timeout 30_000
 

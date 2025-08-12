@@ -1,10 +1,10 @@
-defmodule RomulusElixir.State do
+defmodule Romulus.Core.State do
   @moduledoc """
   State management for infrastructure resources.
   Represents both current and desired states.
   """
   
-  alias RomulusElixir.Libvirt
+  alias Romulus.Infra.Libvirt
   
   defstruct [
     :networks,
@@ -49,7 +49,7 @@ defmodule RomulusElixir.State do
   Generate desired state from configuration.
   """
   def from_config(config) do
-    with {:ok, _validated} <- RomulusElixir.Config.validate(config) do
+    with {:ok, _validated} <- Romulus.Core.Config.validate(config) do
       state = %__MODULE__{
         networks: build_networks(config),
         pools: build_pools(config),

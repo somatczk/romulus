@@ -1,4 +1,4 @@
-defmodule RomulusElixir.Config do
+defmodule Romulus.Core.Config do
   @moduledoc """
   Configuration management for Romulus.
   Loads and validates configuration from YAML files.

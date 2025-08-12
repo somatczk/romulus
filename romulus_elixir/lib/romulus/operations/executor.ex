@@ -1,4 +1,4 @@
-defmodule RomulusElixir.Executor do
+defmodule Romulus.Operations.Executor do
   @moduledoc """
   Executes infrastructure plans by applying changes to libvirt resources.
 
@@ -36,7 +36,8 @@ defmodule RomulusElixir.Executor do
 
   """
 
-  alias RomulusElixir.{Libvirt, CloudInit, Planner}
+  alias Romulus.Core.{Planner, State}
+  alias Romulus.{Error, Infra.Libvirt, CloudInit}
 
   require Logger
 

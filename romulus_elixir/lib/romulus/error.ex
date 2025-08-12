@@ -1,4 +1,4 @@
-defmodule RomulusElixir.Error do
+defmodule Romulus.Error do
   @moduledoc """
   Comprehensive error handling for Romulus infrastructure management.
   

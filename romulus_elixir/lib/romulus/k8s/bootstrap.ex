@@ -1,4 +1,4 @@
-defmodule RomulusElixir.K8s.Bootstrap do
+defmodule Romulus.K8s.Bootstrap do
   @moduledoc """
   Provides robust Kubernetes cluster bootstrapping functionality for headless environments.
 

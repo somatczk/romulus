@@ -22,8 +22,9 @@ defmodule Mix.Tasks.Romulus.Benchmark do
   
   use Mix.Task
   
-  alias RomulusElixir.{Planner, Executor, State}
-  alias RomulusElixir.Libvirt.{Network, Pool, Volume, Domain}
+  alias Romulus.Core.{Config, State, Planner}
+  alias Romulus.Operations.Executor
+  alias Romulus.Infra.Libvirt.{Network, Pool, Volume, Domain}
   
   @shortdoc "Run performance benchmarks"
   

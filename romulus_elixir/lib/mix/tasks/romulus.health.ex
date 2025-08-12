@@ -35,7 +35,7 @@ defmodule Mix.Tasks.Romulus.Health do
   use Mix.Task
   require Logger
   
-  alias RomulusElixir.{State, Config}
+  alias Romulus.Core.{State, Config}
   
   @shortdoc "Check infrastructure health"
   
@@ -140,9 +140,9 @@ defmodule Mix.Tasks.Romulus.Health do
     issues = []
     
     # Load configuration with proper error handling
-    with {:ok, config} <- Config.load("romulus.yaml"),
-         {:ok, current_state} <- State.fetch_current(),
-         {:ok, desired_state} <- State.from_config(config) do
+    with {:ok, config} <- Romulus.Core.Config.load("romulus.yaml"),
+         {:ok, current_state} <- Romulus.Core.State.fetch_current(),
+         {:ok, desired_state} <- Romulus.Core.State.from_config(config) do
       # Perform health checks in order of criticality
       {infra_status, infra_issues} = check_infrastructure(current_state, desired_state, verbose?)
       checks = checks ++ [{:infrastructure, infra_status}]

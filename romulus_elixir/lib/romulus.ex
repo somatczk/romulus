@@ -1,4 +1,4 @@
-defmodule RomulusElixir do
+defmodule Romulus do
   @moduledoc """
   Romulus - Native Elixir infrastructure automation for libvirt/KVM and Kubernetes.
 
@@ -16,15 +16,18 @@ defmodule RomulusElixir do
 
   ## Usage
 
-      iex> {:ok, _plan} = RomulusElixir.plan()
-      iex> {:error, _reason} = RomulusElixir.apply(nil, [])
-      iex> {:error, _reason} = RomulusElixir.destroy(force: false)
+      iex> {:ok, _plan} = Romulus.plan()
+      iex> {:error, _reason} = Romulus.apply(nil, [])
+      iex> {:error, _reason} = Romulus.destroy(force: false)
       iex> :ok
       :ok
 
   """
 
-  alias RomulusElixir.{Config, Planner, Executor, State}
+  alias Romulus.Core.{Config, Planner, State}
+  alias Romulus.Operations.Executor
+  alias Romulus.CloudInit
+  alias Romulus.K8s.Bootstrap
 
   require Logger
   
@@ -42,7 +45,7 @@ defmodule RomulusElixir do
 
   ## Examples
 
-      iex> case RomulusElixir.load_config("config/production.yaml") do
+      iex> case Romulus.load_config("config/production.yaml") do
       ...>   {:ok, _config} -> :loaded
       ...>   {:error, _reason} -> :failed
       ...> end
@@ -70,7 +73,7 @@ defmodule RomulusElixir do
 
   ## Examples
 
-      iex> case RomulusElixir.plan() do
+      iex> case Romulus.plan() do
       ...>   {:ok, plan} -> is_list(plan)
       ...>   {:error, _} -> false
       ...> end
@@ -107,7 +110,7 @@ defmodule RomulusElixir do
 
   ## Examples
 
-      iex> case RomulusElixir.apply(nil, auto_approve: true) do
+      iex> case Romulus.apply(nil, auto_approve: true) do
       ...>   {:ok, _result} -> :applied
       ...>   {:error, _reason} -> :failed
       ...> end
@@ -144,7 +147,7 @@ defmodule RomulusElixir do
 
   ## Examples
 
-      iex> case RomulusElixir.destroy(nil, force: true) do
+      iex> case Romulus.destroy(nil, force: true) do
       ...>   {:ok, _result} -> :destroyed
       ...>   {:error, _reason} -> :failed
       ...> end
@@ -181,7 +184,7 @@ defmodule RomulusElixir do
   """
   def render_cloudinit(config \\ nil) do
     with {:ok, config} <- ensure_config(config) do
-      RomulusElixir.CloudInit.Renderer.render_all(config)
+      CloudInit.Renderer.render_all(config)
     end
   end
   
@@ -204,7 +207,7 @@ defmodule RomulusElixir do
   """
   def bootstrap_k8s(config \\ nil) do
     with {:ok, config} <- ensure_config(config) do
-      RomulusElixir.K8s.Bootstrap.run(config)
+      Bootstrap.run(config)
     end
   end
   

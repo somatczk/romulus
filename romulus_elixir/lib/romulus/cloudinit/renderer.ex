@@ -1,4 +1,4 @@
-defmodule RomulusElixir.CloudInit.Renderer do
+defmodule Romulus.CloudInit.Renderer do
   @moduledoc """
   Renders cloud-init templates using native EEx templating.
   Provides pure Elixir template processing without external dependencies.

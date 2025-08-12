@@ -1,0 +1,456 @@
+name: Infrastructure CI/CD
+
+on:
+  push:
+    branches: [main, master, develop]
+    paths:
+      - 'romulus_elixir/**'
+      - 'infrastructure/**'
+      - '.github/workflows/infrastructure.yml'
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'romulus_elixir/**'
+      - 'infrastructure/**'
+  schedule:
+    # Daily infrastructure validation at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action to perform'
+        required: true
+        default: 'validate'
+        type: choice
+        options:
+          - validate
+          - plan
+          - apply
+          - destroy
+          - health-check
+      environment:
+        description: 'Environment to target'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+env:
+  ELIXIR_VERSION: '1.17'
+  OTP_VERSION: '26.0'
+  MIX_ENV: test
+
+jobs:
+  # Code quality and testing
+  quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: romulus_elixir
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
+      
+      - name: Cache Dependencies
+        uses: actions/cache@v3
+        id: mix-cache
+        with:
+          path: |
+            romulus_elixir/deps
+            romulus_elixir/_build
+            romulus_elixir/priv/plts
+          key: ${{ runner.os }}-mix-${{ hashFiles('romulus_elixir/mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-mix-
+      
+      - name: Install Dependencies
+        if: steps.mix-cache.outputs.cache-hit != 'true'
+        run: |
+          mix local.hex --force
+          mix local.rebar --force
+          mix deps.get
+          mix deps.compile
+      
+      - name: Check Formatting
+        run: mix format --check-formatted
+      
+      - name: Run Credo
+        run: mix credo --strict
+      
+      - name: Run Dialyzer
+        run: |
+          mkdir -p priv/plts
+          mix dialyzer
+        continue-on-error: true  # Dialyzer can be slow on first run
+      
+      - name: Security Scan
+        run: mix sobelow --config
+        continue-on-error: true
+
+  # Unit and integration tests
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    needs: quality
+    defaults:
+      run:
+        working-directory: romulus_elixir
+    
+    services:
+      libvirt:
+        image: ghcr.io/romulus/libvirt-ci:latest
+        options: --privileged
+        ports:
+          - 16509:16509
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
+      
+      - name: Cache Dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            romulus_elixir/deps
+            romulus_elixir/_build
+          key: ${{ runner.os }}-mix-${{ hashFiles('romulus_elixir/mix.lock') }}
+      
+      - name: Install Dependencies
+        run: |
+          mix local.hex --force
+          mix local.rebar --force
+          mix deps.get
+      
+      - name: Run Unit Tests
+        run: mix test --exclude integration
+      
+      - name: Run Integration Tests
+        run: mix test --only integration
+        env:
+          LIBVIRT_DEFAULT_URI: qemu+tcp://localhost:16509/system
+      
+      - name: Generate Coverage Report
+        run: mix coveralls.html
+      
+      - name: Upload Coverage
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-report
+          path: romulus_elixir/cover/
+
+  # Infrastructure validation
+  validate-infrastructure:
+    name: Validate Infrastructure
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    needs: test
+    defaults:
+      run:
+        working-directory: romulus_elixir
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
+      
+      - name: Install Dependencies
+        run: |
+          mix local.hex --force
+          mix local.rebar --force
+          mix deps.get
+      
+      - name: Validate Configuration
+        run: |
+          # Check if config exists, create from template if not
+          if [ ! -f romulus.yaml ]; then
+            echo "⚠️ No romulus.yaml found, using default config"
+            cp config/test.yaml romulus.yaml
+          fi
+          
+          # Validate the configuration
+          mix compile --warnings-as-errors
+          mix romulus.render-cloudinit
+      
+      - name: Check Template Rendering
+        run: |
+          # Ensure cloud-init templates are valid
+          for template in priv/cloud-init/*.yml; do
+            echo "Validating $template"
+            python3 -c "import yaml; yaml.safe_load(open('$template'))" || exit 1
+          done
+
+  # Deployment planning
+  plan:
+    name: Plan Deployment
+    runs-on: self-hosted  # Needs access to libvirt
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'plan')
+    needs: validate-infrastructure
+    defaults:
+      run:
+        working-directory: romulus_elixir
+    outputs:
+      has_changes: ${{ steps.plan.outputs.has_changes }}
+      plan_summary: ${{ steps.plan.outputs.summary }}
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
+      
+      - name: Install Dependencies
+        run: |
+          mix local.hex --force
+          mix local.rebar --force
+          mix deps.get
+      
+      - name: Generate Plan
+        id: plan
+        run: |
+          # Run plan and capture output
+          mix romulus.plan > plan.txt 2>&1
+          
+          # Check if there are changes
+          if grep -q "No changes needed" plan.txt; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          fi
+          
+          # Create summary
+          echo "summary<<EOF" >> $GITHUB_OUTPUT
+          cat plan.txt >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+      
+      - name: Comment PR with Plan
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const plan = fs.readFileSync('romulus_elixir/plan.txt', 'utf8');
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 📋 Infrastructure Plan\n\`\`\`\n${plan}\n\`\`\``
+            });
+      
+      - name: Upload Plan
+        uses: actions/upload-artifact@v3
+        with:
+          name: infrastructure-plan
+          path: romulus_elixir/plan.txt
+
+  # Automated deployment
+  deploy:
+    name: Deploy Infrastructure
+    runs-on: self-hosted
+    if: |
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'apply')
+    needs: plan
+    environment:
+      name: ${{ github.event.inputs.environment || 'staging' }}
+    defaults:
+      run:
+        working-directory: romulus_elixir
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
+      
+      - name: Install Dependencies
+        run: |
+          mix local.hex --force
+          mix local.rebar --force
+          mix deps.get
+      
+      - name: Pre-deployment Checks
+        run: |
+          # Check if infrastructure needs bootstrapping
+          if ! virsh list --all | grep -q "k8s-"; then
+            echo "🔄 No existing infrastructure detected, will perform full deployment"
+            echo "NEEDS_BOOTSTRAP=true" >> $GITHUB_ENV
+          else
+            echo "✅ Existing infrastructure detected, will update"
+            echo "NEEDS_BOOTSTRAP=false" >> $GITHUB_ENV
+          fi
+      
+      - name: Apply Infrastructure
+        run: |
+          ROMULUS_AUTO_APPROVE=true mix romulus.apply
+      
+      - name: Wait for VMs
+        if: env.NEEDS_BOOTSTRAP == 'true'
+        run: |
+          echo "⏳ Waiting for VMs to initialize..."
+          sleep 120
+      
+      - name: Bootstrap Kubernetes
+        if: env.NEEDS_BOOTSTRAP == 'true'
+        run: |
+          mix romulus.k8s.bootstrap
+      
+      - name: Verify Deployment
+        run: |
+          # Check VMs are running
+          virsh list --all | grep -E "k8s-.*running" || exit 1
+          
+          # Check Kubernetes (if accessible)
+          if command -v kubectl &> /dev/null; then
+            kubectl get nodes || true
+          fi
+      
+      - name: Run Smoke Tests
+        run: |
+          mix romulus.smoke_test
+
+  # Health monitoring
+  health-check:
+    name: Health Check
+    runs-on: self-hosted
+    if: |
+      github.event_name == 'schedule' ||
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'health-check')
+    defaults:
+      run:
+        working-directory: romulus_elixir
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
+      
+      - name: Install Dependencies
+        run: |
+          mix local.hex --force
+          mix local.rebar --force
+          mix deps.get
+      
+      - name: Infrastructure Health Check
+        id: health
+        run: |
+          mix romulus.health --format json > health.json
+          
+          # Parse health status
+          if jq -e '.status == "healthy"' health.json > /dev/null; then
+            echo "status=healthy" >> $GITHUB_OUTPUT
+          else
+            echo "status=unhealthy" >> $GITHUB_OUTPUT
+            echo "🚨 Infrastructure is unhealthy!"
+          fi
+      
+      - name: Auto-remediation
+        if: steps.health.outputs.status == 'unhealthy'
+        run: |
+          echo "🔧 Attempting auto-remediation..."
+          mix romulus.heal --auto
+      
+      - name: Create Issue if Unhealthy
+        if: steps.health.outputs.status == 'unhealthy'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const health = JSON.parse(fs.readFileSync('romulus_elixir/health.json', 'utf8'));
+            
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🚨 Infrastructure Health Check Failed',
+              body: `The scheduled health check has detected issues:\n\`\`\`json\n${JSON.stringify(health, null, 2)}\n\`\`\``,
+              labels: ['infrastructure', 'urgent']
+            });
+
+  # Cleanup job for PRs
+  cleanup:
+    name: Cleanup Test Infrastructure
+    runs-on: self-hosted
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    defaults:
+      run:
+        working-directory: romulus_elixir
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
+      
+      - name: Destroy Test Infrastructure
+        run: |
+          # Only destroy PR-specific resources
+          if virsh list --all | grep -q "pr-${{ github.event.pull_request.number }}"; then
+            ROMULUS_FORCE=true mix romulus.destroy --filter "pr-${{ github.event.pull_request.number }}"
+          fi
+
+  # Release job
+  release:
+    name: Build Release
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: [quality, test, validate-infrastructure]
+    defaults:
+      run:
+        working-directory: romulus_elixir
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+          otp-version: ${{ env.OTP_VERSION }}
+      
+      - name: Build Release
+        run: |
+          mix local.hex --force
+          mix local.rebar --force
+          mix deps.get --only prod
+          MIX_ENV=prod mix compile
+          MIX_ENV=prod mix release
+      
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            romulus_elixir/_build/prod/rel/romulus/*.tar.gz
+          generate_release_notes: true

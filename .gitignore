@@ -1,24 +1,34 @@
-# Local .terraform directories
-**/.terraform/*
+# Elixir build artifacts
+_build/
+deps/
+*.beam
+*.plt
 
-# .tfstate files
-*.tfstate
-*.tfstate.*
+# Elixir releases
+rel/
 
 # Crash log files
 crash.log
 crash.*.log
+erl_crash.dump
 
+# Environment files
+.env
+.env.local
 
-# Ignore override files as they are usually used for local dev overrides
-override.tf
-override.tf.json
-*_override.tf
-*_override.tf.json
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
-# Ignore CLI configuration files
-.terraformrc
-terraform.rc
+# Backup files
+backups/
+*.backup
 
-# Ignore lock files
-.terraform.lock.hcl 
+# Logs
+*.log
+/tmp/romulus_*.log

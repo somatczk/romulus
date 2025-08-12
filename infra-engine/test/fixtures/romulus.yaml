@@ -1,0 +1,33 @@
+cluster:
+  name: test-cluster
+  domain: test.local
+network:
+  name: test-network
+  mode: nat
+  cidr: "192.168.100.0/24"
+  dhcp: true
+  dns: true
+storage:
+  pool_name: test-pool
+  pool_path: /tmp/test-pool
+  base_image:
+    name: test-base
+    url: https://example.com/test.qcow2
+    format: qcow2
+nodes:
+  masters:
+    count: 1
+    memory: 1024
+    vcpus: 1
+    disk_size: 5368709120
+    ip_prefix: "192.168.100.10"
+  workers:
+    count: 1
+    memory: 1024
+    vcpus: 1
+    disk_size: 5368709120
+    ip_prefix: "192.168.100.20"
+ssh:
+  public_key_path: /tmp/test_key.pub
+  private_key_path: /tmp/test_key
+  user: test

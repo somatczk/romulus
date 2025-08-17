@@ -1,0 +1,327 @@
+# Monitoring Stack Extension - Observability Services
+# This extends the main docker-compose.yml with monitoring services
+# 
+# Services Included:
+# - Prometheus: Metrics collection and storage
+# - Grafana: Metrics visualization and dashboards
+# - Loki: Log aggregation and storage
+# - Promtail: Log collection agent
+# - Alertmanager: Alert routing and notifications
+# - Node Exporter: System metrics
+# - cAdvisor: Container metrics
+# - Various exporters for service-specific metrics
+#
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
+
+services:
+  # ===== METRICS COLLECTION =====
+
+  # Prometheus - Time-series database and metrics collection
+  prometheus:
+    image: prom/prometheus:v2.48.1
+    container_name: prometheus
+    restart: unless-stopped
+    networks:
+      - monitoring
+      - frontend
+      - backend
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./configs/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./configs/prometheus/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
+      - ./configs/prometheus/recording_rules.yml:/etc/prometheus/recording_rules.yml:ro
+      - ${SSD_PATH}/monitoring/prometheus:/prometheus    # Metrics storage on SSD
+    environment:
+      - DOMAIN=${DOMAIN}
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--storage.tsdb.retention.size=10GB'
+      - '--storage.tsdb.wal-compression'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+      - '--query.timeout=2m'
+      - '--query.max-concurrency=20'
+      - '--query.max-samples=50000000'
+    mem_limit: 2g
+    cpus: 2
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Grafana - Metrics visualization and dashboards
+  grafana:
+    image: grafana/grafana:10.2.3
+    container_name: grafana
+    restart: unless-stopped
+    networks:
+      - monitoring
+      - frontend
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - ${SSD_PATH}/monitoring/grafana:/var/lib/grafana           # Dashboard storage
+      - ./configs/grafana/provisioning:/etc/grafana/provisioning:ro  # Auto-provisioning
+      - ./configs/grafana/dashboards:/var/lib/grafana/dashboards:ro   # Dashboard definitions
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD}
+      - GF_SECURITY_ALLOW_SIGN_UP=false
+      - GF_SECURITY_DISABLE_GRAVATAR=true
+      - GF_ANALYTICS_REPORTING_ENABLED=false
+      - GF_ANALYTICS_CHECK_FOR_UPDATES=false
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_USERS_ALLOW_ORG_CREATE=false
+      - GF_SERVER_DOMAIN=${DOMAIN}
+      - GF_SERVER_ROOT_URL=https://monitoring.${DOMAIN}
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource,grafana-piechart-panel
+    depends_on:
+      - prometheus
+    mem_limit: 1g
+    cpus: 1
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ===== LOG COLLECTION =====
+
+  # Loki - Log aggregation and storage
+  loki:
+    image: grafana/loki:2.9.4
+    container_name: loki
+    restart: unless-stopped
+    networks:
+      - monitoring
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./configs/loki/loki.yml:/etc/loki/local-config.yaml:ro
+      - ${SSD_PATH}/monitoring/loki:/loki                        # Log storage on SSD
+    command:
+      - '-config.file=/etc/loki/local-config.yaml'
+      - '-target=all'
+    mem_limit: 1g
+    cpus: 1
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3100/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Promtail - Log collection agent
+  promtail:
+    image: grafana/promtail:2.9.4
+    container_name: promtail
+    restart: unless-stopped
+    networks:
+      - monitoring
+    volumes:
+      - ./configs/promtail/promtail.yml:/etc/promtail/config.yml:ro
+      - /var/log:/var/log:ro                                    # System logs
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro  # Container logs
+      - /var/run/docker.sock:/var/run/docker.sock:ro            # Docker API access
+    command:
+      - '-config.file=/etc/promtail/config.yml'
+    mem_limit: 256m
+    cpus: 0.5
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      - loki
+
+  # ===== SYSTEM MONITORING =====
+
+  # Node Exporter - System metrics (CPU, memory, disk, network)
+  node-exporter:
+    image: prom/node-exporter:v1.7.0
+    container_name: node-exporter
+    restart: unless-stopped
+    networks:
+      - monitoring
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+      - /run/dbus/system_bus_socket:/var/run/dbus/system_bus_socket:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)'
+      - '--collector.systemd'
+      - '--collector.processes'
+    mem_limit: 256m
+    cpus: 0.5
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9100/metrics"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # cAdvisor - Container resource usage metrics
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.48.1
+    container_name: cadvisor
+    restart: unless-stopped
+    networks:
+      - monitoring
+    ports:
+      - "8080:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /dev/disk:/dev/disk:ro
+    devices:
+      - /dev/kmsg:/dev/kmsg
+    privileged: true
+    command:
+      - '--housekeeping_interval=30s'
+      - '--max_housekeeping_interval=35s'
+      - '--event_storage_event_limit=default=0'
+      - '--event_storage_age_limit=default=0'
+      - '--disable_metrics=percpu,sched,tcp,udp,disk,diskIO,accelerator,hugetlb,referenced_memory,cpu_topology,resctrl'
+      - '--docker_only'
+    mem_limit: 512m
+    cpus: 1
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ===== ALERTING =====
+
+  # Alertmanager - Alert routing and notifications
+  alertmanager:
+    image: prom/alertmanager:v0.26.0
+    container_name: alertmanager
+    restart: unless-stopped
+    networks:
+      - monitoring
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./configs/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ${SSD_PATH}/monitoring/alertmanager:/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+      - '--web.external-url=https://alerts.${DOMAIN}'
+      - '--web.route-prefix=/'
+      - '--cluster.listen-address='
+    environment:
+      - DISCORD_WEBHOOK_URL=${DISCORD_WEBHOOK_URL}
+      - DOMAIN=${DOMAIN}
+      - SMTP_HOST=${SMTP_HOST:-smtp.gmail.com}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - SMTP_USER=${SMTP_USER:-}
+      - SMTP_PASSWORD=${SMTP_PASSWORD:-}
+    mem_limit: 256m
+    cpus: 0.5
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9093/-/healthy"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ===== SERVICE EXPORTERS =====
+
+  # MariaDB Exporter - Database metrics
+  mariadb-exporter:
+    image: prom/mysqld-exporter:v0.15.1
+    container_name: mariadb-exporter
+    restart: unless-stopped
+    networks:
+      - monitoring
+      - backend
+    ports:
+      - "9104:9104"
+    environment:
+      - DATA_SOURCE_NAME=monitoring:${MONITORING_DB_PASSWORD:-monitoring_password}@(mariadb:3306)/
+    depends_on:
+      - mariadb
+    mem_limit: 128m
+    security_opt:
+      - no-new-privileges:true
+
+  # Redis Exporter - Cache metrics
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.55.0
+    container_name: redis-exporter
+    restart: unless-stopped
+    networks:
+      - monitoring
+      - backend
+    ports:
+      - "9121:9121"
+    environment:
+      - REDIS_ADDR=redis://redis:6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    depends_on:
+      - redis
+    mem_limit: 128m
+    security_opt:
+      - no-new-privileges:true
+
+  # Blackbox Exporter - External service monitoring
+  blackbox-exporter:
+    image: prom/blackbox-exporter:v0.24.0
+    container_name: blackbox-exporter
+    restart: unless-stopped
+    networks:
+      - monitoring
+      - frontend
+    ports:
+      - "9115:9115"
+    volumes:
+      - ./configs/blackbox/blackbox.yml:/etc/blackbox_exporter/config.yml:ro
+    mem_limit: 256m
+    security_opt:
+      - no-new-privileges:true
+
+  # ===== UPTIME MONITORING =====
+
+  # Uptime Kuma - Service availability dashboard
+  uptime-kuma:
+    image: louislam/uptime-kuma:1.23.11
+    container_name: uptime-kuma
+    restart: unless-stopped
+    networks:
+      - monitoring
+      - frontend
+    ports:
+      - "3001:3001"
+    volumes:
+      - ${SSD_PATH}/monitoring/uptime-kuma:/app/data
+    environment:
+      - TZ=${TZ}
+    mem_limit: 512m
+    cpus: 1
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

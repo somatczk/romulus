@@ -1,0 +1,261 @@
+# Grafana Dashboard Provisioning Configuration
+# 
+# Purpose: Automatically load and manage dashboards when Grafana starts
+# Benefits: Consistent dashboard deployment, version control, automated setup
+# Integration: Loads dashboards from local files and manages their lifecycle
+# 
+# Dashboard Sources:
+# - Local JSON files for custom homeserver dashboards
+# - Community dashboards for standard monitoring
+# - Automatic updates and synchronization
+# 
+# Dashboard Management:
+# - Automatic loading on startup
+# - Version control via file system
+# - Centralized dashboard distribution
+
+apiVersion: 1
+
+providers:
+  # Homeserver custom dashboards
+  - name: 'homeserver-dashboards'
+    type: file
+    orgId: 1
+    folder: 'Homeserver'
+    folderUid: 'homeserver-folder'
+    
+    # Dashboard loading options
+    options:
+      path: '/var/lib/grafana/dashboards'
+      
+      # Watch for file changes and reload dashboards
+      foldersFromFilesStructure: true
+      
+      # Dashboard update settings
+      disableDeletion: false    # Allow deletion of dashboards
+      updateIntervalSeconds: 30  # Check for updates every 30 seconds
+      
+      # Permissions
+      allowUiUpdates: true      # Allow editing via UI
+      
+    # Dashboard search tags
+    searchTags:
+      - 'homeserver'
+      - 'infrastructure'
+      - 'monitoring'
+
+  # System monitoring dashboards
+  - name: 'system-dashboards'
+    type: file
+    orgId: 1
+    folder: 'System Monitoring'
+    folderUid: 'system-folder'
+    
+    options:
+      path: '/var/lib/grafana/dashboards/system'
+      foldersFromFilesStructure: false
+      disableDeletion: false
+      updateIntervalSeconds: 60
+      allowUiUpdates: true
+      
+    searchTags:
+      - 'system'
+      - 'infrastructure'
+      - 'node-exporter'
+
+  # Application monitoring dashboards
+  - name: 'application-dashboards'
+    type: file
+    orgId: 1
+    folder: 'Applications'
+    folderUid: 'apps-folder'
+    
+    options:
+      path: '/var/lib/grafana/dashboards/applications'
+      foldersFromFilesStructure: true
+      disableDeletion: false
+      updateIntervalSeconds: 60
+      allowUiUpdates: true
+      
+    searchTags:
+      - 'applications'
+      - 'services'
+      - 'plex'
+      - 'gaming'
+
+  # Container monitoring dashboards
+  - name: 'container-dashboards'
+    type: file
+    orgId: 1
+    folder: 'Containers'
+    folderUid: 'containers-folder'
+    
+    options:
+      path: '/var/lib/grafana/dashboards/containers'
+      foldersFromFilesStructure: false
+      disableDeletion: false
+      updateIntervalSeconds: 60
+      allowUiUpdates: true
+      
+    searchTags:
+      - 'containers'
+      - 'docker'
+      - 'cadvisor'
+
+  # Network and security dashboards
+  - name: 'network-security-dashboards'
+    type: file
+    orgId: 1
+    folder: 'Network & Security'
+    folderUid: 'netsec-folder'
+    
+    options:
+      path: '/var/lib/grafana/dashboards/network'
+      foldersFromFilesStructure: false
+      disableDeletion: false
+      updateIntervalSeconds: 60
+      allowUiUpdates: true
+      
+    searchTags:
+      - 'network'
+      - 'security'
+      - 'blackbox'
+      - 'connectivity'
+
+  # Log analysis dashboards
+  - name: 'logs-dashboards'
+    type: file
+    orgId: 1
+    folder: 'Logs & Events'
+    folderUid: 'logs-folder'
+    
+    options:
+      path: '/var/lib/grafana/dashboards/logs'
+      foldersFromFilesStructure: false
+      disableDeletion: false
+      updateIntervalSeconds: 60
+      allowUiUpdates: true
+      
+    searchTags:
+      - 'logs'
+      - 'events'
+      - 'loki'
+      - 'security-events'
+
+  # Business/service level dashboards
+  - name: 'business-dashboards'
+    type: file
+    orgId: 1
+    folder: 'Service Level'
+    folderUid: 'business-folder'
+    
+    options:
+      path: '/var/lib/grafana/dashboards/business'
+      foldersFromFilesStructure: false
+      disableDeletion: false
+      updateIntervalSeconds: 300  # Check every 5 minutes
+      allowUiUpdates: true
+      
+    searchTags:
+      - 'business'
+      - 'sla'
+      - 'service-level'
+      - 'overview'
+
+  # Alert and incident dashboards
+  - name: 'alerting-dashboards'
+    type: file
+    orgId: 1
+    folder: 'Alerts & Incidents'
+    folderUid: 'alerts-folder'
+    
+    options:
+      path: '/var/lib/grafana/dashboards/alerts'
+      foldersFromFilesStructure: false
+      disableDeletion: false
+      updateIntervalSeconds: 30   # More frequent for alerts
+      allowUiUpdates: true
+      
+    searchTags:
+      - 'alerts'
+      - 'incidents'
+      - 'alertmanager'
+      - 'notifications'
+
+# Expected directory structure in container:
+# /var/lib/grafana/dashboards/
+# ├── homeserver-overview.json          # Main homeserver dashboard
+# ├── system/
+# │   ├── node-exporter-full.json       # System metrics (Node Exporter)
+# │   ├── hardware-overview.json        # Hardware utilization
+# │   └── storage-overview.json         # Storage metrics
+# ├── applications/
+# │   ├── plex/
+# │   │   ├── plex-overview.json         # Plex Media Server
+# │   │   └── plex-transcoding.json     # Transcoding metrics
+# │   ├── gaming/
+# │   │   ├── teamspeak-dashboard.json   # TeamSpeak server
+# │   │   └── cs2-server.json           # Counter-Strike 2
+# │   └── downloads/
+# │       └── qbittorrent-dashboard.json # qBittorrent metrics
+# ├── containers/
+# │   ├── docker-overview.json          # Container metrics
+# │   └── cadvisor-dashboard.json       # cAdvisor metrics
+# ├── network/
+# │   ├── blackbox-overview.json        # External monitoring
+# │   ├── ssl-certificates.json         # Certificate monitoring
+# │   └── network-performance.json      # Network metrics
+# ├── logs/
+# │   ├── log-overview.json             # Log analysis
+# │   ├── security-events.json          # Security log analysis
+# │   └── application-logs.json         # Application log patterns
+# ├── business/
+# │   ├── service-sla.json              # Service level objectives
+# │   └── user-experience.json          # End-user metrics
+# └── alerts/
+#     ├── alert-overview.json           # Alert status and trends
+#     └── incident-response.json        # Incident management
+
+# Templates can be used to create consistent dashboard structures
+templates:
+  - name: 'service-template'
+    description: 'Standard template for service monitoring dashboards'
+    tags:
+      - 'template'
+      - 'service'
+    
+  - name: 'infrastructure-template'
+    description: 'Template for infrastructure component dashboards'
+    tags:
+      - 'template'
+      - 'infrastructure'
+
+# Default dashboard settings that apply to all provisioned dashboards
+defaultDashboard:
+  # Default time range
+  time:
+    from: 'now-1h'
+    to: 'now'
+  
+  # Default refresh interval
+  refresh: '30s'
+  
+  # Default timezone
+  timezone: 'browser'
+  
+  # Default graph settings
+  graphTooltip: 1  # Shared crosshair
+  
+  # Default tags for all dashboards
+  tags:
+    - 'homeserver'
+    - 'provisioned'
+  
+  # Default variables (can be overridden per dashboard)
+  templating:
+    - name: 'instance'
+      type: 'query'
+      datasource: 'Prometheus'
+      query: 'label_values(up, instance)'
+      refresh: 2
+      sort: 1

@@ -1,0 +1,378 @@
+name: Bootstrap Self-Hosted Runner
+
+# This workflow runs on GitHub-provided runners to bootstrap a self-hosted runner
+# when none are available. It then triggers the main deployment workflow.
+#
+# Trigger conditions:
+# 1. Manual dispatch when runner is unavailable
+# 2. Scheduled check for runner availability
+# 3. Failure fallback from main deploy workflow
+#
+# Security: Actions pinned to commit SHA, least privilege permissions
+# Performance: SSH connection caching, parallel operations
+
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason for bootstrap'
+        required: false
+        default: 'Manual bootstrap request'
+        type: string
+      
+      deploy_after_bootstrap:
+        description: 'Deploy infrastructure after runner is ready'
+        required: false
+        default: true
+        type: boolean
+  
+  schedule:
+    # Check runner availability daily at 6 AM UTC
+    - cron: '0 6 * * *'
+  
+  workflow_call:
+    inputs:
+      deploy_after_bootstrap:
+        required: false
+        default: true
+        type: boolean
+
+# Concurrency control
+concurrency:
+  group: bootstrap-runner
+  cancel-in-progress: false  # Don't cancel bootstrap in progress
+
+# Default permissions
+permissions:
+  contents: read
+  actions: read
+
+env:
+  RUNNER_NAME: homeserver-runner-bootstrap
+  RUNNER_LABELS: self-hosted,Linux,X64,homeserver,docker,bootstrap
+
+jobs:
+  check-runner:
+    name: Check Self-Hosted Runner
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: read
+      contents: read
+    
+    outputs:
+      runner-available: ${{ steps.check.outputs.available }}
+      runner-count: ${{ steps.check.outputs.count }}
+      
+    steps:
+    - name: Check Runner Status
+      id: check
+      run: |
+        echo "Checking for available self-hosted runners..."
+        
+        # Use GitHub API to check runner status
+        RUNNERS_RESPONSE=$(curl -s \
+          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          -H "Accept: application/vnd.github.v3+json" \
+          "https://api.github.com/repos/${{ github.repository }}/actions/runners")
+        
+        echo "API Response: $RUNNERS_RESPONSE"
+        
+        # Count online self-hosted runners with homeserver label
+        RUNNER_COUNT=$(echo "$RUNNERS_RESPONSE" | jq '.runners | map(select(.status == "online" and (.labels | map(.name) | contains(["homeserver"])))) | length')
+        
+        echo "Online homeserver runners: $RUNNER_COUNT"
+        echo "count=$RUNNER_COUNT" >> $GITHUB_OUTPUT
+        
+        if [[ "$RUNNER_COUNT" -gt 0 ]]; then
+          echo "available=true" >> $GITHUB_OUTPUT
+          echo "Self-hosted runners are available"
+        else
+          echo "available=false" >> $GITHUB_OUTPUT
+          echo "No self-hosted runners available"
+        fi
+
+  bootstrap-runner:
+    name: Deploy Self-Hosted Runner
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    needs: check-runner
+    if: needs.check-runner.outputs.runner-available == 'false'
+    
+    outputs:
+      runner-deployed: ${{ steps.deploy.outputs.deployed }}
+      server-ip: ${{ steps.deploy.outputs.server_ip }}
+      
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      with:
+        fetch-depth: 0
+        persist-credentials: false
+    
+    - name: Setup SSH Connection
+      run: |
+        echo "Setting up SSH connection to homeserver..."
+        
+        # Setup SSH key (assuming it's stored as a secret)
+        mkdir -p ~/.ssh
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        
+        # Add server to known hosts
+        ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+        
+        echo "SSH_HOST=${{ secrets.SERVER_HOST }}" >> $GITHUB_ENV
+        echo "SSH_USER=${{ secrets.SSH_USER || 'root' }}" >> $GITHUB_ENV
+    
+    - name: Generate Runner Token
+      id: token
+      run: |
+        echo "Generating runner registration token..."
+        
+        TOKEN_RESPONSE=$(curl -s -X POST \
+          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          -H "Accept: application/vnd.github.v3+json" \
+          "https://api.github.com/repos/${{ github.repository }}/actions/runners/registration-token")
+        
+        RUNNER_TOKEN=$(echo "$TOKEN_RESPONSE" | jq -r '.token')
+        
+        if [[ "$RUNNER_TOKEN" == "null" || -z "$RUNNER_TOKEN" ]]; then
+          echo "❌ Failed to generate runner token"
+          exit 1
+        fi
+        
+        echo "Runner token generated"
+        echo "RUNNER_TOKEN=$RUNNER_TOKEN" >> $GITHUB_ENV
+    
+    - name: Deploy Runner to Server
+      id: deploy
+      run: |
+        echo "Deploying self-hosted runner to homeserver..."
+        
+        # Create deployment script
+        cat > deploy-runner.sh << 'EOF'
+        #!/bin/bash
+        set -euo pipefail
+        
+        PROJECT_DIR="${PROJECT_DIR:-/opt/homeserver}"
+        
+        echo "=== GitHub Runner Bootstrap Deployment ==="
+        echo "Deploying to: $PROJECT_DIR"
+        
+        # Ensure project directory exists
+        mkdir -p "$PROJECT_DIR"
+        cd "$PROJECT_DIR"
+        
+        # Check if repository exists, clone or update
+        if [[ -d ".git" ]]; then
+          echo "Updating existing repository..."
+          git fetch origin
+          git reset --hard origin/main
+        else
+          echo "Cloning repository..."
+          git clone https://github.com/${{ github.repository }}.git .
+        fi
+        
+        # Ensure .env file exists
+        if [[ ! -f ".env" ]]; then
+          echo "Creating .env from example..."
+          cp .env.example .env
+          echo "⚠️  Please configure .env file with proper values"
+        fi
+        
+        # Set runner configuration in .env
+        echo "Configuring runner environment..."
+        
+        # Update or add runner configuration
+        sed -i "s|GITHUB_REPOSITORY=.*|GITHUB_REPOSITORY=${{ github.repository }}|g" .env
+        sed -i "s|GITHUB_RUNNER_TOKEN=.*|GITHUB_RUNNER_TOKEN=$RUNNER_TOKEN|g" .env
+        sed -i "s|RUNNER_NAME=.*|RUNNER_NAME=$RUNNER_NAME|g" .env
+        sed -i "s|PROJECT_PATH=.*|PROJECT_PATH=$PROJECT_DIR|g" .env
+        
+        # Ensure required directories exist
+        source .env
+        mkdir -p "${SSD_PATH}/runner" "${SSD_PATH}/runner/work" "${SSD_PATH}/runner/cache"
+        
+        # Deploy the runner
+        echo "Starting GitHub runner deployment..."
+        
+        # Stop existing runner if running
+        docker-compose -f docker-compose.runner.yml down 2>/dev/null || true
+        
+        # Pull latest runner image
+        docker-compose -f docker-compose.runner.yml pull
+        
+        # Start the runner
+        docker-compose -f docker-compose.runner.yml up -d github-runner runner-cache
+        
+        # Wait for runner registration
+        echo "Waiting for runner registration..."
+        sleep 30
+        
+        # Check if runner registered successfully
+        if docker-compose -f docker-compose.runner.yml logs github-runner | grep -q "Listening for Jobs\|Runner successfully started"; then
+          echo "GitHub runner deployed and registered successfully"
+          exit 0
+        else
+          echo "GitHub runner registration may have failed"
+          docker-compose -f docker-compose.runner.yml logs github-runner
+          exit 1
+        fi
+        EOF
+        
+        # Make script executable and copy to server
+        chmod +x deploy-runner.sh
+        
+        # Copy script and execute on server
+        scp deploy-runner.sh $SSH_USER@$SSH_HOST:/tmp/deploy-runner.sh
+        
+        # Execute deployment on server
+        ssh $SSH_USER@$SSH_HOST "
+          export RUNNER_TOKEN='$RUNNER_TOKEN'
+          export RUNNER_NAME='$RUNNER_NAME'
+          bash /tmp/deploy-runner.sh
+        "
+        
+        echo "deployed=true" >> $GITHUB_OUTPUT
+        echo "server_ip=$SSH_HOST" >> $GITHUB_OUTPUT
+        echo "Runner deployment completed"
+    
+    - name: Verify Runner Registration
+      run: |
+        echo "Verifying runner registration..."
+        sleep 30
+        
+        # Check if runner appears in GitHub
+        RUNNERS_RESPONSE=$(curl -s \
+          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+          -H "Accept: application/vnd.github.v3+json" \
+          "https://api.github.com/repos/${{ github.repository }}/actions/runners")
+        
+        NEW_RUNNER_COUNT=$(echo "$RUNNERS_RESPONSE" | jq '.runners | map(select(.status == "online" and (.labels | map(.name) | contains(["homeserver"])))) | length')
+        
+        if [[ "$NEW_RUNNER_COUNT" -gt 0 ]]; then
+          echo "Self-hosted runner is now available and registered"
+          echo "Runner count: $NEW_RUNNER_COUNT"
+        else
+          echo "Runner registration verification failed"
+          echo "Available runners:"
+          echo "$RUNNERS_RESPONSE" | jq '.runners[] | {name: .name, status: .status, labels: [.labels[].name]}'
+          exit 1
+        fi
+
+  trigger-deployment:
+    name: Trigger Main Deployment
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      actions: write
+      contents: read
+    needs: [check-runner, bootstrap-runner]
+    if: |
+      always() && 
+      (needs.check-runner.outputs.runner-available == 'true' || 
+       needs.bootstrap-runner.outputs.runner-deployed == 'true') &&
+      (github.event.inputs.deploy_after_bootstrap != 'false' || 
+       inputs.deploy_after_bootstrap != false)
+    
+    steps:
+    - name: Wait for Runner Readiness
+      if: needs.bootstrap-runner.outputs.runner-deployed == 'true'
+      run: |
+        echo "Waiting for bootstrapped runner to be fully ready..."
+        sleep 60  # Give the runner time to fully initialize
+    
+    - name: Trigger Main Deployment
+      uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea # v7.0.1
+      with:
+        script: |
+          console.log('Triggering main deployment workflow...');
+          
+          const result = await github.rest.actions.createWorkflowDispatch({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            workflow_id: 'deploy.yml',
+            ref: 'main',
+            inputs: {
+              environment: 'production',
+              force_deploy: 'false'
+            }
+          });
+          
+          console.log('Main deployment workflow triggered');
+          console.log('Workflow dispatch result:', result.status);
+
+  notify-completion:
+    name: Send Completion Notification
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    needs: [check-runner, bootstrap-runner, trigger-deployment]
+    if: always()
+    
+    steps:
+    - name: Prepare Notification
+      id: notification
+      run: |
+        if [[ "${{ needs.check-runner.outputs.runner-available }}" == "true" ]]; then
+          echo "status=existing" >> $GITHUB_OUTPUT
+          echo "message=Self-hosted runner was already available" >> $GITHUB_OUTPUT
+          echo "color=3066993" >> $GITHUB_OUTPUT  # Green
+        elif [[ "${{ needs.bootstrap-runner.outputs.runner-deployed }}" == "true" ]]; then
+          echo "status=deployed" >> $GITHUB_OUTPUT
+          echo "message=Self-hosted runner successfully bootstrapped and deployed" >> $GITHUB_OUTPUT
+          echo "color=3447003" >> $GITHUB_OUTPUT  # Blue
+        else
+          echo "status=failed" >> $GITHUB_OUTPUT
+          echo "message=Failed to bootstrap self-hosted runner" >> $GITHUB_OUTPUT
+          echo "color=15158332" >> $GITHUB_OUTPUT  # Red
+        fi
+        
+        echo "runner_count=${{ needs.check-runner.outputs.runner-count }}" >> $GITHUB_OUTPUT
+        echo "commit_sha=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
+    
+    - name: Send Discord Notification
+      if: env.DISCORD_WEBHOOK_URL != ''
+      run: |
+        TRIGGER_REASON="${{ github.event.inputs.reason || 'Scheduled check' }}"
+        
+        curl -X POST "${{ env.DISCORD_WEBHOOK_URL }}" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "embeds": [{
+              "title": "GitHub Runner Bootstrap",
+              "description": "${{ steps.notification.outputs.message }}",
+              "color": ${{ steps.notification.outputs.color }},
+              "fields": [
+                {
+                  "name": "Status",
+                  "value": "${{ steps.notification.outputs.status }}",
+                  "inline": true
+                },
+                {
+                  "name": "Runner Count",
+                  "value": "${{ steps.notification.outputs.runner_count }}",
+                  "inline": true
+                },
+                {
+                  "name": "Trigger",
+                  "value": "'$TRIGGER_REASON'",
+                  "inline": true
+                },
+                {
+                  "name": "Repository",
+                  "value": "${{ github.repository }}",
+                  "inline": false
+                }
+              ],
+              "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%S.000Z)'"
+            }]
+          }' || echo "Discord notification failed"
+      env:
+        DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+
+concurrency:
+  group: bootstrap-runner
+  cancel-in-progress: true

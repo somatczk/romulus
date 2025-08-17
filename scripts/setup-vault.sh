@@ -235,7 +235,8 @@ populate_initial_secrets() {
         SSD_PATH="/mnt/ssd" \
         HDD_PATH="/mnt/hdd" \
         RUNNER_NAME="homeserver-runner" \
-        PROJECT_PATH="/opt/homeserver"
+        PROJECT_PATH="/opt/homeserver" \
+        NTP_SERVER="time.cloudflare.com:123"
     
     vault kv put kv/homeserver/cloudflare \
         api_token="your_cloudflare_api_token_here" \
@@ -256,7 +257,13 @@ populate_initial_secrets() {
     vault kv put kv/homeserver/authelia \
         jwt_secret="CHANGE_ME_64_CHAR_JWT_SECRET_HERE" \
         session_secret="CHANGE_ME_64_CHAR_SESSION_SECRET_HERE" \
-        storage_key="CHANGE_ME_32_CHAR_ENCRYPTION_KEY"
+        storage_key="CHANGE_ME_32_CHAR_ENCRYPTION_KEY" \
+        admin_password_hash="CHANGE_ME_ADMIN_PASSWORD_HASH" \
+        admin_email="admin@yourdomain.com" \
+        monitoring_password_hash="CHANGE_ME_MONITORING_PASSWORD_HASH" \
+        monitoring_email="monitoring@yourdomain.com" \
+        user1_password_hash="CHANGE_ME_USER1_PASSWORD_HASH" \
+        user1_email="user@yourdomain.com"
     
     vault kv put kv/homeserver/gaming \
         cs2_server_name="Your CS2 Server" \

@@ -14,11 +14,11 @@
 # - monitoring: Read-only access to monitoring systems
 
 users:
-  # Default admin user (change password and email)
+  # Default admin user
   admin:
     displayname: "Administrator"
-    password: "$argon2id$v=19$m=65536,t=3,p=4$BpLnfgDsc2WD8F2q$o/vzA4myCqZZ36bUGsDY//8mKUYNZZaR0t1MF//X6yA"  # Change this!
-    email: admin@homeserver.local
+    password: "${AUTHELIA_ADMIN_PASSWORD_HASH}"
+    email: "${AUTHELIA_ADMIN_EMAIL:-admin@homeserver.local}"
     groups:
       - admins
       - users
@@ -26,16 +26,16 @@ users:
   # Monitoring service account for automated tasks
   monitoring:
     displayname: "Monitoring Service"
-    password: "$argon2id$v=19$m=65536,t=3,p=4$c8/S3V3JSaD5Z9WD$RHOFcePSFrCwK12TG4RFgDaAaYzQHlxrGzK7A8xY5Ks"  # Change this!
-    email: monitoring@homeserver.local
+    password: "${AUTHELIA_MONITORING_PASSWORD_HASH}"
+    email: "${AUTHELIA_MONITORING_EMAIL:-monitoring@homeserver.local}"
     groups:
       - monitoring
 
-  # Example regular user (customize as needed)
+  # Regular user (customize as needed)
   user1:
     displayname: "Home User"
-    password: "$argon2id$v=19$m=65536,t=3,p=4$8sKYVEG0i5lO5jX/$YIhEzWCl9E9D6Z1qG5Y3Y2Q2TbHvHzxJvY0jFc9Z2Lc"  # Change this!
-    email: user@homeserver.local
+    password: "${AUTHELIA_USER1_PASSWORD_HASH}"
+    email: "${AUTHELIA_USER1_EMAIL:-user@homeserver.local}"
     groups:
       - users
 

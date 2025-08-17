@@ -36,6 +36,17 @@ AUTHELIA_JWT_SECRET={{ with secret "kv/homeserver/authelia" }}{{ .Data.data.jwt_
 AUTHELIA_SESSION_SECRET={{ with secret "kv/homeserver/authelia" }}{{ .Data.data.session_secret }}{{ end }}
 AUTHELIA_STORAGE_ENCRYPTION_KEY={{ with secret "kv/homeserver/authelia" }}{{ .Data.data.storage_key }}{{ end }}
 
+# Authelia User Credentials
+AUTHELIA_ADMIN_PASSWORD_HASH={{ with secret "kv/homeserver/authelia" }}{{ .Data.data.admin_password_hash }}{{ end }}
+AUTHELIA_ADMIN_EMAIL={{ with secret "kv/homeserver/authelia" }}{{ .Data.data.admin_email }}{{ end }}
+AUTHELIA_MONITORING_PASSWORD_HASH={{ with secret "kv/homeserver/authelia" }}{{ .Data.data.monitoring_password_hash }}{{ end }}
+AUTHELIA_MONITORING_EMAIL={{ with secret "kv/homeserver/authelia" }}{{ .Data.data.monitoring_email }}{{ end }}
+AUTHELIA_USER1_PASSWORD_HASH={{ with secret "kv/homeserver/authelia" }}{{ .Data.data.user1_password_hash }}{{ end }}
+AUTHELIA_USER1_EMAIL={{ with secret "kv/homeserver/authelia" }}{{ .Data.data.user1_email }}{{ end }}
+
+# NTP Server
+NTP_SERVER={{ with secret "kv/homeserver/config" }}{{ .Data.data.NTP_SERVER }}{{ end }}
+
 # Gaming Services
 CS2_SERVER_NAME={{ with secret "kv/homeserver/gaming" }}{{ .Data.data.cs2_server_name }}{{ end }}
 CS2_RCON_PASSWORD={{ with secret "kv/homeserver/gaming" }}{{ .Data.data.cs2_rcon_password }}{{ end }}

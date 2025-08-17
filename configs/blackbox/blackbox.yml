@@ -1,0 +1,338 @@
+# Blackbox Exporter Configuration - External Service Monitoring
+# 
+# Purpose: Define probe modules for monitoring external service availability
+# Integration: Works with Prometheus to perform health checks on web services and network endpoints
+# Modules: HTTP/HTTPS, TCP, DNS, and ICMP probes for comprehensive monitoring
+# 
+# Probe Types:
+# - http_2xx: Standard HTTP/HTTPS checks expecting 2xx status codes
+# - http_post_2xx: HTTP POST requests with payload
+# - tcp_connect: TCP port connectivity checks
+# - dns: DNS resolution validation
+# - icmp: Network connectivity ping tests
+#
+# Usage in Prometheus:
+# - blackbox_exporter:9115/probe?module=http_2xx&target=https://example.com
+
+modules:
+  # ===== HTTP/HTTPS PROBES =====
+  
+  # Standard HTTP probe expecting 2xx response
+  http_2xx:
+    prober: http
+    timeout: 10s
+    http:
+      # Allow HTTP redirects (up to 3)
+      follow_redirects: true
+      max_redirects: 3
+      
+      # Valid HTTP status codes
+      valid_status_codes: [200, 201, 202, 204, 301, 302, 307, 308]
+      
+      # HTTP method and headers
+      method: GET
+      headers:
+        User-Agent: "Blackbox-Exporter/1.0 (Homeserver-Monitor)"
+        Accept: "*/*"
+        Cache-Control: "no-cache"
+      
+      # TLS configuration
+      tls_config:
+        insecure_skip_verify: false  # Verify SSL certificates
+        ca_file: ""                  # Use system CA bundle
+        cert_file: ""
+        key_file: ""
+        server_name: ""
+      
+      # IP protocol preference
+      preferred_ip_protocol: "ip4"
+      ip_protocol_fallback: true
+      
+      # Request body (if needed)
+      body: ""
+      
+      # Compression support
+      compression: ""
+
+  # HTTP probe for authentication-protected endpoints
+  http_auth_2xx:
+    prober: http
+    timeout: 15s
+    http:
+      follow_redirects: true
+      max_redirects: 5
+      valid_status_codes: [200, 401, 403]  # 401/403 are OK for auth-protected services
+      method: GET
+      headers:
+        User-Agent: "Blackbox-Exporter/1.0 (Auth-Check)"
+        Accept: "application/json, text/html"
+      tls_config:
+        insecure_skip_verify: false
+      preferred_ip_protocol: "ip4"
+
+  # HTTP POST probe for API endpoints
+  http_post_2xx:
+    prober: http
+    timeout: 10s
+    http:
+      method: POST
+      headers:
+        Content-Type: "application/json"
+        User-Agent: "Blackbox-Exporter/1.0 (API-Check)"
+      body: '{"health": "check"}'
+      valid_status_codes: [200, 201, 400, 405]  # 400/405 OK if endpoint doesn't accept POST
+      tls_config:
+        insecure_skip_verify: false
+      preferred_ip_protocol: "ip4"
+
+  # HTTP probe with specific status code expectations
+  http_401:
+    prober: http
+    timeout: 10s
+    http:
+      method: GET
+      valid_status_codes: [401]  # Expect authentication required
+      headers:
+        User-Agent: "Blackbox-Exporter/1.0 (Auth-Endpoint-Check)"
+      tls_config:
+        insecure_skip_verify: false
+      preferred_ip_protocol: "ip4"
+
+  # ===== TCP PROBES =====
+  
+  # Standard TCP connectivity probe
+  tcp_connect:
+    prober: tcp
+    timeout: 10s
+    tcp:
+      preferred_ip_protocol: "ip4"
+      ip_protocol_fallback: true
+      source_ip_address: ""
+      query_response: []
+
+  # SSH service probe
+  ssh_banner:
+    prober: tcp
+    timeout: 10s
+    tcp:
+      preferred_ip_protocol: "ip4"
+      query_response:
+        - expect: "SSH-2.0-"
+        - send: ""
+        - expect: ""
+
+  # MySQL/MariaDB probe
+  mysql_connect:
+    prober: tcp
+    timeout: 10s
+    tcp:
+      preferred_ip_protocol: "ip4"
+      query_response:
+        - expect: "mysql_native_password"
+
+  # Redis probe
+  redis_connect:
+    prober: tcp
+    timeout: 10s
+    tcp:
+      preferred_ip_protocol: "ip4"
+      query_response:
+        - send: "*1\r\n$4\r\nping\r\n"
+        - expect: "+PONG"
+
+  # ===== DNS PROBES =====
+  
+  # DNS A record resolution
+  dns_a:
+    prober: dns
+    timeout: 10s
+    dns:
+      query_name: "example.com"
+      query_type: "A"
+      preferred_ip_protocol: "ip4"
+      ip_protocol_fallback: true
+      recursion_desired: true
+      validate_answer_rrs:
+        fail_if_matches_regexp: []
+        fail_if_not_matches_regexp: []
+
+  # DNS AAAA record resolution (IPv6)
+  dns_aaaa:
+    prober: dns
+    timeout: 10s
+    dns:
+      query_name: "example.com"
+      query_type: "AAAA"
+      preferred_ip_protocol: "ip6"
+      ip_protocol_fallback: true
+      recursion_desired: true
+
+  # DNS MX record resolution
+  dns_mx:
+    prober: dns
+    timeout: 10s
+    dns:
+      query_name: "example.com"
+      query_type: "MX"
+      preferred_ip_protocol: "ip4"
+      recursion_desired: true
+
+  # DNS TXT record resolution
+  dns_txt:
+    prober: dns
+    timeout: 10s
+    dns:
+      query_name: "example.com"
+      query_type: "TXT"
+      preferred_ip_protocol: "ip4"
+      recursion_desired: true
+
+  # ===== ICMP PROBES =====
+  
+  # Standard ping probe
+  icmp:
+    prober: icmp
+    timeout: 10s
+    icmp:
+      preferred_ip_protocol: "ip4"
+      ip_protocol_fallback: true
+      source_ip_address: ""
+      payload_size: 64
+      dont_fragment: false
+
+  # IPv6 ping probe
+  icmp_ipv6:
+    prober: icmp
+    timeout: 10s
+    icmp:
+      preferred_ip_protocol: "ip6"
+      payload_size: 64
+
+  # ===== CUSTOM PROBES FOR HOMESERVER SERVICES =====
+  
+  # Plex Media Server health check
+  plex_health:
+    prober: http
+    timeout: 15s
+    http:
+      method: GET
+      valid_status_codes: [200, 401]  # 401 is OK for Plex without auth
+      headers:
+        User-Agent: "Blackbox-Exporter/1.0 (Plex-Health-Check)"
+        Accept: "application/json"
+        X-Plex-Client-Identifier: "blackbox-monitor"
+      tls_config:
+        insecure_skip_verify: false
+      preferred_ip_protocol: "ip4"
+      body: ""
+
+  # qBittorrent WebUI health check
+  qbittorrent_health:
+    prober: http
+    timeout: 15s
+    http:
+      method: GET
+      valid_status_codes: [200, 401, 403]  # Auth required is OK
+      headers:
+        User-Agent: "Blackbox-Exporter/1.0 (qBittorrent-Health-Check)"
+        Accept: "text/html,application/json"
+      tls_config:
+        insecure_skip_verify: false
+      preferred_ip_protocol: "ip4"
+
+  # Grafana health check
+  grafana_health:
+    prober: http
+    timeout: 10s
+    http:
+      method: GET
+      valid_status_codes: [200]
+      headers:
+        User-Agent: "Blackbox-Exporter/1.0 (Grafana-Health-Check)"
+        Accept: "application/json"
+      tls_config:
+        insecure_skip_verify: false
+      preferred_ip_protocol: "ip4"
+
+  # TeamSpeak 3 server query port check
+  teamspeak_query:
+    prober: tcp
+    timeout: 10s
+    tcp:
+      preferred_ip_protocol: "ip4"
+      query_response:
+        - send: "version\n"
+        - expect: "version="
+
+  # Counter-Strike 2 server check
+  cs2_server:
+    prober: tcp
+    timeout: 10s
+    tcp:
+      preferred_ip_protocol: "ip4"
+      ip_protocol_fallback: true
+
+  # Generic game server UDP probe
+  game_server_udp:
+    prober: tcp  # Note: Blackbox doesn't support UDP probes natively
+    timeout: 5s
+    tcp:
+      preferred_ip_protocol: "ip4"
+
+  # ===== TLS/SSL CERTIFICATE PROBES =====
+  
+  # TLS certificate expiration check
+  tls_connect:
+    prober: tcp
+    timeout: 10s
+    tcp:
+      preferred_ip_protocol: "ip4"
+      tls: true
+      tls_config:
+        insecure_skip_verify: false
+        ca_file: ""
+        cert_file: ""
+        key_file: ""
+        server_name: ""
+
+  # HTTPS with detailed TLS validation
+  https_tls_verify:
+    prober: http
+    timeout: 15s
+    http:
+      method: GET
+      valid_status_codes: [200, 301, 302, 401, 403]
+      headers:
+        User-Agent: "Blackbox-Exporter/1.0 (TLS-Check)"
+      tls_config:
+        insecure_skip_verify: false
+        ca_file: ""
+        cert_file: ""
+        key_file: ""
+        server_name: ""
+        # Minimum TLS version
+        min_version: "TLS12"
+        max_version: "TLS13"
+      preferred_ip_protocol: "ip4"
+      follow_redirects: true
+      max_redirects: 3
+
+  # ===== PROMETHEUS METRICS ENDPOINTS =====
+  
+  # Prometheus metrics endpoint check
+  prometheus_metrics:
+    prober: http
+    timeout: 10s
+    http:
+      method: GET
+      valid_status_codes: [200]
+      headers:
+        User-Agent: "Blackbox-Exporter/1.0 (Metrics-Check)"
+        Accept: "text/plain"
+      tls_config:
+        insecure_skip_verify: false
+      preferred_ip_protocol: "ip4"
+      body: ""
+
+# Global configuration
+timeout: 30s

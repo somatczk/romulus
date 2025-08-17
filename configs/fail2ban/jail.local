@@ -1,0 +1,139 @@
+# Fail2ban Configuration - Intrusion Prevention
+# 
+# Purpose: Monitor logs for malicious activity and ban offending IP addresses
+# Integration: Works with Docker logs, system logs, and application logs
+# Actions: IP banning via iptables, notification via email/Discord
+#
+# Monitoring Sources:
+# - SSH authentication attempts
+# - Caddy HTTP authentication failures
+# - Authelia login failures
+# - Application-specific security events
+# - Docker container security violations
+
+[DEFAULT]
+# Ban time progression: first offense 10min, repeat offenders get longer bans
+bantime = 10m
+bantime.increment = true
+bantime.rndtime = 5m
+bantime.maxtime = 24h
+bantime.factor = 2
+bantime.formula = ban.Time * (1<<(ban.Count if ban.Count<20 else 20)) * banFactor
+
+# How long to look back for repeated offenses
+findtime = 10m
+
+# Maximum retries before ban
+maxretry = 3
+
+# Backend for log processing
+backend = auto
+
+# Enable ban for private IP addresses (set to false in production DMZ)
+ignoreip = 127.0.0.1/8 ::1 10.0.0.0/8 192.168.0.0/16 172.16.0.0/12
+
+# Default action: ban and send notification
+action = %(action_mwl)s
+         discord-notify
+
+# Log level
+loglevel = INFO
+logtarget = /var/log/fail2ban.log
+
+# Database for persistent ban tracking
+dbfile = /var/lib/fail2ban/fail2ban.sqlite3
+dbpurgeage = 1d
+
+[sshd]
+enabled = true
+port = ssh
+filter = sshd
+logpath = /var/log/auth.log
+maxretry = 3
+bantime = 1h
+findtime = 10m
+
+
+# Caddy HTTP Authentication Failures
+[caddy-auth]
+enabled = true
+port = http,https
+filter = caddy-auth
+logpath = /var/log/caddy/access.log
+maxretry = 5
+bantime = 30m
+findtime = 10m
+
+# Caddy Rate Limiting Violations
+[caddy-rate-limit]
+enabled = true
+port = http,https
+filter = caddy-rate-limit
+logpath = /var/log/caddy/access.log
+maxretry = 20
+bantime = 1h
+findtime = 1m
+
+
+# Authelia Authentication Failures
+[authelia]
+enabled = true
+port = http,https
+filter = authelia
+logpath = /var/lib/docker/containers/*/*.log
+maxretry = 3
+bantime = 1h
+findtime = 10m
+
+
+# Plex Media Server
+[plex]
+enabled = true
+port = 32400
+filter = plex
+logpath = /mnt/ssd/config/plex/Library/Application Support/Plex Media Server/Logs/Plex Media Server.log
+maxretry = 10
+bantime = 2h
+findtime = 10m
+
+# qBittorrent WebUI
+[qbittorrent]
+enabled = true
+port = 8080
+filter = qbittorrent
+logpath = /var/lib/docker/containers/*qbittorrent*/*.log
+maxretry = 5
+bantime = 30m
+findtime = 5m
+
+# Grafana Dashboard
+[grafana]
+enabled = true
+port = 3000
+filter = grafana
+logpath = /var/lib/docker/containers/*grafana*/*.log
+maxretry = 5
+bantime = 1h
+findtime = 10m
+
+
+# Docker Container Exploitation Attempts
+[docker-exploit]
+enabled = true
+port = all
+filter = docker-exploit
+logpath = /var/lib/docker/containers/*/*.log
+maxretry = 1
+bantime = 24h
+findtime = 1h
+
+
+# Kernel Exploitation Attempts
+[kernel-exploit]
+enabled = true
+port = all
+filter = kernel-exploit
+logpath = /var/log/kern.log
+maxretry = 1
+bantime = 24h
+findtime = 1h

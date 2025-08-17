@@ -1,0 +1,221 @@
+# Authelia Configuration - Single Sign-On and 2FA Authentication
+# 
+# Purpose: Provides centralized authentication with 2FA for homeserver services
+# Features: TOTP 2FA, session management, access control policies
+# Integration: Forward auth with Caddy reverse proxy
+# Security: Secure session handling, brute force protection, policy enforcement
+#
+# Protected Services:
+# - Administrative interfaces (Grafana, Prometheus, etc.)
+# - Sensitive configuration panels
+# - API endpoints requiring authentication
+#
+# Authentication Methods:
+# - Username/password with bcrypt hashing
+# - Time-based OTP (TOTP) second factor
+# - Session-based authentication with secure cookies
+
+server:
+  host: 0.0.0.0
+  port: 9091
+  path: ""
+  enable_pprof: false
+  enable_expvars: false
+
+log:
+  level: info
+  format: text
+  file_path: ""
+  keep_stdout: true
+
+jwt_secret: ${AUTHELIA_JWT_SECRET}
+
+default_redirection_url: https://monitoring.${DOMAIN}
+
+totp:
+  issuer: homeserver.${DOMAIN}
+  algorithm: sha1
+  digits: 6
+  period: 30
+  skew: 1
+
+# webauthn:
+#   timeout: 60s
+#   display_name: Homeserver
+#   attestation_conveyance_preference: indirect
+#   user_verification: preferred
+
+ntp:
+  address: "time.cloudflare.com:123"
+  version: 4
+  max_desync: 3s
+  disable_startup_check: false
+  disable_failure: false
+
+authentication_backend:
+  password_reset:
+    disable: false
+  refresh_interval: 5m
+  
+  file:
+    path: /config/users_database.yml
+    watch: false
+    search:
+      email: false
+      case_insensitive: false
+    password:
+      algorithm: argon2id
+      iterations: 1
+      salt_length: 16
+      parallelism: 8
+      memory: 64
+
+access_control:
+  default_policy: deny
+  networks:
+    - name: internal
+      networks:
+        - 10.0.0.0/8
+        - 172.16.0.0/12
+        - 192.168.0.0/16
+  
+  rules:
+    # Public access - no authentication required
+    - domain: "monitoring.${DOMAIN}"
+      policy: bypass
+      resources:
+        - "^/api/health$"
+        - "^/public/.*$"
+    
+    # Admin-only access - require 2FA
+    - domain:
+        - "metrics.${DOMAIN}"
+        - "admin.${DOMAIN}"
+      policy: two_factor
+      subject:
+        - "group:admins"
+    
+    # Standard user access with 2FA
+    - domain:
+        - "monitoring.${DOMAIN}"
+      policy: two_factor
+      resources:
+        - "^/admin/.*$"
+        - "^/api/admin/.*$"
+    
+    # API access with authentication
+    - domain: "api.${DOMAIN}"
+      policy: one_factor
+      methods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+    
+    # Status page - one factor authentication
+    - domain: "status.${DOMAIN}"
+      policy: one_factor
+    
+    # Media services - bypass (handled by service-level auth)
+    - domain:
+        - "plex.${DOMAIN}"
+        - "torrents.${DOMAIN}"
+      policy: bypass
+    
+    # Gaming services - bypass (have own authentication)
+    - domain_regex: "^(ts|teamspeak|cs2|game)\\..*$"
+      policy: bypass
+
+session:
+  name: authelia_session
+  secret: ${AUTHELIA_SESSION_SECRET}
+  expiration: 1h
+  inactivity: 5m
+  remember_me_duration: 1M
+  
+  cookies:
+    - domain: ${DOMAIN}
+      authelia_url: https://auth.${DOMAIN}
+      default_redirection_url: https://monitoring.${DOMAIN}
+      name: authelia_session
+      same_site: lax
+      inactivity: 5m
+      expiration: 1h
+      remember_me_duration: 1M
+
+  redis:
+    host: redis
+    port: 6379
+    password: ${REDIS_PASSWORD}
+    database_index: 1
+    maximum_active_connections: 10
+    minimum_idle_connections: 0
+
+regulation:
+  max_retries: 3
+  find_time: 2m
+  ban_time: 5m
+
+storage:
+  encryption_key: ${AUTHELIA_STORAGE_ENCRYPTION_KEY}
+  
+  local:
+    path: /config/db.sqlite3
+
+# Alternative: MySQL/MariaDB storage
+# storage:
+#   mysql:
+#     host: mariadb
+#     port: 3306
+#     database: authelia
+#     username: authelia
+#     password: ${AUTHELIA_DB_PASSWORD}
+
+notifier:
+  disable_startup_check: false
+  
+  # File-based notifications for development/testing
+  filesystem:
+    filename: /config/notification.txt
+
+  # Email configuration (uncomment and configure for production)
+  # smtp:
+  #   username: authelia@${DOMAIN}
+  #   password: ${SMTP_PASSWORD}
+  #   host: smtp.gmail.com
+  #   port: 587
+  #   sender: authelia@${DOMAIN}
+  #   identifier: homeserver
+  #   subject: "[Homeserver] {title}"
+  #   startup_check_address: test@authelia.com
+  #   disable_require_tls: false
+  #   disable_html_emails: false
+  #   tls:
+  #     server_name: smtp.gmail.com
+  #     skip_verify: false
+  #     minimum_version: TLS1.2
+
+# Optional: OpenID Connect provider configuration
+# identity_providers:
+#   oidc:
+#     hmac_secret: ${AUTHELIA_OIDC_HMAC_SECRET}
+#     issuer_private_key: ${AUTHELIA_OIDC_PRIVATE_KEY}
+#     access_token_lifespan: 1h
+#     authorize_code_lifespan: 1m
+#     id_token_lifespan: 1h
+#     refresh_token_lifespan: 90m
+#     enable_client_debug_messages: false
+#     clients:
+#       - id: grafana
+#         description: Grafana
+#         secret: ${GRAFANA_OIDC_CLIENT_SECRET}
+#         public: false
+#         authorization_policy: two_factor
+#         redirect_uris:
+#           - https://monitoring.${DOMAIN}/login/generic_oauth
+#         scopes:
+#           - openid
+#           - profile
+#           - groups
+#           - email
+#         userinfo_signing_algorithm: none

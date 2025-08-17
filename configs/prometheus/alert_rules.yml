@@ -1,0 +1,355 @@
+# Prometheus Alert Rules - Homeserver Infrastructure
+# 
+# Purpose: Define alerting conditions for critical infrastructure monitoring
+# Integration: Sends alerts to Alertmanager for notification routing
+# Thresholds: Tuned for homeserver environment with 15+ services
+#
+# Alert Severity Levels:
+# - critical: Immediate action required (service down, data loss risk)
+# - warning: Attention needed (resource usage high, performance degraded)
+# - info: Informational (configuration changes, maintenance notices)
+
+groups:
+  # ===== INFRASTRUCTURE ALERTS =====
+  - name: infrastructure
+    interval: 30s
+    rules:
+      # Host system down - critical infrastructure failure
+      - alert: HostDown
+        expr: up{job="node-exporter"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: infrastructure
+        annotations:
+          summary: "Host system is down"
+          description: "Node exporter has been down for more than 1 minute. Host: {{ $labels.instance }}"
+          runbook_url: "https://docs.yourdomain.com/runbooks/host-down"
+
+      # High CPU usage - performance degradation warning
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+          category: performance
+        annotations:
+          summary: "High CPU usage detected"
+          description: "CPU usage is above 80% for more than 5 minutes. Current usage: {{ $value }}%"
+          runbook_url: "https://docs.yourdomain.com/runbooks/high-cpu"
+
+      # High memory usage - potential resource exhaustion
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+          category: performance
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage is above 85% for more than 5 minutes. Current usage: {{ $value }}%"
+          runbook_url: "https://docs.yourdomain.com/runbooks/high-memory"
+
+      # Disk space critical - immediate action required
+      - alert: DiskSpaceCritical
+        expr: (1 - (node_filesystem_avail_bytes{fstype!="tmpfs"} / node_filesystem_size_bytes{fstype!="tmpfs"})) * 100 > 90
+        for: 2m
+        labels:
+          severity: critical
+          category: storage
+        annotations:
+          summary: "Disk space critically low"
+          description: "Disk usage is above 90% on {{ $labels.mountpoint }}. Current usage: {{ $value }}%"
+          runbook_url: "https://docs.yourdomain.com/runbooks/disk-space"
+
+      # Disk space warning - preemptive alert
+      - alert: DiskSpaceWarning
+        expr: (1 - (node_filesystem_avail_bytes{fstype!="tmpfs"} / node_filesystem_size_bytes{fstype!="tmpfs"})) * 100 > 75
+        for: 5m
+        labels:
+          severity: warning
+          category: storage
+        annotations:
+          summary: "Disk space running low"
+          description: "Disk usage is above 75% on {{ $labels.mountpoint }}. Current usage: {{ $value }}%"
+
+  # ===== CONTAINER ALERTS =====
+  - name: containers
+    interval: 30s
+    rules:
+      # Container down - service availability issue
+      - alert: ContainerDown
+        expr: absent(container_last_seen{name!=""}) or (time() - container_last_seen{name!=""}) > 60
+        for: 1m
+        labels:
+          severity: critical
+          category: service
+        annotations:
+          summary: "Container is down"
+          description: "Container {{ $labels.name }} has been down for more than 1 minute"
+          runbook_url: "https://docs.yourdomain.com/runbooks/container-down"
+
+      # High container memory usage - resource constraint warning
+      - alert: ContainerHighMemoryUsage
+        expr: (container_memory_usage_bytes / container_spec_memory_limit_bytes) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          category: performance
+        annotations:
+          summary: "Container high memory usage"
+          description: "Container {{ $labels.name }} is using {{ $value }}% of its memory limit"
+
+      # Container restarting frequently - stability issue
+      - alert: ContainerRestartingFrequently
+        expr: rate(container_start_time_seconds[15m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          category: stability
+        annotations:
+          summary: "Container restarting frequently"
+          description: "Container {{ $labels.name }} has restarted more than 5 times in 15 minutes"
+
+  # ===== DATABASE ALERTS =====
+  - name: database
+    interval: 30s
+    rules:
+      # MariaDB down - critical data service failure
+      - alert: MariaDBDown
+        expr: up{job="mariadb"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: database
+        annotations:
+          summary: "MariaDB is down"
+          description: "MariaDB database has been down for more than 1 minute"
+          runbook_url: "https://docs.yourdomain.com/runbooks/mariadb-down"
+
+      # High database connections - potential resource exhaustion
+      - alert: MariaDBHighConnections
+        expr: mysql_global_status_threads_connected / mysql_global_variables_max_connections * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          category: database
+        annotations:
+          summary: "MariaDB high connection usage"
+          description: "MariaDB is using {{ $value }}% of available connections"
+
+      # Redis down - session/cache service failure
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: database
+        annotations:
+          summary: "Redis is down"
+          description: "Redis cache service has been down for more than 1 minute"
+
+      # Redis high memory usage - cache eviction risk
+      - alert: RedisHighMemoryUsage
+        expr: redis_memory_used_bytes / redis_memory_max_bytes * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+          category: database
+        annotations:
+          summary: "Redis high memory usage"
+          description: "Redis is using {{ $value }}% of allocated memory"
+
+  # ===== WEB SERVICES ALERTS =====
+  - name: web_services
+    interval: 30s
+    rules:
+      # HTTP service down - external access failure
+      - alert: HTTPServiceDown
+        expr: probe_success{job="blackbox-http"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          category: web_service
+        annotations:
+          summary: "HTTP service unreachable"
+          description: "Service {{ $labels.instance }} is not responding to HTTP checks"
+          runbook_url: "https://docs.yourdomain.com/runbooks/http-service-down"
+
+      # SSL certificate expiring soon - security maintenance needed
+      - alert: SSLCertificateExpiringSoon
+        expr: probe_ssl_earliest_cert_expiry - time() < 86400 * 7  # 7 days
+        for: 1h
+        labels:
+          severity: warning
+          category: security
+        annotations:
+          summary: "SSL certificate expiring soon"
+          description: "SSL certificate for {{ $labels.instance }} expires in {{ $value }} seconds"
+
+      # High HTTP response time - performance issue
+      - alert: HighHTTPResponseTime
+        expr: probe_duration_seconds{job="blackbox-http"} > 5
+        for: 5m
+        labels:
+          severity: warning
+          category: performance
+        annotations:
+          summary: "High HTTP response time"
+          description: "HTTP response time for {{ $labels.instance }} is {{ $value }} seconds"
+
+  # ===== APPLICATION SPECIFIC ALERTS =====
+  - name: applications
+    interval: 60s
+    rules:
+      # Plex down - media service failure
+      - alert: PlexDown
+        expr: up{job="plex"} == 0
+        for: 2m
+        labels:
+          severity: warning
+          category: media
+        annotations:
+          summary: "Plex Media Server is down"
+          description: "Plex has been unreachable for more than 2 minutes"
+
+      # TeamSpeak down - voice service failure
+      - alert: TeamSpeakDown
+        expr: up{job="teamspeak"} == 0
+        for: 1m
+        labels:
+          severity: warning
+          category: gaming
+        annotations:
+          summary: "TeamSpeak server is down"
+          description: "TeamSpeak server has been unreachable for more than 1 minute"
+
+      # CS2 server down - game service failure
+      - alert: CS2ServerDown
+        expr: up{job="cs2-server"} == 0
+        for: 2m
+        labels:
+          severity: warning
+          category: gaming
+        annotations:
+          summary: "CS2 server is down"
+          description: "Counter-Strike 2 server has been unreachable for more than 2 minutes"
+
+      # qBittorrent down - download service failure
+      - alert: QBittorrentDown
+        expr: up{job="qbittorrent"} == 0
+        for: 2m
+        labels:
+          severity: warning
+          category: media
+        annotations:
+          summary: "qBittorrent is down"
+          description: "qBittorrent service has been unreachable for more than 2 minutes"
+
+  # ===== MONITORING ALERTS =====
+  - name: monitoring
+    interval: 60s
+    rules:
+      # Prometheus targets down - monitoring blind spots
+      - alert: PrometheusTargetDown
+        expr: up == 0
+        for: 5m
+        labels:
+          severity: warning
+          category: monitoring
+        annotations:
+          summary: "Prometheus target down"
+          description: "Prometheus target {{ $labels.job }}/{{ $labels.instance }} has been down for 5 minutes"
+
+      # High scrape duration - monitoring performance issue
+      - alert: PrometheusScrapeSlowdown
+        expr: prometheus_target_interval_length_seconds{quantile="0.9"} > 60
+        for: 5m
+        labels:
+          severity: warning
+          category: monitoring
+        annotations:
+          summary: "Prometheus scrape slowdown"
+          description: "Prometheus scrape duration is high: {{ $value }} seconds"
+
+      # Prometheus storage usage - monitoring data retention risk
+      - alert: PrometheusStorageUsageHigh
+        expr: prometheus_tsdb_symbol_table_size_bytes / (1024*1024*1024) > 8  # 8GB
+        for: 10m
+        labels:
+          severity: warning
+          category: monitoring
+        annotations:
+          summary: "Prometheus storage usage high"
+          description: "Prometheus storage is using {{ $value }}GB"
+
+  # ===== GITHUB RUNNER ALERTS =====
+  - name: github-runner
+    interval: 60s
+    rules:
+      # GitHub Runner down - CI/CD pipeline unavailable
+      - alert: GitHubRunnerDown
+        expr: up{job="github-runner"} == 0
+        for: 2m
+        labels:
+          severity: warning
+          category: cicd
+        annotations:
+          summary: "GitHub Actions runner is down"
+          description: "Self-hosted GitHub runner has been down for more than 2 minutes"
+          runbook_url: "https://docs.yourdomain.com/runbooks/github-runner-down"
+
+      # GitHub Runner high CPU usage
+      - alert: GitHubRunnerHighCPU
+        expr: rate(container_cpu_usage_seconds_total{name="github-runner"}[5m]) * 100 > 80
+        for: 10m
+        labels:
+          severity: warning
+          category: cicd
+        annotations:
+          summary: "GitHub runner high CPU usage"
+          description: "GitHub runner is using {{ $value }}% CPU for more than 10 minutes"
+
+      # GitHub Runner high memory usage
+      - alert: GitHubRunnerHighMemory
+        expr: (container_memory_usage_bytes{name="github-runner"} / container_spec_memory_limit_bytes{name="github-runner"}) * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+          category: cicd
+        annotations:
+          summary: "GitHub runner high memory usage"
+          description: "GitHub runner is using {{ $value }}% of allocated memory"
+
+      # GitHub Runner storage usage high
+      - alert: GitHubRunnerStorageFull
+        expr: node_filesystem_avail_bytes{mountpoint=~".*runner.*"} / node_filesystem_size_bytes{mountpoint=~".*runner.*"} * 100 < 20
+        for: 5m
+        labels:
+          severity: warning
+          category: storage
+        annotations:
+          summary: "GitHub runner storage running low"
+          description: "GitHub runner storage has less than 20% available space"
+
+      # GitHub Runner cache service down
+      - alert: GitHubRunnerCacheDown
+        expr: up{job="runner-cache"} == 0
+        for: 5m
+        labels:
+          severity: info
+          category: cicd
+        annotations:
+          summary: "GitHub runner cache service down"
+          description: "Runner cache service has been down for 5 minutes, builds may be slower"
+
+      # Long running jobs (over 2 hours)
+      - alert: GitHubRunnerLongJob
+        expr: time() - container_start_time_seconds{name=~".*runner.*"} > 7200
+        for: 1m
+        labels:
+          severity: info
+          category: cicd
+        annotations:
+          summary: "GitHub runner job running for over 2 hours"
+          description: "A GitHub Actions job has been running for more than 2 hours"

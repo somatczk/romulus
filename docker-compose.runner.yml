@@ -1,0 +1,194 @@
+# GitHub Actions Self-Hosted Runner
+# 
+# Purpose: Provides a containerized GitHub Actions runner for CI/CD automation
+# Features: Automatic registration, Docker-in-Docker support, resource limits
+# Integration: Runs alongside homeserver infrastructure for deployment automation
+# 
+# Runner Configuration:
+# - Automatically registers with GitHub repository
+# - Supports Docker commands for building and deployment
+# - Isolated network access with proper security
+# - Resource-limited to prevent interference with main services
+#
+# Usage: docker compose -f docker-compose.yml -f docker-compose.runner.yml up -d
+#
+# Security Notes:
+# - Uses Docker socket for container management
+# - Network isolation prevents access to internal services
+# - Non-root execution where possible
+
+services:
+  
+  # GitHub Runner - Self-hosted Actions executor
+  github-runner:
+    image: myoung34/github-runner:2.311.0-ubuntu-22.04
+    container_name: github-runner
+    restart: unless-stopped
+    networks:
+      - runner-network
+      - frontend  # For external API calls to GitHub
+    environment:
+      # Runner identification
+      - RUNNER_NAME=${RUNNER_NAME:-homeserver-runner}
+      - RUNNER_WORKDIR=/tmp/runner/work
+      - RUNNER_GROUP=${RUNNER_GROUP:-default}
+      - RUNNER_SCOPE=repo
+      - LABELS=self-hosted,Linux,X64,homeserver,docker
+      
+      # GitHub configuration
+      - REPO_URL=https://github.com/${GITHUB_REPOSITORY}
+      - ACCESS_TOKEN=${GITHUB_RUNNER_TOKEN}
+      
+      # Runner behavior
+      - RUNNER_REPLACE_EXISTING=true
+      - DISABLE_RUNNER_UPDATE=false
+      - EPHEMERAL=${RUNNER_EPHEMERAL:-false}
+      
+      # Docker configuration
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - DOCKER_TLS_VERIFY=""
+      - DOCKER_CERT_PATH=""
+      
+      # Resource and security settings
+      - START_DOCKER_SERVICE=false  # Use host Docker daemon
+      - RUNNER_ALLOW_RUNASROOT=1
+      
+      # Timezone
+      - TZ=${TZ:-UTC}
+    
+    volumes:
+      # Runner work directory (for build artifacts, caches, etc.)
+      - ${SSD_PATH}/runner/work:/tmp/runner/work
+      - ${SSD_PATH}/runner/externals:/tmp/runner/externals
+      
+      # Docker socket for container management
+      - /var/run/docker.sock:/var/run/docker.sock:rw
+      
+      # Project access (read-only for deployment scripts)
+      - ${PROJECT_PATH:-$(pwd)}:/workspace:ro
+      
+      # Additional tool access
+      - /usr/bin/docker:/usr/bin/docker:ro
+      - /usr/local/bin/docker-compose:/usr/local/bin/docker-compose:ro
+    
+    # Resource limits to prevent interference with main services
+    mem_limit: ${RUNNER_MEMORY_LIMIT:-2g}
+    memswap_limit: ${RUNNER_MEMORY_LIMIT:-2g}
+    mem_reservation: ${RUNNER_MEMORY_RESERVATION:-1g}
+    cpus: ${RUNNER_CPU_LIMIT:-2.0}
+    
+    # Security configuration
+    security_opt:
+      - no-new-privileges:true
+    
+    # User configuration (run as non-root when possible)
+    user: "${PUID:-1000}:${PGID:-1000}"
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "Runner.Listener"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    
+    # Labels for identification
+    labels:
+      - "homeserver.service=github-runner"
+      - "homeserver.component=cicd"
+      - "homeserver.network=runner"
+
+
+  # Runner Cache Service - Speeds up builds
+  runner-cache:
+    image: redis:7.2-alpine
+    container_name: runner-cache
+    restart: unless-stopped
+    networks:
+      - runner-network
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+      - ${SSD_PATH}/runner/cache:/data
+    mem_limit: 512m
+    cpus: 0.5
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+    labels:
+      - "homeserver.service=runner-cache"
+      - "homeserver.component=cicd"
+
+  # Build Tools Container - Pre-installed tools for builds
+  runner-tools:
+    image: alpine:3.19
+    container_name: runner-tools
+    restart: "no"  # Only runs when needed
+    networks:
+      - runner-network
+    volumes:
+      - ${SSD_PATH}/runner/tools:/tools
+    command: |
+      sh -c "
+        apk add --no-cache \
+          git curl wget bash \
+          nodejs npm yarn \
+          python3 py3-pip \
+          build-base \
+          jq yq \
+        && npm install -g @vercel/ncc typescript \
+        && pip3 install --break-system-packages yamllint ansible \
+        && echo 'Build tools installed successfully' > /tools/ready
+      "
+    mem_limit: 256m
+    cpus: 1
+    security_opt:
+      - no-new-privileges:true
+    labels:
+      - "homeserver.service=runner-tools"
+      - "homeserver.component=cicd"
+
+volumes:
+  runner-work:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${SSD_PATH}/runner/work
+  
+  runner-cache-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${SSD_PATH}/runner/cache
+
+networks:
+  # Dedicated network for runner with controlled access
+  runner-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+          gateway: 172.20.0.1
+    driver_opts:
+      com.docker.network.bridge.name: br-runner
+      com.docker.network.driver.mtu: 1500
+    labels:
+      - "homeserver.network=runner"
+      - "homeserver.component=cicd"

@@ -81,25 +81,20 @@ jobs:
         # Load environment variables for this step only
         export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
         echo "Deploying core infrastructure services..."
-        docker-compose -f compose/core/proxy.yml up -d
-        docker-compose -f compose/core/database.yml up -d
-        docker-compose -f compose/core/cache.yml up -d
+        docker-compose up -d caddy cloudflare-ddns mariadb redis
         
         echo "Waiting for core services..."
         sleep 30
         
-        docker-compose -f compose/core/database.yml ps mariadb | grep -q "Up" || exit 1
-        docker-compose -f compose/core/cache.yml ps redis | grep -q "Up" || exit 1
+        docker-compose ps mariadb | grep -q "Up" || exit 1
+        docker-compose ps redis | grep -q "Up" || exit 1
 
     - name: Deploy Application Services  
       run: |
         # Load environment variables for this step only
         export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
         echo "Deploying application services..."
-        docker-compose -f compose/media/plex.yml up -d
-        docker-compose -f compose/media/torrent.yml up -d
-        docker-compose -f compose/gaming/teamspeak.yml up -d
-        docker-compose -f compose/gaming/cs2.yml up -d
+        docker-compose up -d plex qbittorrent teamspeak cs2
         sleep 30
 
     - name: Deploy Monitoring Stack
@@ -107,11 +102,7 @@ jobs:
         # Load environment variables for this step only
         export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
         echo "Deploying monitoring services..."
-        docker-compose -f compose/monitoring/metrics.yml up -d
-        docker-compose -f compose/monitoring/logging.yml up -d
-        docker-compose -f compose/monitoring/exporters.yml up -d
-        docker-compose -f compose/monitoring/alerting.yml up -d
-        docker-compose -f compose/monitoring/uptime.yml up -d
+        docker-compose up -d prometheus grafana loki promtail alertmanager uptime-kuma node-exporter cadvisor redis-exporter mariadb-exporter
         sleep 20
 
     - name: Deploy Security Services
@@ -119,7 +110,7 @@ jobs:
         # Load environment variables for this step only
         export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
         echo "Deploying security services..."
-        docker-compose -f compose/security/fail2ban.yml up -d
+        docker-compose up -d fail2ban
         sleep 10
 
     - name: Health Check
@@ -137,19 +128,19 @@ jobs:
           while [[ $elapsed -lt $timeout ]]; do
             case $service in
               caddy)
-                if docker-compose -f compose/core/proxy.yml ps "$service" | grep -q "Up"; then
+                if docker-compose ps "$service" | grep -q "Up"; then
                   echo "$service is running"
                   break
                 fi
                 ;;
               mariadb)
-                if docker-compose -f compose/core/database.yml ps "$service" | grep -q "Up"; then
+                if docker-compose ps "$service" | grep -q "Up"; then
                   echo "$service is running"
                   break
                 fi
                 ;;
               redis)
-                if docker-compose -f compose/core/cache.yml ps "$service" | grep -q "Up"; then
+                if docker-compose ps "$service" | grep -q "Up"; then
                   echo "$service is running"
                   break
                 fi
@@ -168,7 +159,7 @@ jobs:
         # Check monitoring services
         for service in prometheus grafana; do
           echo "Checking $service..."
-          if docker-compose -f compose/monitoring/metrics.yml ps "$service" | grep -q "Up"; then
+          if docker-compose ps "$service" | grep -q "Up"; then
             echo "$service is running"
           else
             echo "$service not running (non-critical)"

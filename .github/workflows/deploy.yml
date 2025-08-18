@@ -11,47 +11,6 @@ concurrency:
 permissions:
   contents: read
 
-env:
-  TZ: ${{ secrets.TZ }}
-  PUID: ${{ secrets.PUID }}
-  PGID: ${{ secrets.PGID }}
-  DOMAIN: ${{ secrets.DOMAIN }}
-  NVME_PATH: ${{ secrets.NVME_PATH }}
-  SSD_PATH: ${{ secrets.SSD_PATH }}
-  HDD_PATH: ${{ secrets.HDD_PATH }}
-  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-  CLOUDFLARE_DOMAINS: ${{ secrets.CLOUDFLARE_DOMAINS }}
-  MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
-  TS3SERVER_DB_PASSWORD: ${{ secrets.TS3SERVER_DB_PASSWORD }}
-  REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
-  PLEX_CLAIM: ${{ secrets.PLEX_CLAIM }}
-  QBITTORRENT_PASSWORD: ${{ secrets.QBITTORRENT_PASSWORD }}
-  CS2_SERVER_NAME: ${{ secrets.CS2_SERVER_NAME }}
-  CS2_RCON_PASSWORD: ${{ secrets.CS2_RCON_PASSWORD }}
-  CS2_SERVER_PASSWORD: ${{ secrets.CS2_SERVER_PASSWORD }}
-  STEAM_TOKEN: ${{ secrets.STEAM_TOKEN }}
-  TS3_SERVER_ADMIN_PASSWORD: ${{ secrets.TS3_SERVER_ADMIN_PASSWORD }}
-  GF_SECURITY_ADMIN_PASSWORD: ${{ secrets.GF_SECURITY_ADMIN_PASSWORD }}
-  PLEX_MEMORY_LIMIT: ${{ secrets.PLEX_MEMORY_LIMIT }}
-  PLEX_CPU_LIMIT: ${{ secrets.PLEX_CPU_LIMIT }}
-  CS2_MEMORY_LIMIT: ${{ secrets.CS2_MEMORY_LIMIT }}
-  CS2_CPU_LIMIT: ${{ secrets.CS2_CPU_LIMIT }}
-  PLEX_PORT: ${{ secrets.PLEX_PORT }}
-  QBITTORRENT_PORT: ${{ secrets.QBITTORRENT_PORT }}
-  GRAFANA_PORT: ${{ secrets.GRAFANA_PORT }}
-  PROMETHEUS_PORT: ${{ secrets.PROMETHEUS_PORT }}
-  TEAMSPEAK_VOICE_PORT: ${{ secrets.TEAMSPEAK_VOICE_PORT }}
-  TEAMSPEAK_QUERY_PORT: ${{ secrets.TEAMSPEAK_QUERY_PORT }}
-  TEAMSPEAK_FILES_PORT: ${{ secrets.TEAMSPEAK_FILES_PORT }}
-  CS2_PORT: ${{ secrets.CS2_PORT }}
-  CS2_RCON_PORT: ${{ secrets.CS2_RCON_PORT }}
-  DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-  SMTP_HOST: ${{ secrets.SMTP_HOST }}
-  SMTP_PORT: ${{ secrets.SMTP_PORT }}
-  SMTP_USER: ${{ secrets.SMTP_USER }}
-  SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
-  MONITORING_DB_PASSWORD: ${{ secrets.MONITORING_DB_PASSWORD }}
-
 jobs:
   deploy:
     name: Deploy Infrastructure
@@ -65,9 +24,47 @@ jobs:
         fetch-depth: 0
         clean: true
 
+    # Decrypt environment secrets from encrypted JSON file
+    - name: Decrypt Environment Secrets
+      run: ./scripts/decrypt-large-secrets.sh homeserver-env-secrets.json
+      env:
+        LARGE_SECRET_PASSPHRASE_HOMESERVER_ENV_SECRETS_JSON: ${{ secrets.ENV_SECRETS_PASSPHRASE }}
+
+    # Load all environment variables from the decrypted JSON file
+    - name: Load Environment Variables
+      run: |
+        # Verify the JSON file exists and is valid
+        if [ ! -f "$HOME/secrets/homeserver-env-secrets.json" ]; then
+          echo "::error::Environment secrets file not found"
+          exit 1
+        fi
+        
+        # Validate JSON format
+        if ! jq empty "$HOME/secrets/homeserver-env-secrets.json" 2>/dev/null; then
+          echo "::error::Invalid JSON format in environment secrets"
+          exit 1
+        fi
+        
+        # Load all key-value pairs into GITHUB_ENV
+        jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" >> $GITHUB_ENV
+        
+        # Count loaded variables (for verification)
+        VARIABLE_COUNT=$(jq 'keys | length' "$HOME/secrets/homeserver-env-secrets.json")
+        echo "::notice::Loaded $VARIABLE_COUNT environment variables"
+        
+        # Verify critical variables are loaded (without exposing values)
+        CRITICAL_VARS=("DOMAIN" "CLOUDFLARE_API_TOKEN" "MYSQL_ROOT_PASSWORD" "REDIS_PASSWORD")
+        for var in "${CRITICAL_VARS[@]}"; do
+          if jq -e "has(\"$var\")" "$HOME/secrets/homeserver-env-secrets.json" >/dev/null; then
+            echo "::notice::Critical variable $var verified"
+          else
+            echo "::error::Critical variable $var is missing"
+            exit 1
+          fi
+        done
+
     - name: Validate Configuration
       run: |
-        echo "Validating Docker Compose configuration..."
         docker-compose config --quiet
 
     - name: Create Required Directories
@@ -181,11 +178,23 @@ jobs:
         for endpoint in "${endpoints[@]}"; do
           echo "Testing $endpoint..."
           if curl -f -s --max-time 30 --insecure "$endpoint" >/dev/null 2>&1; then
-            echo "✓ $endpoint accessible"
+            echo "External endpoint accessible"
           else
-            echo "⚠ $endpoint not accessible (may need more time)"
+            echo "External endpoint not accessible (may need more time)"
           fi
         done
+
+    # Clean up decrypted secrets (security best practice)
+    - name: Cleanup Decrypted Secrets
+      if: always()
+      run: |
+        echo "Cleaning up decrypted secrets..."
+        if [ -d "$HOME/secrets" ]; then
+          # Securely overwrite files before deletion
+          find $HOME/secrets -type f -exec shred -vfz -n 3 {} \; 2>/dev/null || true
+          rm -rf $HOME/secrets
+          echo "Decrypted secrets cleaned up"
+        fi
 
     - name: Deployment Summary
       run: |
@@ -198,9 +207,7 @@ jobs:
         echo "  • Monitoring Stack (Prometheus, Grafana, Loki, Alerting, Uptime)"
         echo "  • Security Services (Fail2Ban)"
         echo ""
-        echo "Access URLs:"
-        echo "  • Plex: https://plex.${DOMAIN}"
-        echo "  • qBittorrent: https://torrents.${DOMAIN}"
-        echo "  • Grafana: https://monitoring.${DOMAIN}"
-        echo "  • TeamSpeak: ts.${DOMAIN}:${TEAMSPEAK_VOICE_PORT}"
-        echo "  • CS2 Server: ${DOMAIN}:${CS2_PORT}"
+        echo "Configuration:"
+        echo "  • All environment variables loaded from encrypted secrets"
+        echo "  • Single passphrase authentication used"
+        echo "  • Secure cleanup completed"

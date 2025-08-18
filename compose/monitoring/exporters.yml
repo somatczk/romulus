@@ -1,6 +1,6 @@
 services:
   node-exporter:
-    image: prom/node-exporter:v1.7.0
+    image: prom/node-exporter:latest
     container_name: node-exporter
     restart: unless-stopped
     networks:
@@ -61,7 +61,7 @@ services:
       retries: 3
 
   mariadb-exporter:
-    image: prom/mysqld-exporter:v0.15.1
+    image: prom/mysqld-exporter:latest
     container_name: mariadb-exporter
     restart: unless-stopped
     networks:
@@ -78,7 +78,7 @@ services:
       - no-new-privileges:true
 
   redis-exporter:
-    image: oliver006/redis_exporter:v1.55.0
+    image: oliver006/redis_exporter:latest
     container_name: redis-exporter
     restart: unless-stopped
     networks:
@@ -96,7 +96,7 @@ services:
       - no-new-privileges:true
 
   blackbox-exporter:
-    image: prom/blackbox-exporter:v0.24.0
+    image: prom/blackbox-exporter:latest
     container_name: blackbox-exporter
     restart: unless-stopped
     networks:

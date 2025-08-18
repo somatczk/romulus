@@ -25,7 +25,7 @@ services:
       retries: 3
 
   cloudflare-ddns:
-    image: favonia/cloudflare-ddns:1.13.0
+    image: favonia/cloudflare-ddns:latest
     container_name: cloudflare-ddns
     restart: unless-stopped
     networks:

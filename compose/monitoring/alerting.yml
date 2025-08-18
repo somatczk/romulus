@@ -1,6 +1,6 @@
 services:
   alertmanager:
-    image: prom/alertmanager:v0.26.0
+    image: prom/alertmanager:latest
     container_name: alertmanager
     restart: unless-stopped
     networks:

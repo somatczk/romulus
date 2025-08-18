@@ -1,0 +1,363 @@
+# Alertmanager Configuration - Alert Routing and Notifications
+# 
+# Purpose: Route, group, and deliver alerts from Prometheus to various notification channels
+# Features: Alert grouping, silencing, inhibition rules, and multi-channel notifications
+# Integration: Receives alerts from Prometheus and sends notifications via Discord, email, etc.
+# 
+# Alert Flow:
+# Prometheus → Alertmanager → Route Matching → Grouping → Notification Delivery
+# 
+# Configuration Sections:
+# - global: Default notification settings
+# - route: Alert routing tree with matching rules
+# - receivers: Notification channel configurations
+# - inhibit_rules: Alert suppression logic
+# - templates: Custom notification templates
+
+global:
+  # Default SMTP configuration for email notifications
+  smtp_smarthost: '${SMTP_HOST}:${SMTP_PORT}'
+  smtp_from: 'alerts@${DOMAIN}'
+  smtp_auth_username: '${SMTP_USER}'  # Set via environment variable
+  smtp_auth_password: '${SMTP_PASSWORD}'  # Set via environment variable
+  smtp_require_tls: true
+  
+  # Default notification URLs
+  slack_api_url: ''
+  victorops_api_key: ''
+  pagerduty_url: 'https://events.pagerduty.com/v2/enqueue'
+  
+  # Resolve timeout for alerts
+  resolve_timeout: 5m
+  
+  # External URLs for links in notifications
+  http_config:
+    follow_redirects: true
+    enable_http2: true
+  
+  # SMTP authentication (if using SMTP)
+  smtp_hello: 'homeserver.local'
+
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+route:
+  # Root route - all alerts start here
+  group_by: ['alertname', 'cluster', 'service']
+  group_wait: 30s        # Wait time before sending first notification
+  group_interval: 5m     # Time between notifications for the same group
+  repeat_interval: 4h    # Time before re-sending resolved alerts
+  receiver: 'default'    # Default receiver for unmatched alerts
+  
+  # Child routes with specific matching criteria
+  routes:
+    # Critical infrastructure alerts - immediate notification
+    - matchers:
+        - severity = "critical"
+      receiver: 'critical-alerts'
+      group_wait: 10s
+      group_interval: 2m
+      repeat_interval: 30m
+      continue: true  # Also send to default receiver
+    
+    # Database alerts - specialized handling
+    - matchers:
+        - category = "database"
+      receiver: 'database-team'
+      group_by: ['alertname', 'instance']
+      group_wait: 1m
+      group_interval: 5m
+      repeat_interval: 2h
+    
+    # Security alerts - high priority
+    - matchers:
+        - category = "security"
+      receiver: 'security-alerts'
+      group_wait: 5s
+      group_interval: 1m
+      repeat_interval: 15m
+    
+    # Service availability alerts
+    - matchers:
+        - category =~ "service|web_service|external"
+      receiver: 'service-alerts'
+      group_by: ['alertname', 'service']
+      group_wait: 2m
+      group_interval: 10m
+      repeat_interval: 4h
+    
+    # Performance and resource alerts
+    - matchers:
+        - category =~ "performance|resources|storage"
+      receiver: 'resource-alerts'
+      group_by: ['alertname', 'instance']
+      group_wait: 5m
+      group_interval: 15m
+      repeat_interval: 6h
+    
+    # Monitoring system alerts
+    - matchers:
+        - category = "monitoring"
+      receiver: 'monitoring-team'
+      group_by: ['alertname']
+      group_wait: 10m
+      group_interval: 30m
+      repeat_interval: 8h
+    
+    # Media and gaming service alerts
+    - matchers:
+        - category =~ "media|gaming"
+      receiver: 'media-gaming-alerts'
+      group_by: ['alertname', 'service']
+      group_wait: 5m
+      group_interval: 30m
+      repeat_interval: 12h
+    
+    # Low priority informational alerts
+    - matchers:
+        - severity = "info"
+      receiver: 'info-alerts'
+      group_wait: 30m
+      group_interval: 2h
+      repeat_interval: 24h
+
+receivers:
+  # Default receiver - catches all unmatched alerts
+  - name: 'default'
+    discord_configs:
+      - webhook_url: '${DISCORD_WEBHOOK_URL}'
+        title: 'Homeserver Alert'
+        message: |
+          **Alert**: {{ .GroupLabels.alertname }}
+          **Status**: {{ .Status }}
+          **Summary**: {{ range .Alerts }}{{ .Annotations.summary }}{{ end }}
+          **Details**: {{ range .Alerts }}{{ .Annotations.description }}{{ end }}
+          **Time**: {{ .GroupLabels.alertname }}
+          **Services**: {{ .GroupLabels.service }}
+        send_resolved: true
+    
+    # Optional email notifications (uncomment and set SMTP_* variables to enable)
+    # email_configs:
+    #   - to: 'admin@${DOMAIN}'
+    #     subject: 'Homeserver Alert: {{ .GroupLabels.alertname }}'
+    #     body: |
+    #       Alert Details:
+    #       {{ range .Alerts }}
+    #       - Alert: {{ .Annotations.summary }}
+    #       - Description: {{ .Annotations.description }}
+    #       - Severity: {{ .Labels.severity }}
+    #       - Time: {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+    #       {{ end }}
+
+  # Critical alerts - multiple notification channels
+  - name: 'critical-alerts'
+    discord_configs:
+      - webhook_url: '${DISCORD_WEBHOOK_URL}'
+        title: 'CRITICAL: Homeserver Alert'
+        message: |
+          **CRITICAL ALERT**
+          
+          **Service**: {{ .GroupLabels.service }}
+          **Alert**: {{ .GroupLabels.alertname }}
+          **Status**: {{ .Status }}
+          
+          {{ range .Alerts }}
+          **Summary**: {{ .Annotations.summary }}
+          **Description**: {{ .Annotations.description }}
+          **Started**: {{ .StartsAt.Format "2006-01-02 15:04:05 UTC" }}
+          **Runbook**: {{ .Annotations.runbook_url }}
+          {{ end }}
+          
+          @everyone - Immediate attention required!
+        send_resolved: true
+    
+    # SMS/Webhook for critical alerts (if configured)
+    # webhook_configs:
+    #   - url: 'https://your-sms-gateway.com/send'
+    #     http_config:
+    #       basic_auth:
+    #         username: 'api-user'
+    #         password: 'api-password'
+
+  # Database team alerts
+  - name: 'database-team'
+    discord_configs:
+      - webhook_url: '${DISCORD_WEBHOOK_URL}'
+        title: 'Database Alert'
+        message: |
+          **Database Issue Detected**
+          
+          **Database**: {{ .GroupLabels.job }}
+          **Instance**: {{ .GroupLabels.instance }}
+          **Alert**: {{ .GroupLabels.alertname }}
+          
+          {{ range .Alerts }}
+          **Summary**: {{ .Annotations.summary }}
+          **Description**: {{ .Annotations.description }}
+          {{ if .Annotations.runbook_url }}**Runbook**: {{ .Annotations.runbook_url }}{{ end }}
+          {{ end }}
+        send_resolved: true
+
+  # Security alerts - high priority
+  - name: 'security-alerts'
+    discord_configs:
+      - webhook_url: '${DISCORD_WEBHOOK_URL}'
+        title: 'Security Alert'
+        message: |
+          **SECURITY ALERT**
+          
+          **Type**: {{ .GroupLabels.alertname }}
+          **Severity**: {{ .GroupLabels.severity }}
+          
+          {{ range .Alerts }}
+          **Summary**: {{ .Annotations.summary }}
+          **Description**: {{ .Annotations.description }}
+          **Time**: {{ .StartsAt.Format "2006-01-02 15:04:05 UTC" }}
+          {{ end }}
+          
+          **Action Required**: Review security logs immediately
+        send_resolved: true
+
+  # Service availability alerts
+  - name: 'service-alerts'
+    discord_configs:
+      - webhook_url: '${DISCORD_WEBHOOK_URL}'
+        title: 'Service Alert'
+        message: |
+          **Service Status Change**
+          
+          **Service**: {{ .GroupLabels.service }}
+          **Alert**: {{ .GroupLabels.alertname }}
+          **Status**: {{ .Status }}
+          
+          {{ range .Alerts }}
+          {{ if eq .Status "firing" }}**Service Issue**: {{ .Annotations.summary }}{{ end }}
+          {{ if eq .Status "resolved" }}**Service Recovered**: {{ .Annotations.summary }}{{ end }}
+          **Details**: {{ .Annotations.description }}
+          {{ end }}
+        send_resolved: true
+
+  # Resource and performance alerts
+  - name: 'resource-alerts'
+    discord_configs:
+      - webhook_url: '${DISCORD_WEBHOOK_URL}'
+        title: 'Resource Alert'
+        message: |
+          **Resource Usage Alert**
+          
+          **Host**: {{ .GroupLabels.instance }}
+          **Metric**: {{ .GroupLabels.alertname }}
+          
+          {{ range .Alerts }}
+          **Current Status**: {{ .Annotations.summary }}
+          **Details**: {{ .Annotations.description }}
+          {{ end }}
+          
+          _Monitor resource usage and consider scaling if needed_
+        send_resolved: true
+
+  # Monitoring system alerts
+  - name: 'monitoring-team'
+    discord_configs:
+      - webhook_url: '${DISCORD_WEBHOOK_URL}'
+        title: 'Monitoring Alert'
+        message: |
+          **Monitoring System Issue**
+          
+          **Component**: {{ .GroupLabels.job }}
+          **Alert**: {{ .GroupLabels.alertname }}
+          
+          {{ range .Alerts }}
+          **Issue**: {{ .Annotations.summary }}
+          **Impact**: {{ .Annotations.description }}
+          {{ end }}
+          
+          _Check monitoring system health_
+        send_resolved: true
+
+  # Media and gaming service alerts
+  - name: 'media-gaming-alerts'
+    discord_configs:
+      - webhook_url: '${DISCORD_WEBHOOK_URL}'
+        title: 'Media/Gaming Alert'
+        message: |
+          **Media/Gaming Service Alert**
+          
+          **Service**: {{ .GroupLabels.service }}
+          **Status**: {{ .Status }}
+          
+          {{ range .Alerts }}
+          **{{ .Annotations.summary }}**
+          {{ .Annotations.description }}
+          {{ end }}
+        send_resolved: true
+
+  # Low priority informational alerts
+  - name: 'info-alerts'
+    discord_configs:
+      - webhook_url: '${DISCORD_WEBHOOK_URL}'
+        title: 'Homeserver Info'
+        message: |
+          **Information Notice**
+          
+          {{ range .Alerts }}
+          **{{ .Annotations.summary }}**
+          {{ .Annotations.description }}
+          {{ end }}
+        send_resolved: false  # Don't send resolved for info alerts
+
+# Suppress certain alerts when others are firing
+inhibit_rules:
+  # Suppress service alerts when the entire host is down
+  - source_matchers:
+      - alertname = "HostDown"
+    target_matchers:
+      - severity =~ "warning|critical"
+    equal: ['instance']
+  
+  # Suppress container alerts when Docker is down
+  - source_matchers:
+      - alertname = "DockerDaemonDown"
+    target_matchers:
+      - alertname =~ "Container.*"
+    equal: ['instance']
+  
+  # Suppress HTTP alerts when the reverse proxy is down
+  - source_matchers:
+      - alertname = "CaddyDown"
+    target_matchers:
+      - alertname = "HTTPServiceDown"
+    equal: ['instance']
+  
+  # Suppress database connection alerts when database is down
+  - source_matchers:
+      - alertname =~ "(MariaDB|Redis)Down"
+    target_matchers:
+      - alertname =~ "(MariaDB|Redis).*Connection.*"
+    equal: ['instance']
+  
+  # Suppress high resource usage alerts when there's a critical alert
+  - source_matchers:
+      - severity = "critical"
+    target_matchers:
+      - alertname =~ "(HighCPUUsage|HighMemoryUsage)"
+      - severity = "warning"
+    equal: ['instance']
+
+# Define time periods when alerts should be muted (optional)
+mute_time_intervals:
+  - name: 'maintenance-window'
+    time_intervals:
+      - times:
+          - start_time: '02:00'
+            end_time: '04:00'
+        weekdays: ['sunday']
+        months: ['1:12']
+  
+  - name: 'weekend-non-critical'
+    time_intervals:
+      - times:
+          - start_time: '22:00'
+            end_time: '08:00'
+        weekdays: ['saturday', 'sunday']
+

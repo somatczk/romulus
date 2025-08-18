@@ -1,0 +1,240 @@
+name: 'Validate Configuration Files'
+description: 'Validates YAML, shell scripts, and Docker Compose files'
+branding:
+  icon: 'check-circle'
+  color: 'green'
+
+inputs:
+  validate-yaml:
+    description: 'Whether to validate YAML files'
+    required: false
+    default: 'true'
+  validate-shell:
+    description: 'Whether to validate shell scripts'
+    required: false
+    default: 'true'
+  validate-docker:
+    description: 'Whether to validate Docker Compose files'
+    required: false
+    default: 'true'
+  config-path:
+    description: 'Path to configuration files'
+    required: false
+    default: 'configs'
+  scripts-path:
+    description: 'Path to shell scripts'
+    required: false
+    default: 'scripts'
+
+outputs:
+  yaml-valid:
+    description: 'Whether YAML validation passed'
+    value: ${{ steps.yaml-validation.outputs.valid }}
+  shell-valid:
+    description: 'Whether shell validation passed'
+    value: ${{ steps.shell-validation.outputs.valid }}
+  docker-valid:
+    description: 'Whether Docker Compose validation passed'
+    value: ${{ steps.docker-validation.outputs.valid }}
+  overall-valid:
+    description: 'Whether all validations passed'
+    value: ${{ steps.summary.outputs.valid }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup validation environment
+      shell: bash
+      run: |
+        echo "Setting up validation environment..."
+        
+        # Install required tools if not available
+        if ! command -v python3 &> /dev/null; then
+          echo "ERROR: Python3 is required but not installed"
+          exit 1
+        fi
+        
+        # Install PyYAML if not available
+        python3 -c "import yaml" 2>/dev/null || pip3 install --user PyYAML
+        
+        echo "Validation environment ready"
+
+    - name: Validate YAML files
+      id: yaml-validation
+      if: inputs.validate-yaml == 'true'
+      shell: bash
+      run: |
+        echo "Validating YAML files..."
+        
+        YAML_FILES_FOUND=false
+        YAML_ERRORS=0
+        
+        # Find and validate YAML files
+        if find "${{ inputs.config-path }}" -name "*.yml" -o -name "*.yaml" 2>/dev/null | grep -q .; then
+          YAML_FILES_FOUND=true
+          
+          find "${{ inputs.config-path }}" -name "*.yml" -o -name "*.yaml" | while read -r file; do
+            echo "Validating: $file"
+            
+            if python3 -c "import yaml; yaml.safe_load(open('$file'))" 2>/dev/null; then
+              echo "  Valid YAML"
+            else
+              echo "  Invalid YAML"
+              ((YAML_ERRORS++))
+            fi
+          done
+        fi
+        
+        # Check Docker Compose files
+        for compose_file in docker-compose*.yml; do
+          if [[ -f "$compose_file" ]]; then
+            YAML_FILES_FOUND=true
+            echo "Validating: $compose_file"
+            
+            if python3 -c "import yaml; yaml.safe_load(open('$compose_file'))" 2>/dev/null; then
+              echo "  Valid YAML"
+            else
+              echo "  Invalid YAML"
+              ((YAML_ERRORS++))
+            fi
+          fi
+        done
+        
+        if [[ "$YAML_FILES_FOUND" == "true" ]]; then
+          if [[ $YAML_ERRORS -eq 0 ]]; then
+            echo "All YAML files are valid"
+            echo "valid=true" >> $GITHUB_OUTPUT
+          else
+            echo "Found $YAML_ERRORS YAML validation errors"
+            echo "valid=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+        else
+          echo "INFO: No YAML files found to validate"
+          echo "valid=true" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Validate shell scripts
+      id: shell-validation
+      if: inputs.validate-shell == 'true'
+      shell: bash
+      run: |
+        echo "Validating shell scripts..."
+        
+        SHELL_FILES_FOUND=false
+        SHELL_ERRORS=0
+        
+        # Find and validate shell scripts
+        if find "${{ inputs.scripts-path }}" -name "*.sh" 2>/dev/null | grep -q .; then
+          SHELL_FILES_FOUND=true
+          
+          find "${{ inputs.scripts-path }}" -name "*.sh" | while read -r file; do
+            echo "Validating: $file"
+            
+            if bash -n "$file" 2>/dev/null; then
+              echo "  Valid shell script"
+            else
+              echo "  Invalid shell script"
+              ((SHELL_ERRORS++))
+            fi
+          done
+        fi
+        
+        if [[ "$SHELL_FILES_FOUND" == "true" ]]; then
+          if [[ $SHELL_ERRORS -eq 0 ]]; then
+            echo "All shell scripts are valid"
+            echo "valid=true" >> $GITHUB_OUTPUT
+          else
+            echo "Found $SHELL_ERRORS shell script validation errors"
+            echo "valid=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+        else
+          echo "INFO: No shell scripts found to validate"
+          echo "valid=true" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Validate Docker Compose configuration
+      id: docker-validation
+      if: inputs.validate-docker == 'true'
+      shell: bash
+      run: |
+        echo "Validating Docker Compose configuration..."
+        
+        # Check if docker-compose is available
+        if ! command -v docker-compose &> /dev/null && ! command -v docker &> /dev/null; then
+          echo "INFO: Docker/docker-compose not available, skipping validation"
+          echo "valid=true" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+        
+        # Validate main Docker Compose files
+        COMPOSE_FILES=""
+        for file in docker-compose.yml docker-compose.monitoring.yml docker-compose.security.yml docker-compose.runner.yml; do
+          if [[ -f "$file" ]]; then
+            COMPOSE_FILES="$COMPOSE_FILES -f $file"
+          fi
+        done
+        
+        if [[ -n "$COMPOSE_FILES" ]]; then
+          echo "Validating Docker Compose configuration..."
+          
+          # Create minimal test environment
+          cat > .env.test << 'EOF'
+        TZ=UTC
+        PUID=1000
+        PGID=1000
+        DOMAIN=test.local
+        NVME_PATH=/tmp/nvme
+        SSD_PATH=/tmp/ssd
+        HDD_PATH=/tmp/hdd
+        MYSQL_ROOT_PASSWORD=test_password
+        REDIS_PASSWORD=test_password
+        GF_SECURITY_ADMIN_PASSWORD=test_password
+        DISCORD_WEBHOOK_URL=https://test.webhook
+        EOF
+          
+          if docker-compose --env-file .env.test $COMPOSE_FILES config --quiet; then
+            echo "Docker Compose configuration is valid"
+            echo "valid=true" >> $GITHUB_OUTPUT
+          else
+            echo "Docker Compose configuration is invalid"
+            echo "valid=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          
+          # Clean up test file
+          rm -f .env.test
+        else
+          echo "INFO: No Docker Compose files found to validate"
+          echo "valid=true" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Validation summary
+      id: summary
+      shell: bash
+      run: |
+        echo "Validation Summary"
+        echo "=================="
+        
+        YAML_VALID="${{ steps.yaml-validation.outputs.valid }}"
+        SHELL_VALID="${{ steps.shell-validation.outputs.valid }}"
+        DOCKER_VALID="${{ steps.docker-validation.outputs.valid }}"
+        
+        # Default to true if validation was skipped
+        YAML_VALID="${YAML_VALID:-true}"
+        SHELL_VALID="${SHELL_VALID:-true}"
+        DOCKER_VALID="${DOCKER_VALID:-true}"
+        
+        echo "YAML validation: $YAML_VALID"
+        echo "Shell validation: $SHELL_VALID"
+        echo "Docker validation: $DOCKER_VALID"
+        
+        if [[ "$YAML_VALID" == "true" && "$SHELL_VALID" == "true" && "$DOCKER_VALID" == "true" ]]; then
+          echo "All validations passed"
+          echo "valid=true" >> $GITHUB_OUTPUT
+        else
+          echo "Some validations failed"
+          echo "valid=false" >> $GITHUB_OUTPUT
+          exit 1
+        fi

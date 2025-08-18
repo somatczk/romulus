@@ -1,0 +1,50 @@
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: caddy
+    restart: unless-stopped
+    networks:
+      - frontend
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./configs/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ${SSD_PATH}/caddy/data:/data
+      - ${SSD_PATH}/caddy/config:/config
+    environment:
+      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}
+    mem_limit: 512m
+    cpus: 1
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "caddy", "validate", "--config", "/etc/caddy/Caddyfile"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  cloudflare-ddns:
+    image: favonia/cloudflare-ddns:1.13.0
+    container_name: cloudflare-ddns
+    restart: unless-stopped
+    networks:
+      - frontend
+    environment:
+      - CF_API_TOKEN=${CLOUDFLARE_API_TOKEN}
+      - DOMAINS=${CLOUDFLARE_DOMAINS}
+      - PROXIED=true
+      - IP6_PROVIDER=none
+      - UPDATE_CRON=@every 5m
+    mem_limit: 64m
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "ping", "-c", "1", "cloudflare.com"]
+      interval: 300s
+      timeout: 10s
+      retries: 2
+
+networks:
+  frontend:
+    external: true

@@ -1,0 +1,40 @@
+services:
+  plex:
+    image: lscr.io/linuxserver/plex:1.32.8
+    container_name: plex
+    restart: unless-stopped
+    networks:
+      - frontend
+      - backend
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - VERSION=docker
+      - PLEX_CLAIM=${PLEX_CLAIM}
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,video,utility
+    volumes:
+      - ${SSD_PATH}/config/plex:/config
+      - ${HDD_PATH}/media:/media:ro
+    devices:
+      - /dev/dri:/dev/dri
+    ports:
+      - "${PLEX_PORT}:32400"
+    mem_limit: ${PLEX_MEMORY_LIMIT}
+    cpus: ${PLEX_CPU_LIMIT}
+    tmpfs:
+      - /transcode:rw,noexec,nosuid,size=4g
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:32400/web"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  frontend:
+    external: true
+  backend:
+    external: true

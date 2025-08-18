@@ -41,7 +41,7 @@ services:
     environment:
       - CF_API_TOKEN=${CLOUDFLARE_API_TOKEN}
       - DOMAINS=${CLOUDFLARE_DOMAINS}
-      - PROXIED=true
+      - PROXIED=false
       - IP6_PROVIDER=none
       - UPDATE_CRON=@every 5m
     mem_limit: 64m

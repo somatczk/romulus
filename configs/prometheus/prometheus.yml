@@ -1,0 +1,175 @@
+# Prometheus Configuration - Metrics Collection and Monitoring
+# 
+# Purpose: Collects metrics from all homeserver services for monitoring and alerting
+# Dependencies: Node Exporter, cAdvisor, and service-specific exporters must be running
+# Storage: 30-day retention with 15-second collection intervals
+# Security: Basic auth required for external access, internal network only
+# Performance: Configured for up to 50 targets with moderate query load
+#
+# Troubleshooting:
+# - If targets are down, check Docker networking and service health
+# - High memory usage may require increasing retention settings
+# - Certificate errors indicate Cloudflare DNS challenge issues
+#
+# Last updated: 2024-01-15
+# Contact: admin@yourdomain.com for configuration changes
+
+global:
+  scrape_interval: 15s          # Balance between data granularity and resource usage
+  evaluation_interval: 15s      # How frequently to evaluate alert rules
+  external_labels:              # Labels added to all metrics for identification
+    environment: 'homeserver'
+    instance: 'primary'
+
+# Alerting configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+# Load alerting rules from external files
+rule_files:
+  - "alert_rules.yml"
+  - "recording_rules.yml"
+
+# Scrape configurations for various targets
+scrape_configs:
+  # Prometheus itself - self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+    scrape_interval: 15s
+    metrics_path: /metrics
+
+  # Node Exporter - System metrics (CPU, memory, disk, network)
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 15s
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: node-exporter:9100
+
+  # cAdvisor - Container metrics (Docker container resource usage)
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    scrape_interval: 30s
+    metrics_path: /metrics
+    relabel_configs:
+      # Add container labels as Prometheus labels
+      - source_labels: [__meta_docker_container_label_com_docker_compose_service]
+        target_label: service
+
+  # Docker Daemon - Docker engine metrics
+  - job_name: 'docker'
+    static_configs:
+      - targets: ['172.17.0.1:9323']  # Docker daemon metrics endpoint
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # MariaDB Exporter - Database metrics
+  - job_name: 'mariadb'
+    static_configs:
+      - targets: ['mariadb-exporter:9104']
+    scrape_interval: 30s
+    params:
+      collect[]:
+        - info_schema.innodb_metrics
+        - info_schema.processlist
+        - info_schema.query_response_time
+        - engine_innodb_status
+        - slave_status
+
+  # Redis Exporter - Cache and session store metrics
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+    scrape_interval: 30s
+
+  # Caddy Metrics - Reverse proxy performance
+  - job_name: 'caddy'
+    static_configs:
+      - targets: ['caddy:2019']  # Caddy admin endpoint
+    scrape_interval: 30s
+    metrics_path: /metrics
+
+  # Blackbox Exporter - External service monitoring
+  - job_name: 'blackbox-http'
+    metrics_path: /probe
+    params:
+      module: [http_2xx]  # HTTP probe module
+    static_configs:
+      - targets:
+          - https://plex.${DOMAIN}
+          - https://torrents.${DOMAIN}
+          - https://monitoring.${DOMAIN}
+          - https://status.${DOMAIN}
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  # TeamSpeak 3 Server - Custom metrics via ServerQuery
+  - job_name: 'teamspeak'
+    static_configs:
+      - targets: ['teamspeak-exporter:9189']
+    scrape_interval: 60s  # TeamSpeak metrics don't change frequently
+
+  # Counter-Strike 2 Server - Game server metrics
+  - job_name: 'cs2-server'
+    static_configs:
+      - targets: ['cs2-exporter:9590']
+    scrape_interval: 60s
+
+  # Plex Media Server - Custom media metrics
+  - job_name: 'plex'
+    static_configs:
+      - targets: ['plex-exporter:9594']
+    scrape_interval: 60s
+    params:
+      collect[]:
+        - sessions
+        - libraries
+        - bandwidth
+
+  # qBittorrent - Torrent client metrics
+  - job_name: 'qbittorrent'
+    static_configs:
+      - targets: ['qbittorrent-exporter:8080']
+    scrape_interval: 60s
+
+  # NVIDIA GPU Metrics (for Plex transcoding monitoring)
+  - job_name: 'nvidia-gpu'
+    static_configs:
+      - targets: ['nvidia-exporter:9835']
+    scrape_interval: 30s
+
+  # Custom Application Metrics - Internal service metrics
+  - job_name: 'homeserver-custom'
+    static_configs:
+      - targets: ['metrics-collector:8080']
+    scrape_interval: 30s
+    metrics_path: /api/metrics
+
+  # Loki for log-based metrics
+  - job_name: 'loki'
+    static_configs:
+      - targets: ['loki:3100']
+    scrape_interval: 30s
+
+# Remote write configuration (optional - for long-term storage)
+# remote_write:
+#   - url: https://your-remote-prometheus/api/v1/write
+#     basic_auth:
+#       username: prometheus
+#       password: ${REMOTE_PROMETHEUS_PASSWORD}
+

@@ -1,0 +1,224 @@
+# Grafana Datasource Provisioning Configuration
+# 
+# Purpose: Automatically configure data sources when Grafana starts
+# Benefits: Eliminates manual data source setup, ensures consistency
+# Integration: Works with Prometheus, Loki, and other monitoring components
+# 
+# Data Sources Configured:
+# - Prometheus: Primary metrics data source
+# - Loki: Log aggregation data source
+# - Alertmanager: Alert status data source
+# 
+# Configuration is applied automatically on Grafana startup
+# Changes require Grafana restart to take effect
+
+apiVersion: 1
+
+datasources:
+  # Primary Prometheus instance - metrics collection
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    version: 1
+    editable: true
+    jsonData:
+      # Query timeout settings
+      queryTimeout: '60s'
+      timeInterval: '15s'
+      
+      # HTTP settings
+      httpMethod: POST
+      
+      # Custom HTTP headers
+      customQueryParameters: ''
+      
+      # Prometheus-specific settings
+      prometheusType: 'Prometheus'
+      prometheusVersion: '2.45.0'
+      
+      # Cache settings for better performance
+      cacheLevel: 'High'
+      
+      # Exemplars configuration
+      exemplarTraceIdDestinations:
+        - name: 'Jaeger'
+          url: 'http://localhost:16686/trace/${__value.raw}'
+      
+      # Query editor settings
+      disableMetricsLookup: false
+      
+      # Rule query settings
+      manageAlerts: true
+      alertmanagerUid: 'alertmanager-uid'
+      
+      # Expression queries
+      incrementalQuerying: true
+      incrementalQueryOverlapWindow: '10m'
+    
+    # Security settings
+    basicAuth: false
+    basicAuthUser: ''
+    withCredentials: false
+    
+    # TLS settings
+    tlsAuth: false
+    tlsAuthWithCACert: false
+    tlsSkipVerify: true
+    
+    # Additional settings
+    orgId: 1
+    
+    # Secure JSON data (passwords, tokens, etc.)
+    secureJsonData: {}
+
+  #
+  # Log aggregation and search
+  - name: Loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    isDefault: false
+    version: 1
+    editable: true
+    jsonData:
+      # Query timeout
+      timeout: '60s'
+      
+      # Maximum number of lines to return
+      maxLines: 1000
+      
+      # Loki-specific settings
+      derivedFields:
+        - datasourceUid: 'prometheus-uid'
+          matcherRegex: 'traceID=(\\w+)'
+          name: 'TraceID'
+          url: 'http://localhost:16686/trace/${__value.raw}'
+      
+      # HTTP settings
+      httpHeaderName1: 'X-Scope-OrgID'
+      httpHeaderValue1: '1'
+    
+    # Security settings
+    basicAuth: false
+    withCredentials: false
+    tlsSkipVerify: true
+    orgId: 1
+    secureJsonData: {}
+
+  #
+  # Alert status and silences
+  - name: Alertmanager
+    type: alertmanager
+    access: proxy
+    url: http://alertmanager:9093
+    isDefault: false
+    version: 1
+    editable: true
+    jsonData:
+      # Alertmanager implementation type
+      implementation: 'prometheus'
+      
+      # HTTP settings
+      httpMethod: 'GET'
+      
+      # Timeout settings
+      timeout: '30s'
+      
+      # Handle Grafana managed alerts
+      handleGrafanaManagedAlerts: false
+      
+      # Custom headers
+      customQueryParameters: ''
+    
+    basicAuth: false
+    withCredentials: false
+    tlsSkipVerify: true
+    orgId: 1
+    secureJsonData: {}
+
+  #
+  
+  # Node Exporter Metrics (specific Prometheus instance if needed)
+  - name: Node Exporter
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: false
+    version: 1
+    editable: true
+    jsonData:
+      queryTimeout: '30s'
+      timeInterval: '15s'
+      httpMethod: POST
+      prometheusType: 'Prometheus'
+      # Custom query for node metrics only
+      customQueryParameters: 'job=node-exporter'
+    basicAuth: false
+    withCredentials: false
+    tlsSkipVerify: true
+    orgId: 1
+    secureJsonData: {}
+
+  # Container Metrics (cAdvisor)
+  - name: Container Metrics
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: false
+    version: 1
+    editable: true
+    jsonData:
+      queryTimeout: '30s'
+      timeInterval: '30s'
+      httpMethod: POST
+      prometheusType: 'Prometheus'
+      customQueryParameters: 'job=cadvisor'
+    basicAuth: false
+    withCredentials: false
+    tlsSkipVerify: true
+    orgId: 1
+    secureJsonData: {}
+
+  # Application Metrics
+  - name: Application Metrics
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: false
+    version: 1
+    editable: true
+    jsonData:
+      queryTimeout: '45s'
+      timeInterval: '15s'
+      httpMethod: POST
+      prometheusType: 'Prometheus'
+      # Filter for application-specific jobs
+      customQueryParameters: 'job=~"plex|qbittorrent|teamspeak|cs2-server"'
+    basicAuth: false
+    withCredentials: false
+    tlsSkipVerify: true
+    orgId: 1
+    secureJsonData: {}
+
+  # External Services (Blackbox)
+  - name: External Services
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: false
+    version: 1
+    editable: true
+    jsonData:
+      queryTimeout: '30s'
+      timeInterval: '60s'
+      httpMethod: POST
+      prometheusType: 'Prometheus'
+      customQueryParameters: 'job=blackbox-http'
+    basicAuth: false
+    withCredentials: false
+    tlsSkipVerify: true
+    orgId: 1
+    secureJsonData: {}
+

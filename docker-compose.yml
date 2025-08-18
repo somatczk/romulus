@@ -1,0 +1,47 @@
+networks:
+  frontend:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+  
+  backend:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16
+  
+  monitoring:
+    driver: bridge
+    internal: true
+    ipam:
+      config:
+        - subnet: 172.22.0.0/16
+
+include:
+  # Core Infrastructure
+  - compose/core/proxy.yml
+  - compose/core/database.yml
+  - compose/core/cache.yml
+  
+  # Media Services
+  - compose/media/plex.yml
+  - compose/media/torrent.yml
+  
+  # Gaming Services
+  - compose/gaming/teamspeak.yml
+  - compose/gaming/cs2.yml
+  
+  # Monitoring Stack
+  - compose/monitoring/metrics.yml
+  - compose/monitoring/logging.yml
+  - compose/monitoring/exporters.yml
+  - compose/monitoring/alerting.yml
+  - compose/monitoring/uptime.yml
+  
+  # Security Services
+  - compose/security/fail2ban.yml
+  
+  # Infrastructure
+  - compose/infrastructure/github-runner.yml

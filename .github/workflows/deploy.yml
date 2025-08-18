@@ -1,0 +1,213 @@
+name: Deploy Homeserver
+
+on:
+  push:
+    branches: [ main ]
+
+concurrency:
+  group: deploy
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy Infrastructure
+    runs-on: self-hosted
+    timeout-minutes: 30
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        clean: true
+
+    # Decrypt environment secrets from encrypted JSON file
+    - name: Decrypt Environment Secrets
+      run: ./scripts/decrypt-large-secrets.sh homeserver-env-secrets.json
+      env:
+        LARGE_SECRET_PASSPHRASE_HOMESERVER_ENV_SECRETS_JSON: ${{ secrets.ENV_SECRETS_PASSPHRASE }}
+
+    # Load all environment variables from the decrypted JSON file
+    - name: Load Environment Variables
+      run: |
+        # Verify the JSON file exists and is valid
+        if [ ! -f "$HOME/secrets/homeserver-env-secrets.json" ]; then
+          echo "::error::Environment secrets file not found"
+          exit 1
+        fi
+        
+        # Validate JSON format
+        if ! jq empty "$HOME/secrets/homeserver-env-secrets.json" 2>/dev/null; then
+          echo "::error::Invalid JSON format in environment secrets"
+          exit 1
+        fi
+        
+        # Load all key-value pairs into GITHUB_ENV
+        jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" >> $GITHUB_ENV
+        
+        # Count loaded variables (for verification)
+        VARIABLE_COUNT=$(jq 'keys | length' "$HOME/secrets/homeserver-env-secrets.json")
+        echo "::notice::Loaded $VARIABLE_COUNT environment variables"
+        
+        # Verify critical variables are loaded (without exposing values)
+        CRITICAL_VARS=("DOMAIN" "CLOUDFLARE_API_TOKEN" "MYSQL_ROOT_PASSWORD" "REDIS_PASSWORD")
+        for var in "${CRITICAL_VARS[@]}"; do
+          if jq -e "has(\"$var\")" "$HOME/secrets/homeserver-env-secrets.json" >/dev/null; then
+            echo "::notice::Critical variable $var verified"
+          else
+            echo "::error::Critical variable $var is missing"
+            exit 1
+          fi
+        done
+
+    - name: Validate Configuration
+      run: |
+        docker-compose config --quiet
+
+    - name: Create Required Directories
+      run: |
+        mkdir -p "${SSD_PATH}"/{caddy/{data,config},databases/{mariadb,redis},config/{plex,qbittorrent,teamspeak,fail2ban},monitoring/{prometheus,grafana,loki,alertmanager,uptime-kuma}}
+        mkdir -p "${NVME_PATH}/games/cs2"
+        mkdir -p "${HDD_PATH}"/{media,downloads/complete}
+        sudo chown -R "${PUID}:${PGID}" "${SSD_PATH}" "${NVME_PATH}" "${HDD_PATH}" || true
+
+    - name: Deploy Core Infrastructure
+      run: |
+        echo "Deploying core infrastructure services..."
+        docker-compose -f compose/core/proxy.yml up -d
+        docker-compose -f compose/core/database.yml up -d
+        docker-compose -f compose/core/cache.yml up -d
+        
+        echo "Waiting for core services..."
+        sleep 30
+        
+        docker-compose -f compose/core/database.yml ps mariadb | grep -q "Up" || exit 1
+        docker-compose -f compose/core/cache.yml ps redis | grep -q "Up" || exit 1
+
+    - name: Deploy Application Services  
+      run: |
+        echo "Deploying application services..."
+        docker-compose -f compose/media/plex.yml up -d
+        docker-compose -f compose/media/torrent.yml up -d
+        docker-compose -f compose/gaming/teamspeak.yml up -d
+        docker-compose -f compose/gaming/cs2.yml up -d
+        sleep 30
+
+    - name: Deploy Monitoring Stack
+      run: |
+        echo "Deploying monitoring services..."
+        docker-compose -f compose/monitoring/metrics.yml up -d
+        docker-compose -f compose/monitoring/logging.yml up -d
+        docker-compose -f compose/monitoring/exporters.yml up -d
+        docker-compose -f compose/monitoring/alerting.yml up -d
+        docker-compose -f compose/monitoring/uptime.yml up -d
+        sleep 20
+
+    - name: Deploy Security Services
+      run: |
+        echo "Deploying security services..."
+        docker-compose -f compose/security/fail2ban.yml up -d
+        sleep 10
+
+    - name: Health Check
+      run: |
+        echo "Performing health checks..."
+        
+        # Check core services
+        for service in caddy mariadb redis; do
+          echo "Checking $service..."
+          timeout=60
+          elapsed=0
+          
+          while [[ $elapsed -lt $timeout ]]; do
+            case $service in
+              caddy)
+                if docker-compose -f compose/core/proxy.yml ps "$service" | grep -q "Up"; then
+                  echo "$service is running"
+                  break
+                fi
+                ;;
+              mariadb)
+                if docker-compose -f compose/core/database.yml ps "$service" | grep -q "Up"; then
+                  echo "$service is running"
+                  break
+                fi
+                ;;
+              redis)
+                if docker-compose -f compose/core/cache.yml ps "$service" | grep -q "Up"; then
+                  echo "$service is running"
+                  break
+                fi
+                ;;
+            esac
+            sleep 5
+            elapsed=$((elapsed + 5))
+          done
+          
+          if [[ $elapsed -ge $timeout ]]; then
+            echo "$service failed to start"
+            exit 1
+          fi
+        done
+        
+        # Check monitoring services
+        for service in prometheus grafana; do
+          echo "Checking $service..."
+          if docker-compose -f compose/monitoring/metrics.yml ps "$service" | grep -q "Up"; then
+            echo "$service is running"
+          else
+            echo "$service not running (non-critical)"
+          fi
+        done
+        
+        echo "All critical services are running"
+
+    - name: Test External Access
+      run: |
+        echo "Testing external access..."
+        sleep 30
+        
+        endpoints=(
+          "https://monitoring.${DOMAIN}/api/health"
+          "https://status.${DOMAIN}"
+        )
+        
+        for endpoint in "${endpoints[@]}"; do
+          echo "Testing $endpoint..."
+          if curl -f -s --max-time 30 --insecure "$endpoint" >/dev/null 2>&1; then
+            echo "External endpoint accessible"
+          else
+            echo "External endpoint not accessible (may need more time)"
+          fi
+        done
+
+    # Clean up decrypted secrets (security best practice)
+    - name: Cleanup Decrypted Secrets
+      if: always()
+      run: |
+        echo "Cleaning up decrypted secrets..."
+        if [ -d "$HOME/secrets" ]; then
+          # Securely overwrite files before deletion
+          find $HOME/secrets -type f -exec shred -vfz -n 3 {} \; 2>/dev/null || true
+          rm -rf $HOME/secrets
+          echo "Decrypted secrets cleaned up"
+        fi
+
+    - name: Deployment Summary
+      run: |
+        echo "Deployment completed successfully!"
+        echo ""
+        echo "Service Categories Deployed:"
+        echo "  • Core Infrastructure (Proxy, Database, Cache)"
+        echo "  • Media Services (Plex, qBittorrent)"
+        echo "  • Gaming Services (TeamSpeak, CS2)"
+        echo "  • Monitoring Stack (Prometheus, Grafana, Loki, Alerting, Uptime)"
+        echo "  • Security Services (Fail2Ban)"
+        echo ""
+        echo "Configuration:"
+        echo "  • All environment variables loaded from encrypted secrets"
+        echo "  • Single passphrase authentication used"
+        echo "  • Secure cleanup completed"

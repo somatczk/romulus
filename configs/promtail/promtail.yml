@@ -1,0 +1,289 @@
+# Promtail Configuration - Log Collection Agent
+# 
+# Purpose: Collects logs from various sources and ships them to Loki
+# Sources: Docker containers, system logs, application logs
+# Processing: Label extraction, log parsing, filtering
+# Integration: Sends structured logs to Loki for aggregation
+#
+# Log Processing Features:
+# - Container log collection with automatic service detection
+# - System log collection from journald and files
+# - Log parsing and label extraction
+# - Multi-line log support for stack traces
+# - Rate limiting and backpressure handling
+
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+  log_level: info
+
+# Position tracking for log file processing
+positions:
+  filename: /tmp/positions.yaml
+
+# Loki client configuration
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+    backoff_config:
+      min_period: 500ms
+      max_period: 5m
+      max_retries: 10
+    batchsize: 1048576    # 1MB batch size
+    batchwait: 1s         # Wait 1s before sending partial batch
+    timeout: 10s
+
+# Log scraping configurations
+scrape_configs:
+  # ===== CONTAINER LOGS =====
+  # Docker container logs with service detection
+  - job_name: containers
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+        filters:
+          - name: label
+            values: ["logging=promtail"]
+    
+    relabel_configs:
+      # Use container name as instance
+      - source_labels: ['__meta_docker_container_name']
+        regex: '/(.*)'
+        target_label: 'instance'
+        replacement: '${1}'
+      
+      # Extract service name from compose service label
+      - source_labels: ['__meta_docker_container_label_com_docker_compose_service']
+        target_label: 'service'
+      
+      # Extract compose project
+      - source_labels: ['__meta_docker_container_label_com_docker_compose_project']
+        target_label: 'compose_project'
+      
+      # Extract container image
+      - source_labels: ['__meta_docker_container_label_image']
+        target_label: 'image'
+      
+      # Set log path
+      - source_labels: ['__meta_docker_container_id']
+        target_label: '__path__'
+        replacement: '/var/lib/docker/containers/${1}/*-json.log'
+    
+    pipeline_stages:
+      # Parse Docker JSON logs
+      - json:
+          expressions:
+            output: log
+            stream: stream
+            attrs: attrs
+            timestamp: time
+      
+      # Extract timestamp
+      - timestamp:
+          source: timestamp
+          format: RFC3339Nano
+      
+      # Process log output
+      - output:
+          source: output
+      
+      # Label stream type (stdout/stderr)
+      - labels:
+          stream:
+
+  # ===== APPLICATION SPECIFIC LOGS =====
+  
+  # Caddy access logs
+  - job_name: caddy_access
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: caddy_access
+          __path__: /var/log/caddy/access.log
+    
+    pipeline_stages:
+      - json:
+          expressions:
+            timestamp: ts
+            level: level
+            msg: msg
+            request: request
+            response: response
+            remote_ip: request.remote_ip
+            method: request.method
+            uri: request.uri
+            status: response.status
+            size: response.size
+            duration: duration
+      
+      - timestamp:
+          source: timestamp
+          format: Unix
+      
+      - labels:
+          level:
+          method:
+          status:
+
+  # Plex Media Server logs
+  - job_name: plex_logs
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: plex
+          service: plex
+          __path__: /mnt/ssd/config/plex/Library/Application Support/Plex Media Server/Logs/*.log
+    
+    pipeline_stages:
+      # Multi-line support for stack traces
+      - multiline:
+          firstline: '^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}'
+      
+      # Parse Plex log format
+      - regex:
+          expression: '^(?P<timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}),\d{3} \[(?P<thread>\d+)\] (?P<level>\w+) - (?P<message>.*)'
+      
+      - timestamp:
+          source: timestamp
+          format: '2006-01-02 15:04:05'
+      
+      - labels:
+          level:
+          thread:
+
+  # qBittorrent logs
+  - job_name: qbittorrent_logs
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: qbittorrent
+          service: qbittorrent
+          __path__: /mnt/ssd/config/qbittorrent/qBittorrent/logs/*.log
+    
+    pipeline_stages:
+      - regex:
+          expression: '^\((?P<level>\w)\) (?P<timestamp>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}) - (?P<message>.*)'
+      
+      - timestamp:
+          source: timestamp
+          format: RFC3339
+      
+      - labels:
+          level:
+
+  # ===== SYSTEM LOGS =====
+  
+  # System journal logs
+  - job_name: journal
+    journal:
+      max_age: 12h
+      labels:
+        job: systemd-journal
+    
+    relabel_configs:
+      # Extract systemd unit
+      - source_labels: ['__journal__systemd_unit']
+        target_label: 'unit'
+      
+      # Extract hostname
+      - source_labels: ['__journal__hostname']
+        target_label: 'hostname'
+      
+      # Extract priority as level
+      - source_labels: ['__journal_priority']
+        target_label: 'level'
+    
+    pipeline_stages:
+      # Map syslog levels to standard levels
+      - template:
+          source: level
+          template: |
+            {{ if eq .level "0" }}emerg
+            {{ else if eq .level "1" }}alert
+            {{ else if eq .level "2" }}crit
+            {{ else if eq .level "3" }}err
+            {{ else if eq .level "4" }}warning
+            {{ else if eq .level "5" }}notice
+            {{ else if eq .level "6" }}info
+            {{ else if eq .level "7" }}debug
+            {{ else }}unknown{{ end }}
+      
+      - labels:
+          level:
+
+  # Docker daemon logs
+  - job_name: docker_daemon
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: docker
+          service: docker
+          __path__: /var/log/docker.log
+    
+    pipeline_stages:
+      - regex:
+          expression: '^(?P<timestamp>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d+Z) (?P<level>\w+) (?P<message>.*)'
+      
+      - timestamp:
+          source: timestamp
+          format: RFC3339Nano
+      
+      - labels:
+          level:
+
+  # ===== SECURITY LOGS =====
+  
+  # SSH authentication logs
+  - job_name: ssh_auth
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: ssh_auth
+          service: sshd
+          __path__: /var/log/auth.log
+    
+    pipeline_stages:
+      - regex:
+          expression: '^(?P<timestamp>\w{3} \d{2} \d{2}:\d{2}:\d{2}) (?P<hostname>\S+) (?P<process>\S+)(\[(?P<pid>\d+)\])?: (?P<message>.*)'
+      
+      - timestamp:
+          source: timestamp
+          format: 'Jan 02 15:04:05'
+      
+      - labels:
+          process:
+      
+      # Filter for interesting SSH events
+      - match:
+          selector: '{process="sshd"}'
+          stages:
+            - regex:
+                expression: '.*(Failed password|Accepted password|Invalid user|Connection closed).*'
+            - labels:
+                event: auth_event
+
+  # Fail2ban logs
+  - job_name: fail2ban
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: fail2ban
+          service: fail2ban
+          __path__: /var/log/fail2ban.log
+    
+    pipeline_stages:
+      - regex:
+          expression: '^(?P<timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}),\d+ fail2ban\.(?P<component>\S+) +\[(?P<pid>\d+)\]: (?P<level>\S+) +(?P<message>.*)'
+      
+      - timestamp:
+          source: timestamp
+          format: '2006-01-02 15:04:05'
+      
+      - labels:
+          level:
+          component:

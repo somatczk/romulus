@@ -1,0 +1,400 @@
+# Prometheus Recording Rules - Pre-computed Metrics
+# 
+# Purpose: Pre-calculate commonly used metrics to improve dashboard performance
+# Benefits: Faster dashboard loading, reduced query complexity, consistent calculations
+# Integration: Works with alert rules and Grafana dashboards for optimized queries
+# 
+# Recording Rule Types:
+# - System metrics aggregations (CPU, memory, disk)
+# - Application performance indicators
+# - Service level indicators (SLI)
+# - Business metrics for homeserver operations
+#
+# Evaluation Frequency: Rules are evaluated every 30s by default
+# Retention: Recording rule results follow normal Prometheus retention (30 days)
+
+groups:
+  # ===== SYSTEM RESOURCE AGGREGATIONS =====
+  - name: system_resource_rules
+    interval: 30s
+    rules:
+      # Overall system CPU usage percentage
+      - record: homeserver:system_cpu_usage_percent
+        expr: 100 - (avg by (instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)
+        labels:
+          component: system
+          metric_type: resource
+      
+      # System memory usage percentage
+      - record: homeserver:system_memory_usage_percent
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100
+        labels:
+          component: system
+          metric_type: resource
+      
+      # System load average (1m, 5m, 15m)
+      - record: homeserver:system_load1
+        expr: node_load1
+        labels:
+          component: system
+          metric_type: load
+      
+      - record: homeserver:system_load5
+        expr: node_load5
+        labels:
+          component: system
+          metric_type: load
+      
+      - record: homeserver:system_load15
+        expr: node_load15
+        labels:
+          component: system
+          metric_type: load
+      
+      # Disk usage percentages by mount point
+      - record: homeserver:disk_usage_percent
+        expr: (1 - (node_filesystem_avail_bytes{fstype!="tmpfs"} / node_filesystem_size_bytes{fstype!="tmpfs"})) * 100
+        labels:
+          component: system
+          metric_type: storage
+      
+      # Network I/O rates
+      - record: homeserver:network_receive_bytes_rate
+        expr: rate(node_network_receive_bytes_total{device!="lo"}[5m])
+        labels:
+          component: network
+          metric_type: throughput
+      
+      - record: homeserver:network_transmit_bytes_rate
+        expr: rate(node_network_transmit_bytes_total{device!="lo"}[5m])
+        labels:
+          component: network
+          metric_type: throughput
+
+  # ===== CONTAINER RESOURCE AGGREGATIONS =====
+  - name: container_resource_rules
+    interval: 30s
+    rules:
+      # Container CPU usage percentage
+      - record: homeserver:container_cpu_usage_percent
+        expr: rate(container_cpu_usage_seconds_total{name!=""}[5m]) * 100
+        labels:
+          component: container
+          metric_type: resource
+      
+      # Container memory usage percentage (of host total)
+      - record: homeserver:container_memory_usage_percent
+        expr: (container_memory_usage_bytes{name!=""} / on() node_memory_MemTotal_bytes) * 100
+        labels:
+          component: container
+          metric_type: resource
+      
+      # Container memory usage percentage (of container limit)
+      - record: homeserver:container_memory_limit_usage_percent
+        expr: (container_memory_usage_bytes{name!=""} / container_spec_memory_limit_bytes{name!=""}) * 100
+        labels:
+          component: container
+          metric_type: resource
+      
+      # Container network I/O rates
+      - record: homeserver:container_network_receive_bytes_rate
+        expr: rate(container_network_receive_bytes_total{name!=""}[5m])
+        labels:
+          component: container
+          metric_type: network
+      
+      - record: homeserver:container_network_transmit_bytes_rate
+        expr: rate(container_network_transmit_bytes_total{name!=""}[5m])
+        labels:
+          component: container
+          metric_type: network
+
+  # ===== SERVICE AVAILABILITY RULES =====
+  - name: service_availability_rules
+    interval: 15s
+    rules:
+      # Service uptime percentage (5m window)
+      - record: homeserver:service_availability_5m
+        expr: avg_over_time(up[5m]) * 100
+        labels:
+          component: service
+          metric_type: availability
+      
+      # Service uptime percentage (1h window)
+      - record: homeserver:service_availability_1h
+        expr: avg_over_time(up[1h]) * 100
+        labels:
+          component: service
+          metric_type: availability
+      
+      # Service uptime percentage (24h window)
+      - record: homeserver:service_availability_24h
+        expr: avg_over_time(up[24h]) * 100
+        labels:
+          component: service
+          metric_type: availability
+      
+      # Total number of services
+      - record: homeserver:total_services
+        expr: count(up)
+        labels:
+          component: service
+          metric_type: count
+      
+      # Number of healthy services
+      - record: homeserver:healthy_services
+        expr: count(up == 1)
+        labels:
+          component: service
+          metric_type: count
+      
+      # Service health percentage
+      - record: homeserver:service_health_percent
+        expr: (count(up == 1) / count(up)) * 100
+        labels:
+          component: service
+          metric_type: health
+
+  # ===== APPLICATION-SPECIFIC RULES =====
+  - name: application_performance_rules
+    interval: 60s
+    rules:
+      # Plex active sessions
+      - record: homeserver:plex_active_sessions
+        expr: plex_sessions_active_total or on() vector(0)
+        labels:
+          component: plex
+          metric_type: usage
+      
+      # Plex transcoding sessions
+      - record: homeserver:plex_transcoding_sessions
+        expr: plex_transcoding_sessions_total or on() vector(0)
+        labels:
+          component: plex
+          metric_type: usage
+      
+      # MariaDB query rate
+      - record: homeserver:mariadb_queries_rate
+        expr: rate(mysql_global_status_queries[5m])
+        labels:
+          component: mariadb
+          metric_type: performance
+      
+      # MariaDB connection usage percentage
+      - record: homeserver:mariadb_connection_usage_percent
+        expr: (mysql_global_status_threads_connected / mysql_global_variables_max_connections) * 100
+        labels:
+          component: mariadb
+          metric_type: resource
+      
+      # Redis memory usage percentage
+      - record: homeserver:redis_memory_usage_percent
+        expr: (redis_memory_used_bytes / redis_memory_max_bytes) * 100
+        labels:
+          component: redis
+          metric_type: resource
+      
+      # Redis command rate
+      - record: homeserver:redis_commands_rate
+        expr: rate(redis_commands_processed_total[5m])
+        labels:
+          component: redis
+          metric_type: performance
+
+  # ===== WEB SERVICE PERFORMANCE RULES =====
+  - name: web_service_performance_rules
+    interval: 60s
+    rules:
+      # HTTP response time percentiles
+      - record: homeserver:http_response_time_p50
+        expr: histogram_quantile(0.50, rate(probe_duration_seconds_bucket{job="blackbox-http"}[5m]))
+        labels:
+          component: web
+          metric_type: latency
+          percentile: "50"
+      
+      - record: homeserver:http_response_time_p95
+        expr: histogram_quantile(0.95, rate(probe_duration_seconds_bucket{job="blackbox-http"}[5m]))
+        labels:
+          component: web
+          metric_type: latency
+          percentile: "95"
+      
+      - record: homeserver:http_response_time_p99
+        expr: histogram_quantile(0.99, rate(probe_duration_seconds_bucket{job="blackbox-http"}[5m]))
+        labels:
+          component: web
+          metric_type: latency
+          percentile: "99"
+      
+      # HTTP success rate
+      - record: homeserver:http_success_rate
+        expr: avg(probe_success{job="blackbox-http"}) * 100
+        labels:
+          component: web
+          metric_type: availability
+      
+      # SSL certificate days until expiry
+      - record: homeserver:ssl_cert_expiry_days
+        expr: (probe_ssl_earliest_cert_expiry - time()) / 86400
+        labels:
+          component: ssl
+          metric_type: expiry
+
+  # ===== STORAGE PERFORMANCE RULES =====
+  - name: storage_performance_rules
+    interval: 30s
+    rules:
+      # Disk I/O rates by device
+      - record: homeserver:disk_read_bytes_rate
+        expr: rate(node_disk_read_bytes_total[5m])
+        labels:
+          component: storage
+          metric_type: io
+          operation: read
+      
+      - record: homeserver:disk_write_bytes_rate
+        expr: rate(node_disk_written_bytes_total[5m])
+        labels:
+          component: storage
+          metric_type: io
+          operation: write
+      
+      # Disk IOPS
+      - record: homeserver:disk_reads_iops
+        expr: rate(node_disk_reads_completed_total[5m])
+        labels:
+          component: storage
+          metric_type: iops
+          operation: read
+      
+      - record: homeserver:disk_writes_iops
+        expr: rate(node_disk_writes_completed_total[5m])
+        labels:
+          component: storage
+          metric_type: iops
+          operation: write
+      
+      # Storage tier utilization
+      - record: homeserver:storage_tier_usage_bytes
+        expr: node_filesystem_size_bytes{fstype!="tmpfs"} - node_filesystem_avail_bytes{fstype!="tmpfs"}
+        labels:
+          component: storage
+          metric_type: usage
+
+  # ===== ALERT AGGREGATIONS =====
+  - name: alert_aggregation_rules
+    interval: 30s
+    rules:
+      # Total firing alerts
+      - record: homeserver:alerts_firing_total
+        expr: count(ALERTS{alertstate="firing"})
+        labels:
+          component: alerts
+          metric_type: count
+          state: firing
+      
+      # Firing alerts by severity
+      - record: homeserver:alerts_firing_by_severity
+        expr: count by (severity) (ALERTS{alertstate="firing"})
+        labels:
+          component: alerts
+          metric_type: count
+          state: firing
+      
+      # Critical alerts count
+      - record: homeserver:critical_alerts_count
+        expr: count(ALERTS{alertstate="firing", severity="critical"})
+        labels:
+          component: alerts
+          metric_type: count
+          severity: critical
+
+  # ===== BUSINESS METRICS RULES =====
+  - name: business_metrics_rules
+    interval: 300s  # 5 minute intervals for business metrics
+    rules:
+      # Homeserver uptime percentage (SLA tracking)
+      - record: homeserver:uptime_sla_24h
+        expr: (1 - (count(up{job="node-exporter"} == 0) / count(up{job="node-exporter"}))) * 100
+        labels:
+          component: business
+          metric_type: sla
+          period: 24h
+      
+      # Service level indicator: All critical services healthy
+      - record: homeserver:critical_services_healthy
+        expr: |
+          (
+            count(up{job=~"caddy|mariadb|redis|prometheus"} == 1) /
+            count(up{job=~"caddy|mariadb|redis|prometheus"})
+          ) * 100
+        labels:
+          component: business
+          metric_type: sli
+      
+      # Data throughput (network + disk combined)
+      - record: homeserver:total_data_throughput_bytes_rate
+        expr: |
+          sum(homeserver:network_receive_bytes_rate) +
+          sum(homeserver:network_transmit_bytes_rate) +
+          sum(homeserver:disk_read_bytes_rate) +
+          sum(homeserver:disk_write_bytes_rate)
+        labels:
+          component: business
+          metric_type: throughput
+      
+      # Resource efficiency (services per GB RAM)
+      - record: homeserver:service_density_per_gb
+        expr: count(up == 1) / (node_memory_MemTotal_bytes / 1024 / 1024 / 1024)
+        labels:
+          component: business
+          metric_type: efficiency
+
+  # ===== GAMING SERVICE RULES =====
+  - name: gaming_service_rules
+    interval: 60s
+    rules:
+      # TeamSpeak active connections
+      - record: homeserver:teamspeak_connections
+        expr: teamspeak_clients_online or on() vector(0)
+        labels:
+          component: teamspeak
+          metric_type: connections
+      
+      # CS2 server player count
+      - record: homeserver:cs2_players
+        expr: cs2_players_current or on() vector(0)
+        labels:
+          component: cs2
+          metric_type: players
+      
+      # Gaming services availability
+      - record: homeserver:gaming_services_availability
+        expr: avg(up{job=~"teamspeak|cs2-server"}) * 100
+        labels:
+          component: gaming
+          metric_type: availability
+
+  # ===== SECURITY METRICS RULES =====
+  - name: security_metrics_rules
+    interval: 60s
+    rules:
+      
+      # Fail2ban active bans
+      - record: homeserver:fail2ban_active_bans
+        expr: fail2ban_banned_ips or on() vector(0)
+        labels:
+          component: security
+          metric_type: bans
+      
+      # SSL certificate health score (0-100)
+      - record: homeserver:ssl_health_score
+        expr: |
+          (
+            count(homeserver:ssl_cert_expiry_days > 30) /
+            count(homeserver:ssl_cert_expiry_days)
+          ) * 100
+        labels:
+          component: security
+          metric_type: health

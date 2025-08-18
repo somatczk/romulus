@@ -1,0 +1,144 @@
+# Loki Configuration - Log Aggregation and Storage
+# 
+# Purpose: Centralized log collection and storage for homeserver infrastructure
+# Integration: Works with Promtail for log collection and Grafana for visualization
+# Storage: Optimized for SSD storage with 7-day retention
+# Performance: Configured for moderate log volume from 15+ services
+#
+# Log Sources:
+# - All Docker containers via Promtail
+# - System logs from host
+# - Application-specific logs
+# - Security events and alerts
+
+auth_enabled: false
+
+# Server configuration
+server:
+  http_listen_port: 3100
+  grpc_listen_port: 9096
+  log_level: info
+
+# Common configuration shared across components
+common:
+  path_prefix: /loki
+  storage:
+    filesystem:
+      chunks_directory: /loki/chunks
+      rules_directory: /loki/rules
+  replication_factor: 1
+  ring:
+    instance_addr: 127.0.0.1
+    kvstore:
+      store: inmemory
+
+# Query settings for log search performance
+query_range:
+  results_cache:
+    cache:
+      embedded_cache:
+        enabled: true
+        max_size_mb: 100
+
+# Schema configuration for log storage
+schema_config:
+  configs:
+    - from: 2020-10-24
+      store: boltdb-shipper
+      object_store: filesystem
+      schema: v11
+      index:
+        prefix: index_
+        period: 24h
+
+# Ruler for alerting on log patterns
+ruler:
+  alertmanager_url: http://alertmanager:9093
+  ring:
+    kvstore:
+      store: inmemory
+  rule_path: /loki/rules
+  storage:
+    type: local
+    local:
+      directory: /loki/rules
+  enable_api: true
+  enable_alertmanager_v2: true
+
+# Analytics disabled for privacy
+analytics:
+  reporting_enabled: false
+
+# Limits configuration to prevent resource exhaustion
+limits_config:
+  # Retention period for logs
+  retention_period: 168h  # 7 days
+  
+  # Ingestion limits per tenant
+  ingestion_rate_mb: 16               # 16MB/s max ingestion rate
+  ingestion_burst_size_mb: 32         # 32MB burst size
+  max_streams_per_user: 10000         # Maximum streams per tenant
+  max_line_size: 256KB                # Maximum log line size
+  
+  # Query limits
+  max_entries_limit_per_query: 5000   # Max entries returned per query
+  max_chunks_per_query: 2000000       # Max chunks per query
+  max_query_length: 721h              # Max query time range (30 days)
+  max_query_parallelism: 32           # Parallel query workers
+  max_query_series: 500               # Max series per query
+  
+  # Split queries by time range for better performance
+  split_queries_by_interval: 15m
+  
+  # Compaction settings
+  compactor:
+    working_directory: /loki/compactor
+    shared_store: filesystem
+    compaction_interval: 10m
+    retention_enabled: true
+    retention_delete_delay: 2h
+    retention_delete_worker_count: 150
+
+# Storage configuration optimized for SSD
+storage_config:
+  boltdb_shipper:
+    active_index_directory: /loki/boltdb-shipper-active
+    cache_location: /loki/boltdb-shipper-cache
+    cache_ttl: 24h
+    shared_store: filesystem
+  
+  filesystem:
+    directory: /loki/chunks
+
+# Frontend configuration for query distribution
+frontend:
+  max_outstanding_per_tenant: 100
+  compress_responses: true
+
+# Frontend worker configuration
+frontend_worker:
+  frontend_address: 127.0.0.1:9095
+  parallelism: 10
+  match_max_concurrent: true
+
+# Query scheduler for better resource management
+query_scheduler:
+  max_outstanding_requests_per_tenant: 100
+
+# Index gateway for better query performance
+index_gateway:
+  mode: ring
+
+# Chunk store configuration
+chunk_store_config:
+  max_look_back_period: 0s
+
+# Table manager for index management
+table_manager:
+  retention_deletes_enabled: true
+  retention_period: 168h  # 7 days
+
+# Memberlist for service discovery
+memberlist:
+  join_members:
+    - loki:7946

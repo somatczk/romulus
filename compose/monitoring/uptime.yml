@@ -1,0 +1,29 @@
+services:
+  uptime-kuma:
+    image: louislam/uptime-kuma:1.23.11
+    container_name: uptime-kuma
+    restart: unless-stopped
+    networks:
+      - monitoring
+      - frontend
+    ports:
+      - "3001:3001"
+    volumes:
+      - ${SSD_PATH}/monitoring/uptime-kuma:/app/data
+    environment:
+      - TZ=${TZ}
+    mem_limit: 512m
+    cpus: 1
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  monitoring:
+    external: true
+  frontend:
+    external: true

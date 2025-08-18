@@ -1,305 +1,47 @@
-# Homeserver Infrastructure - Main Service Definitions
-# Production-ready Docker compose for AMD 5950x homeserver
-# 
-# Networks:
-# - frontend: Public-facing services with reverse proxy access
-# - backend: Internal services (databases, inter-service communication)
-# - monitoring: Isolated monitoring stack
-#
-# Storage Strategy:
-# - NVMe (/mnt/nvme): Docker root, containers, game files - fast access
-# - SSD (/mnt/ssd): Databases, cache, active data - high IOPS
-# - HDD (/mnt/hdd): Media libraries, bulk storage - sequential access
-#
-# Resource Limits:
-# - Total RAM target: <24GB under normal operation
-# - CPU allocation prevents resource monopolization
-# - GPU passthrough for Plex hardware transcoding
-
-services:
-  # ===== CORE INFRASTRUCTURE =====
-
-  # Caddy Reverse Proxy with Automatic HTTPS
-  # Handles SSL termination and routing for all web services
-  caddy:
-    image: caddy:2-alpine
-    container_name: caddy
-    restart: unless-stopped
-    networks:
-      - frontend
-    ports:
-      - "80:80"      # HTTP (redirects to HTTPS)
-      - "443:443"    # HTTPS
-    volumes:
-      - ./configs/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
-      - ${SSD_PATH}/caddy/data:/data              # Certificate storage on SSD
-      - ${SSD_PATH}/caddy/config:/config          # Caddy configuration cache
-    environment:
-      - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}
-    mem_limit: 512m
-    cpus: 1
-    security_opt:
-      - no-new-privileges:true
-    healthcheck:
-      test: ["CMD", "caddy", "validate", "--config", "/etc/caddy/Caddyfile"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  # Dynamic DNS Service for Cloudflare
-  # Automatically updates DNS records when external IP changes
-  cloudflare-ddns:
-    image: favonia/cloudflare-ddns:1.13.0
-    container_name: cloudflare-ddns
-    restart: unless-stopped
-    networks:
-      - frontend
-    environment:
-      - CF_API_TOKEN=${CLOUDFLARE_API_TOKEN}
-      - DOMAINS=${DOMAIN}
-      - PROXIED=true
-    mem_limit: 64m
-    security_opt:
-      - no-new-privileges:true
-    healthcheck:
-      test: ["CMD", "ping", "-c", "1", "cloudflare.com"]
-      interval: 300s
-      timeout: 10s
-      retries: 2
-
-  # ===== DATABASE SERVICES =====
-
-  # MariaDB - Primary database for TeamSpeak and other services
-  # Optimized for SSD storage with InnoDB engine
-  mariadb:
-    image: mariadb:10
-    container_name: mariadb
-    restart: unless-stopped
-    networks:
-      - backend
-    environment:
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
-      - MYSQL_DATABASE=teamspeak
-      - MYSQL_USER=teamspeak
-      - MYSQL_PASSWORD=${TS3SERVER_DB_PASSWORD}
-      - MYSQL_CHARSET=utf8mb4
-      - MYSQL_COLLATION=utf8mb4_unicode_ci
-    volumes:
-      - ${SSD_PATH}/databases/mariadb:/var/lib/mysql    # Database files on SSD for performance
-      - ./configs/mariadb/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-    command: >
-      --innodb-buffer-pool-size=1G
-      --innodb-log-file-size=256M
-      --max-connections=200
-      --query-cache-size=128M
-      --query-cache-type=1
-    mem_limit: 2g
-    cpus: 2
-    security_opt:
-      - no-new-privileges:true
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  # Redis - Session management and caching
-  # Fast in-memory data store with persistence
-  redis:
-    image: redis:7-alpine
-    container_name: redis
-    restart: unless-stopped
-    networks:
-      - backend
-    command: >
-      redis-server
-      --requirepass ${REDIS_PASSWORD}
-      --maxmemory 128mb
-      --maxmemory-policy allkeys-lru
-      --save 900 1
-      --save 300 10
-      --save 60 10000
-    volumes:
-      - ${SSD_PATH}/databases/redis:/data    # Persistence storage on SSD
-    mem_limit: 256m
-    cpus: 1
-    security_opt:
-      - no-new-privileges:true
-    healthcheck:
-      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "${REDIS_PASSWORD}", "ping"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
-  # ===== MEDIA SERVICES =====
-
-  # Plex Media Server with Hardware Transcoding
-  # Supports 5-10 concurrent streams with GTX 1060 hardware acceleration
-  plex:
-    image: lscr.io/linuxserver/plex:1.32.8
-    container_name: plex
-    restart: unless-stopped
-    networks:
-      - frontend
-      - backend
-    environment:
-      - PUID=${PUID}
-      - PGID=${PGID}
-      - TZ=${TZ}
-      - VERSION=docker
-      - PLEX_CLAIM=${PLEX_CLAIM}
-      - NVIDIA_VISIBLE_DEVICES=all
-      - NVIDIA_DRIVER_CAPABILITIES=compute,video,utility
-    volumes:
-      - ${SSD_PATH}/config/plex:/config                 # Metadata and config on SSD
-      - ${HDD_PATH}/media:/media:ro                     # Media libraries on HDD (read-only)
-    devices:
-      - /dev/dri:/dev/dri                              # GPU device for hardware transcoding
-    ports:
-      - "${PLEX_PORT}:32400"                           # Plex web interface and API
-    mem_limit: ${PLEX_MEMORY_LIMIT:-8g}
-    cpus: ${PLEX_CPU_LIMIT:-6}
-    tmpfs:
-      - /transcode:rw,noexec,nosuid,size=4g           # 4GB tmpfs for transcoding
-    security_opt:
-      - no-new-privileges:true
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:32400/web"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  # qBittorrent - Torrent client with WebUI
-  # Download management with SSD cache and HDD storage
-  qbittorrent:
-    image: lscr.io/linuxserver/qbittorrent:4.6.2
-    container_name: qbittorrent
-    restart: unless-stopped
-    networks:
-      - frontend
-      - backend
-    environment:
-      - PUID=${PUID}
-      - PGID=${PGID}
-      - TZ=${TZ}
-      - WEBUI_PORT=8080
-    volumes:
-      - ${SSD_PATH}/config/qbittorrent:/config          # Configuration on SSD
-      - ${SSD_PATH}/cache/qbittorrent:/cache            # Active downloads on SSD
-      - ${HDD_PATH}/downloads/complete:/downloads       # Completed downloads on HDD
-    ports:
-      - "${QBITTORRENT_PORT}:8080"                     # WebUI port
-      - "6881:6881/tcp"                                 # BitTorrent TCP
-      - "6881:6881/udp"                                 # BitTorrent UDP
-    mem_limit: 2g
-    cpus: 2
-    security_opt:
-      - no-new-privileges:true
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  # ===== GAMING SERVICES =====
-
-  # TeamSpeak 3 Server with MariaDB Backend
-  # Voice communication server with persistent database storage
-  teamspeak:
-    image: teamspeak:3.13.7
-    container_name: teamspeak
-    restart: unless-stopped
-    networks:
-      - frontend
-      - backend
-    ports:
-      - "${TEAMSPEAK_VOICE_PORT}:9987/udp"            # Voice communication
-      - "${TEAMSPEAK_QUERY_PORT}:10011/tcp"           # ServerQuery (admin interface)
-      - "${TEAMSPEAK_FILES_PORT}:30033/tcp"           # File transfers
-    environment:
-      - TS3SERVER_LICENSE=accept
-      - TS3SERVER_DB_PLUGIN=ts3db_mariadb
-      - TS3SERVER_DB_SQLCREATEPATH=create_mariadb
-      - TS3SERVER_DB_HOST=mariadb
-      - TS3SERVER_DB_USER=teamspeak
-      - TS3SERVER_DB_PASSWORD=${TS3SERVER_DB_PASSWORD}
-      - TS3SERVER_DB_NAME=teamspeak
-      - TS3SERVER_DB_WAITUNTILREADY=30
-    volumes:
-      - ${SSD_PATH}/config/teamspeak:/var/ts3server     # Server data and logs on SSD
-    depends_on:
-      mariadb:
-        condition: service_healthy
-    mem_limit: 1g
-    cpus: 2
-    security_opt:
-      - no-new-privileges:true
-    healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "10011"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-
-  # Counter-Strike 2 Dedicated Server
-  # High-performance 128-tick game server with Steam integration
-  cs2-server:
-    image: joedwards32/cs2:2.0.9
-    container_name: cs2-server
-    restart: unless-stopped
-    networks:
-      - frontend
-    ports:
-      - "${CS2_PORT}:27015/tcp"                        # Game server port
-      - "${CS2_PORT}:27015/udp"                        # Game server port
-      - "${CS2_RCON_PORT}:27015/tcp"                   # RCON administration
-    environment:
-      - SRCDS_TOKEN=${STEAM_TOKEN}                      # Steam game server token
-      - CS2_SERVERNAME=${CS2_SERVER_NAME}
-      - CS2_PASSWORD=${CS2_SERVER_PASSWORD}
-      - CS2_RCONPW=${CS2_RCON_PASSWORD}
-      - CS2_LAN=0                                       # Internet server
-      - CS2_RCON=1                                      # Enable RCON
-      - CS2_MAXPLAYERS=16                               # Maximum player count
-      - CS2_TICKRATE=128                                # High-precision tickrate
-      - CS2_ADDITIONAL_ARGS="-nohltv +sv_hibernate_when_empty 1"
-    volumes:
-      - ${NVME_PATH}/games/cs2:/home/steam/cs2-dedicated/game/csgo/cfg    # Game configs on NVMe
-      - ${SSD_PATH}/config/cs2:/home/steam/cs2-dedicated                  # Server data on SSD
-    mem_limit: ${CS2_MEMORY_LIMIT:-4g}
-    cpus: ${CS2_CPU_LIMIT:-4}
-    security_opt:
-      - no-new-privileges:true
-    healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "27015"]
-      interval: 60s
-      timeout: 10s
-      retries: 2
-
 networks:
-  # Frontend network - reverse proxy and public-facing services
   frontend:
     driver: bridge
     ipam:
       config:
         - subnet: 172.20.0.0/16
   
-  # Backend network - internal services and databases
   backend:
     driver: bridge
-    internal: true  # No external access
+    internal: true
     ipam:
       config:
         - subnet: 172.21.0.0/16
   
-  # Monitoring network - isolated monitoring stack
   monitoring:
     driver: bridge
-    internal: true  # No external access
+    internal: true
     ipam:
       config:
         - subnet: 172.22.0.0/16
 
-volumes:
-  # Named volumes for service data that doesn't need host path mapping
-  caddy_data:
-  caddy_config:
+include:
+  # Core Infrastructure
+  - compose/core/proxy.yml
+  - compose/core/database.yml
+  - compose/core/cache.yml
+  
+  # Media Services
+  - compose/media/plex.yml
+  - compose/media/torrent.yml
+  
+  # Gaming Services
+  - compose/gaming/teamspeak.yml
+  - compose/gaming/cs2.yml
+  
+  # Monitoring Stack
+  - compose/monitoring/metrics.yml
+  - compose/monitoring/logging.yml
+  - compose/monitoring/exporters.yml
+  - compose/monitoring/alerting.yml
+  - compose/monitoring/uptime.yml
+  
+  # Security Services
+  - compose/security/fail2ban.yml
+  
+  # Infrastructure
+  - compose/infrastructure/github-runner.yml

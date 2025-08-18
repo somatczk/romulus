@@ -1,0 +1,36 @@
+services:
+  mariadb:
+    image: mariadb:10
+    container_name: mariadb
+    restart: unless-stopped
+    networks:
+      - backend
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=teamspeak
+      - MYSQL_USER=teamspeak
+      - MYSQL_PASSWORD=${TS3SERVER_DB_PASSWORD}
+      - MYSQL_CHARSET=utf8mb4
+      - MYSQL_COLLATION=utf8mb4_unicode_ci
+    volumes:
+      - ${SSD_PATH}/databases/mariadb:/var/lib/mysql
+      - ./configs/mariadb/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    command: >
+      --innodb-buffer-pool-size=1G
+      --innodb-log-file-size=256M
+      --max-connections=200
+      --query-cache-size=128M
+      --query-cache-type=1
+    mem_limit: 2g
+    cpus: 2
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  backend:
+    external: true

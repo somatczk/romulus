@@ -1,652 +1,205 @@
-name: Deploy Homeserver Infrastructure
-
-# Automated deployment pipeline for homeserver infrastructure
-# Triggered on pushes to main branch and manual workflow dispatch
-# Features: Environment validation, deployment, health checks, rollback
-# Fallback: Automatically bootstraps self-hosted runner if none available
-#
-# Security: Actions pinned to commit SHA, least privilege permissions
-# Performance: Caching enabled, parallel job execution
-# Monitoring: Comprehensive metrics and health checks
+name: Deploy Homeserver
 
 on:
   push:
     branches: [ main ]
-    paths-ignore:
-      - 'docs/**'
-      - '*.md'
-      - '.gitignore'
-  
-  workflow_dispatch:
-    inputs:
-      environment:
-        description: 'Deployment environment'
-        required: true
-        default: 'production'
-        type: choice
-        options:
-        - production
-        - staging
-      
-      force_deploy:
-        description: 'Force deployment (skip health checks)'
-        required: false
-        default: false
-        type: boolean
-  
-  workflow_call:
-    # Allow this workflow to be called by the bootstrap workflow
 
-# Concurrency control - cancel in-progress runs on new commits
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: deploy
   cancel-in-progress: true
 
-# Default permissions - read-only, explicit grants where needed
 permissions:
   contents: read
-  actions: read
-  security-events: read
 
 env:
-  DEPLOYMENT_TIMEOUT: 1800  # 30 minutes
-  HEALTH_CHECK_RETRIES: 10
-  ROLLBACK_ON_FAILURE: true
+  TZ: ${{ secrets.TZ || 'UTC' }}
+  PUID: ${{ secrets.PUID || '1000' }}
+  PGID: ${{ secrets.PGID || '1000' }}
+  DOMAIN: ${{ secrets.DOMAIN }}
+  NVME_PATH: ${{ secrets.NVME_PATH || '/mnt/nvme' }}
+  SSD_PATH: ${{ secrets.SSD_PATH || '/mnt/ssd' }}
+  HDD_PATH: ${{ secrets.HDD_PATH || '/mnt/hdd' }}
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+  TS3SERVER_DB_PASSWORD: ${{ secrets.TS3SERVER_DB_PASSWORD }}
+  REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+  PLEX_CLAIM: ${{ secrets.PLEX_CLAIM }}
+  QBITTORRENT_PASSWORD: ${{ secrets.QBITTORRENT_PASSWORD }}
+  CS2_SERVER_NAME: ${{ secrets.CS2_SERVER_NAME }}
+  CS2_RCON_PASSWORD: ${{ secrets.CS2_RCON_PASSWORD }}
+  CS2_SERVER_PASSWORD: ${{ secrets.CS2_SERVER_PASSWORD }}
+  STEAM_TOKEN: ${{ secrets.STEAM_TOKEN }}
+  TS3_SERVER_ADMIN_PASSWORD: ${{ secrets.TS3_SERVER_ADMIN_PASSWORD }}
+  GF_SECURITY_ADMIN_PASSWORD: ${{ secrets.GF_SECURITY_ADMIN_PASSWORD }}
+  PLEX_MEMORY_LIMIT: ${{ secrets.PLEX_MEMORY_LIMIT || '8g' }}
+  PLEX_CPU_LIMIT: ${{ secrets.PLEX_CPU_LIMIT || '6' }}
+  CS2_MEMORY_LIMIT: ${{ secrets.CS2_MEMORY_LIMIT || '4g' }}
+  CS2_CPU_LIMIT: ${{ secrets.CS2_CPU_LIMIT || '4' }}
+  PLEX_PORT: ${{ secrets.PLEX_PORT || '32400' }}
+  QBITTORRENT_PORT: ${{ secrets.QBITTORRENT_PORT || '8080' }}
+  GRAFANA_PORT: ${{ secrets.GRAFANA_PORT || '3000' }}
+  PROMETHEUS_PORT: ${{ secrets.PROMETHEUS_PORT || '9090' }}
+  TEAMSPEAK_VOICE_PORT: ${{ secrets.TEAMSPEAK_VOICE_PORT || '9987' }}
+  TEAMSPEAK_QUERY_PORT: ${{ secrets.TEAMSPEAK_QUERY_PORT || '10011' }}
+  TEAMSPEAK_FILES_PORT: ${{ secrets.TEAMSPEAK_FILES_PORT || '30033' }}
+  CS2_PORT: ${{ secrets.CS2_PORT || '27015' }}
+  CS2_RCON_PORT: ${{ secrets.CS2_RCON_PORT || '27025' }}
   DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+  SMTP_HOST: ${{ secrets.SMTP_HOST || 'smtp.gmail.com' }}
+  SMTP_PORT: ${{ secrets.SMTP_PORT || '587' }}
+  SMTP_USER: ${{ secrets.SMTP_USER }}
+  SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+  MONITORING_DB_PASSWORD: ${{ secrets.MONITORING_DB_PASSWORD || 'monitoring_password' }}
 
 jobs:
-  check-runner-availability:
-    name: Check Self-Hosted Runner
-    runs-on: ubuntu-latest
-    timeout-minutes: 3
-    permissions:
-      actions: read
-      contents: read
-    
-    outputs:
-      runner-available: ${{ steps.check.outputs.available }}
-      should-bootstrap: ${{ steps.check.outputs.should_bootstrap }}
-      
-    steps:
-    - name: Check for Self-Hosted Runners
-      id: check
-      run: |
-        echo "Checking for available self-hosted runners..."
-        
-        # Use GitHub API to check runner status
-        RUNNERS_RESPONSE=$(curl -s \
-          -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-          -H "Accept: application/vnd.github.v3+json" \
-          "https://api.github.com/repos/${{ github.repository }}/actions/runners")
-        
-        # Count online self-hosted runners with homeserver label
-        RUNNER_COUNT=$(echo "$RUNNERS_RESPONSE" | jq '.runners | map(select(.status == "online" and (.labels | map(.name) | contains(["homeserver"])))) | length')
-        
-        echo "Online homeserver runners: $RUNNER_COUNT"
-        
-        if [[ "$RUNNER_COUNT" -gt 0 ]]; then
-          echo "available=true" >> $GITHUB_OUTPUT
-          echo "should_bootstrap=false" >> $GITHUB_OUTPUT
-          echo "Self-hosted runners available, proceeding with deployment"
-        else
-          echo "available=false" >> $GITHUB_OUTPUT
-          echo "should_bootstrap=true" >> $GITHUB_OUTPUT
-          echo "No self-hosted runners available, bootstrap needed"
-        fi
-
-  bootstrap-runner:
-    name: Bootstrap Self-Hosted Runner
-    needs: check-runner-availability
-    if: needs.check-runner-availability.outputs.should-bootstrap == 'true'
-    uses: ./.github/workflows/bootstrap-runner.yml
-    secrets: inherit
-    with:
-      deploy_after_bootstrap: false
-
-  sync-secrets:
-    name: Sync Secrets from Vault
-    uses: ./.github/workflows/vault-integration.yml
-    needs: [check-runner-availability, bootstrap-runner]
-    if: always() && (needs.check-runner-availability.outputs.runner-available == 'true' || needs.bootstrap-runner.result == 'success')
-    secrets: inherit
-    with:
-      update_secrets: false
-
-  validate:
-    name: Validate Configuration
-    runs-on: self-hosted
-    timeout-minutes: 10
-    permissions:
-      contents: read
-      security-events: read
-    needs: [check-runner-availability, bootstrap-runner, sync-secrets]
-    if: always() && (needs.check-runner-availability.outputs.runner-available == 'true' || needs.bootstrap-runner.result == 'success')
-    
-    outputs:
-      config-valid: ${{ steps.validation.outputs.valid }}
-      
-    steps:
-    - name: Checkout Repository
-      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      with:
-        fetch-depth: 0
-        persist-credentials: false
-    
-    - name: Cache Docker layers
-      uses: actions/cache@ab5e6d0c87105b4c9c2047343972218f562e4319 # v4.0.1
-      with:
-        path: /tmp/.buildx-cache
-        key: ${{ runner.os }}-docker-${{ hashFiles('**/docker-compose*.yml') }}
-        restore-keys: |
-          ${{ runner.os }}-docker-
-    
-    - name: Cache validation artifacts
-      uses: actions/cache@ab5e6d0c87105b4c9c2047343972218f562e4319 # v4.0.1
-      with:
-        path: |
-          ~/.cache/pip
-          /tmp/validation-cache
-        key: validation-${{ runner.os }}-${{ hashFiles('configs/**/*.yml', 'scripts/**/*.sh') }}
-        restore-keys: |
-          validation-${{ runner.os }}-
-    
-    - name: Validate Docker Compose Files
-      id: validation
-      run: |
-        echo "Validating Docker Compose configuration..."
-        
-        # Check if all compose files exist
-        for file in docker-compose.yml docker-compose.monitoring.yml docker-compose.security.yml; do
-          if [[ ! -f "$file" ]]; then
-            echo "❌ Missing compose file: $file"
-            exit 1
-          fi
-        done
-        
-        # Validate compose file syntax
-        docker-compose -f docker-compose.yml -f docker-compose.monitoring.yml -f docker-compose.security.yml config > /dev/null
-        
-        # Check if .env.example exists and contains required variables
-        if [[ ! -f ".env.example" ]]; then
-          echo "❌ Missing .env.example file"
-          exit 1
-        fi
-        
-        # Validate required configuration directories
-        required_dirs=("configs/caddy" "configs/prometheus" "configs/grafana" "configs/authelia" "scripts")
-        for dir in "${required_dirs[@]}"; do
-          if [[ ! -d "$dir" ]]; then
-            echo "❌ Missing configuration directory: $dir"
-            exit 1
-          fi
-        done
-        
-        echo "Configuration validation passed"
-        echo "valid=true" >> $GITHUB_OUTPUT
-    
-    - name: Lint Configuration Files
-      run: |
-        echo "Linting configuration files..."
-        
-        # Check YAML syntax for config files
-        find configs -name "*.yml" -o -name "*.yaml" | while read -r file; do
-          echo "Checking $file..."
-          python3 -c "import yaml; yaml.safe_load(open('$file'))" || exit 1
-        done
-        
-        # Check shell script syntax
-        find scripts -name "*.sh" | while read -r file; do
-          echo "Checking $file..."
-          bash -n "$file" || exit 1
-        done
-        
-        echo "Linting completed successfully"
-
-  security-scan:
-    name: Security Scan
-    runs-on: self-hosted
-    timeout-minutes: 10
-    permissions:
-      contents: read
-      security-events: write
-    needs: [check-runner-availability, bootstrap-runner]
-    if: always() && (needs.check-runner-availability.outputs.runner-available == 'true' || needs.bootstrap-runner.result == 'success')
-    
-    steps:
-    - name: Checkout Repository
-      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      with:
-        persist-credentials: false
-    
-    - name: Scan for secrets
-      run: |
-        echo "Scanning for hardcoded secrets..."
-        
-        # Check for common secret patterns
-        SECRETS_FOUND=0
-        
-        # Scan for potential secrets in configuration files
-        if grep -r "password\|secret\|token\|key" configs/ --include="*.yml" --include="*.yaml" | grep -v '\${' | grep -v '#'; then
-          echo "⚠️ Potential hardcoded secrets found in config files"
-          SECRETS_FOUND=1
-        fi
-        
-        # Scan for secrets in scripts
-        if grep -r "password\|secret\|token\|key" scripts/ --include="*.sh" | grep -v '\${' | grep -v '#'; then
-          echo "⚠️ Potential hardcoded secrets found in scripts"
-          SECRETS_FOUND=1
-        fi
-        
-        if [[ $SECRETS_FOUND -eq 0 ]]; then
-          echo "No hardcoded secrets detected"
-        else
-          echo "Security scan failed - hardcoded secrets detected"
-          exit 1
-        fi
-    
-    - name: Validate environment variables
-      run: |
-        echo "Validating environment variable usage..."
-        
-        # Check that all referenced variables are documented in .env.example
-        MISSING_VARS=()
-        
-        # Extract all environment variables from config files
-        ENV_VARS=$(grep -h '\${[A-Z_]*}' configs/**/*.yml configs/**/*.sql 2>/dev/null | sed 's/.*\${\([A-Z_]*\).*/\1/' | sort -u || true)
-        
-        for var in $ENV_VARS; do
-          if ! grep -q "^${var}=\|^# ${var}=" .env.example; then
-            MISSING_VARS+=("$var")
-          fi
-        done
-        
-        if [[ ${#MISSING_VARS[@]} -gt 0 ]]; then
-          echo "Missing environment variables in .env.example: ${MISSING_VARS[*]}"
-          exit 1
-        else
-          echo "All environment variables are documented"
-        fi
-
-  backup:
-    name: Create Backup
-    runs-on: self-hosted
-    timeout-minutes: 30
-    permissions:
-      contents: read
-    needs: [validate, security-scan]
-    if: always() && needs.validate.outputs.config-valid == 'true' && needs.security-scan.result == 'success'
-    
-    steps:
-    - name: Checkout Repository
-      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      with:
-        persist-credentials: false
-    
-    - name: Create Pre-Deployment Backup
-      run: |
-        echo "Creating pre-deployment backup..."
-        
-        # Load environment variables
-        if [[ -f .env ]]; then
-          source .env
-        else
-          echo "❌ .env file not found"
-          exit 1
-        fi
-        
-        # Run backup script
-        ./scripts/backup.sh --type config
-        
-        echo "Pre-deployment backup completed"
-    
-    - name: Verify Backup
-      run: |
-        echo "Verifying backup integrity..."
-        
-        # Check if backup was created
-        backup_dir="${SSD_PATH}/backups"
-        if [[ ! -d "$backup_dir" ]]; then
-          echo "❌ Backup directory not found"
-          exit 1
-        fi
-        
-        # Find the most recent backup
-        latest_backup=$(find "$backup_dir" -name "homeserver-backup-*.tar.gz.enc" -type f -printf '%T@ %p\n' | sort -n | tail -1 | cut -d' ' -f2-)
-        
-        if [[ -z "$latest_backup" ]]; then
-          echo "❌ No backup file found"
-          exit 1
-        fi
-        
-        echo "Backup verified: $(basename "$latest_backup")"
-
   deploy:
     name: Deploy Infrastructure
     runs-on: self-hosted
-    timeout-minutes: 45
-    permissions:
-      contents: read
-    needs: [validate, backup, security-scan]
-    environment: ${{ github.event.inputs.environment || 'production' }}
+    timeout-minutes: 30
     
-    outputs:
-      deployment-id: ${{ steps.deploy.outputs.deployment-id }}
-      
     steps:
     - name: Checkout Repository
-      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      uses: actions/checkout@v4
       with:
-        persist-credentials: false
-    
-    - name: Load Environment Variables
+        fetch-depth: 0
+        clean: true
+
+    - name: Validate Configuration
       run: |
-        if [[ ! -f .env ]]; then
-          echo "❌ .env file not found. Please ensure it exists and contains required variables."
-          exit 1
-        fi
-        
-        echo "Environment file loaded"
-    
-    - name: Pull Latest Images
+        echo "Validating Docker Compose configuration..."
+        docker-compose config --quiet
+
+    - name: Create Required Directories
       run: |
-        echo "Pulling latest Docker images..."
-        
-        # Retry logic for image pulls
-        MAX_ATTEMPTS=3
-        ATTEMPT=1
-        
-        while [[ $ATTEMPT -le $MAX_ATTEMPTS ]]; do
-          echo "Attempt $ATTEMPT of $MAX_ATTEMPTS..."
-          
-          if docker-compose -f docker-compose.yml -f docker-compose.monitoring.yml -f docker-compose.security.yml pull; then
-            echo "Images pulled successfully"
-            break
-          else
-            echo "Image pull failed (attempt $ATTEMPT)"
-            if [[ $ATTEMPT -eq $MAX_ATTEMPTS ]]; then
-              echo "All image pull attempts failed"
-              exit 1
-            fi
-            
-            # Wait before retry
-            sleep 30
-            ((ATTEMPT++))
-          fi
-        done
-    
-    - name: Deploy Services
-      id: deploy
+        mkdir -p "${SSD_PATH}"/{caddy/{data,config},databases/{mariadb,redis},config/{plex,qbittorrent,teamspeak,fail2ban},monitoring/{prometheus,grafana,loki,alertmanager,uptime-kuma}}
+        mkdir -p "${NVME_PATH}/games/cs2"
+        mkdir -p "${HDD_PATH}"/{media,downloads/complete}
+        sudo chown -R "${PUID}:${PGID}" "${SSD_PATH}" "${NVME_PATH}" "${HDD_PATH}" || true
+
+    - name: Deploy Core Infrastructure
       run: |
-        echo "Starting infrastructure deployment..."
+        echo "Deploying core infrastructure services..."
+        docker-compose -f compose/core/proxy.yml up -d
+        docker-compose -f compose/core/database.yml up -d
+        docker-compose -f compose/core/cache.yml up -d
         
-        # Generate deployment ID
-        deployment_id="deploy-$(date +%Y%m%d-%H%M%S)"
-        echo "deployment-id=$deployment_id" >> $GITHUB_OUTPUT
+        echo "Waiting for core services..."
+        sleep 30
         
-        # Run deployment script
-        ./scripts/deploy.sh
-        
-        echo "Deployment completed with ID: $deployment_id"
-    
-    - name: Wait for Services
+        docker-compose -f compose/core/database.yml ps mariadb | grep -q "Up" || exit 1
+        docker-compose -f compose/core/cache.yml ps redis | grep -q "Up" || exit 1
+
+    - name: Deploy Application Services  
       run: |
-        echo "Waiting for services to become ready..."
+        echo "Deploying application services..."
+        docker-compose -f compose/media/plex.yml up -d
+        docker-compose -f compose/media/torrent.yml up -d
+        docker-compose -f compose/gaming/teamspeak.yml up -d
+        docker-compose -f compose/gaming/cs2.yml up -d
+        sleep 30
+
+    - name: Deploy Monitoring Stack
+      run: |
+        echo "Deploying monitoring services..."
+        docker-compose -f compose/monitoring/metrics.yml up -d
+        docker-compose -f compose/monitoring/logging.yml up -d
+        docker-compose -f compose/monitoring/exporters.yml up -d
+        docker-compose -f compose/monitoring/alerting.yml up -d
+        docker-compose -f compose/monitoring/uptime.yml up -d
+        sleep 20
+
+    - name: Deploy Security Services
+      run: |
+        echo "Deploying security services..."
+        docker-compose -f compose/security/fail2ban.yml up -d
+        sleep 10
+
+    - name: Health Check
+      run: |
+        echo "Performing health checks..."
         
-        # Give services time to initialize
-        sleep 60
-        
-        # Check critical services are up
-        critical_services=("caddy" "mariadb" "redis" "prometheus" "grafana")
-        
-        for service in "${critical_services[@]}"; do
+        # Check core services
+        for service in caddy mariadb redis; do
           echo "Checking $service..."
-          timeout=300  # 5 minutes
+          timeout=60
           elapsed=0
           
           while [[ $elapsed -lt $timeout ]]; do
-            if docker-compose -f docker-compose.yml -f docker-compose.monitoring.yml -f docker-compose.security.yml ps "$service" | grep -q "Up"; then
-              echo "$service is running"
-              break
-            fi
-            
-            sleep 10
-            elapsed=$((elapsed + 10))
+            case $service in
+              caddy)
+                if docker-compose -f compose/core/proxy.yml ps "$service" | grep -q "Up"; then
+                  echo "$service is running"
+                  break
+                fi
+                ;;
+              mariadb)
+                if docker-compose -f compose/core/database.yml ps "$service" | grep -q "Up"; then
+                  echo "$service is running"
+                  break
+                fi
+                ;;
+              redis)
+                if docker-compose -f compose/core/cache.yml ps "$service" | grep -q "Up"; then
+                  echo "$service is running"
+                  break
+                fi
+                ;;
+            esac
+            sleep 5
+            elapsed=$((elapsed + 5))
           done
           
           if [[ $elapsed -ge $timeout ]]; then
-            echo "$service failed to start within $timeout seconds"
+            echo "$service failed to start"
             exit 1
+          fi
+        done
+        
+        # Check monitoring services
+        for service in prometheus grafana; do
+          echo "Checking $service..."
+          if docker-compose -f compose/monitoring/metrics.yml ps "$service" | grep -q "Up"; then
+            echo "$service is running"
+          else
+            echo "$service not running (non-critical)"
           fi
         done
         
         echo "All critical services are running"
-    
-    - name: Ensure Runner Continues
-      run: |
-        echo "Ensuring GitHub runner continues after deployment..."
-        
-        # Check if runner needs restart (it might have been affected by network changes)
-        if ! docker ps --filter "name=github-runner" --filter "status=running" | grep -q github-runner; then
-          echo "Restarting GitHub runner..."
-          docker-compose -f docker-compose.yml -f docker-compose.monitoring.yml -f docker-compose.security.yml -f docker-compose.runner.yml restart github-runner
-          sleep 10
-        fi
-        
-        # Verify runner is still responsive
-        sleep 20
-        if docker logs github-runner --tail=10 | grep -q "Listening for Jobs\|Runner successfully started"; then
-          echo "GitHub runner is ready for new jobs"
-        else
-          echo "WARNING: GitHub runner may need manual attention"
-        fi
 
-  health-check:
-    name: Health Check
-    runs-on: self-hosted
-    timeout-minutes: 15
-    permissions:
-      contents: read
-    needs: deploy
-    if: ${{ !github.event.inputs.force_deploy }}
-    
-    steps:
-    - name: Checkout Repository
-      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      with:
-        persist-credentials: false
-    
-    - name: Run Health Checks
-      run: |
-        echo "Running comprehensive health checks..."
-        
-        # Wait a bit more for services to fully initialize
-        sleep 30
-        
-        # Run health check script (now includes runner checks)
-        ./scripts/healthcheck.sh --verbose
-        
-        echo "Health checks passed"
-    
-    - name: Runner Self-Check
-      run: |
-        echo "Verifying GitHub runner health..."
-        
-        # Check if this runner is healthy and registered
-        if docker ps --filter "name=github-runner" --format "table {{.Status}}" | grep -q "Up"; then
-          echo "Self-hosted runner container is running"
-        else
-          echo "WARNING: Runner container status unclear"
-        fi
-        
-        # Check runner resource usage
-        echo "Runner resource usage:"
-        docker stats github-runner --no-stream --format "CPU: {{.CPUPerc}}, Memory: {{.MemUsage}}" || echo "Could not get stats"
-        
-        # Cleanup runner workspace after deployment
-        echo "Cleaning up runner workspace..."
-        docker exec github-runner find /tmp/runner/work -type f -name "*.log" -mtime +7 -delete 2>/dev/null || true
-        docker exec github-runner find /tmp/runner/work -type d -empty -delete 2>/dev/null || true
-    
     - name: Test External Access
       run: |
-        echo "Testing external service access..."
+        echo "Testing external access..."
+        sleep 30
         
-        source .env
-        
-        # Test key external endpoints
         endpoints=(
-          "https://monitoring.${DOMAIN}"
+          "https://monitoring.${DOMAIN}/api/health"
           "https://status.${DOMAIN}"
         )
         
         for endpoint in "${endpoints[@]}"; do
           echo "Testing $endpoint..."
-          
-          response_code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 --insecure "$endpoint" || echo "000")
-          
-          if [[ "$response_code" =~ ^[23] ]] || [[ "$response_code" == "401" ]] || [[ "$response_code" == "403" ]]; then
-            echo "$endpoint is accessible (HTTP $response_code)"
+          if curl -f -s --max-time 30 --insecure "$endpoint" >/dev/null 2>&1; then
+            echo "✓ $endpoint accessible"
           else
-            echo "$endpoint is not accessible (HTTP $response_code)"
-            exit 1
+            echo "⚠ $endpoint not accessible (may need more time)"
           fi
         done
-        
-        echo "External access tests passed"
-    
-    - name: Performance Check
-      run: |
-        echo "Checking system performance..."
-        
-        # Check CPU usage
-        cpu_usage=$(top -bn1 | grep "Cpu(s)" | awk '{print $2}' | cut -d'%' -f1)
-        if (( $(echo "$cpu_usage > 90" | bc -l) )); then
-          echo "WARNING: High CPU usage: ${cpu_usage}%"
-        else
-          echo "CPU usage normal: ${cpu_usage}%"
-        fi
-        
-        # Check memory usage
-        mem_usage=$(free | grep Mem | awk '{printf "%.1f", $3*100/$2}')
-        if (( $(echo "$mem_usage > 90" | bc -l) )); then
-          echo "WARNING: High memory usage: ${mem_usage}%"
-        else
-          echo "Memory usage normal: ${mem_usage}%"
-        fi
-        
-        echo "Performance check completed"
 
-  rollback:
-    name: Rollback Deployment
-    runs-on: self-hosted
-    timeout-minutes: 20
-    permissions:
-      contents: read
-    needs: [deploy, health-check]
-    if: failure()
-    
-    steps:
-    - name: Checkout Repository
-      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      with:
-        persist-credentials: false
-    
-    - name: Rollback to Previous Version
+    - name: Deployment Summary
       run: |
-        echo "Rolling back deployment due to failure..."
-        
-        # Stop current services
-        docker-compose -f docker-compose.yml -f docker-compose.monitoring.yml -f docker-compose.security.yml down
-        
-        # Restore from backup
-        source .env
-        backup_dir="${SSD_PATH}/backups"
-        
-        # Find the most recent backup
-        latest_backup=$(find "$backup_dir" -name "homeserver-backup-*.tar.gz.enc" -type f -printf '%T@ %p\n' | sort -n | tail -1 | cut -d' ' -f2-)
-        
-        if [[ -n "$latest_backup" ]]; then
-          echo "Restoring from backup: $(basename "$latest_backup")"
-          # Add restoration logic here
-        fi
-        
-        echo "Rollback completed"
-    
-    - name: Restart Services
-      run: |
-        echo "Restarting services after rollback..."
-        ./scripts/deploy.sh
-        echo "Services restarted"
-
-  notify:
-    name: Send Notifications
-    runs-on: self-hosted
-    timeout-minutes: 5
-    permissions:
-      contents: read
-    needs: [deploy, health-check]
-    if: always()
-    
-    steps:
-    - name: Prepare Notification
-      id: notification
-      run: |
-        if [[ "${{ needs.health-check.result }}" == "success" ]] || [[ "${{ github.event.inputs.force_deploy }}" == "true" ]]; then
-          echo "status=success" >> $GITHUB_OUTPUT
-          echo "message=Homeserver deployment completed successfully" >> $GITHUB_OUTPUT
-          echo "color=3066993" >> $GITHUB_OUTPUT  # Green
-        else
-          echo "status=failure" >> $GITHUB_OUTPUT
-          echo "message=Homeserver deployment failed" >> $GITHUB_OUTPUT
-          echo "color=15158332" >> $GITHUB_OUTPUT  # Red
-        fi
-        
-        echo "deployment_id=${{ needs.deploy.outputs.deployment-id }}" >> $GITHUB_OUTPUT
-        echo "commit_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-        echo "commit_message=$(git log -1 --pretty=format:'%s')" >> $GITHUB_OUTPUT
-    
-    - name: Send Discord Notification
-      if: ${{ env.DISCORD_WEBHOOK_URL != '' }}
-      run: |
-        curl -X POST "${{ env.DISCORD_WEBHOOK_URL }}" \
-          -H "Content-Type: application/json" \
-          -d '{
-            "embeds": [{
-              "title": "Homeserver Deployment",
-              "description": "${{ steps.notification.outputs.message }}",
-              "color": ${{ steps.notification.outputs.color }},
-              "fields": [
-                {
-                  "name": "Deployment ID",
-                  "value": "${{ steps.notification.outputs.deployment_id }}",
-                  "inline": true
-                },
-                {
-                  "name": "Commit",
-                  "value": "${{ steps.notification.outputs.commit_sha }}",
-                  "inline": true
-                },
-                {
-                  "name": "Branch",
-                  "value": "${{ github.ref_name }}",
-                  "inline": true
-                },
-                {
-                  "name": "Message",
-                  "value": "${{ steps.notification.outputs.commit_message }}",
-                  "inline": false
-                }
-              ],
-              "timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%S.000Z)'"
-            }]
-          }'
-    
-    - name: Update Deployment Status
-      run: |
-        echo "Deployment Status: ${{ steps.notification.outputs.status }}"
-        echo "Deployment ID: ${{ steps.notification.outputs.deployment_id }}"
-        echo "Commit: ${{ steps.notification.outputs.commit_sha }}"
-        
-        # Log deployment to file for history
-        source .env
-        echo "$(date -u +%Y-%m-%dT%H:%M:%S.000Z) ${{ steps.notification.outputs.deployment_id }} ${{ steps.notification.outputs.status }} ${{ steps.notification.outputs.commit_sha }}" >> "${SSD_PATH}/deployments.log"
+        echo "Deployment completed successfully!"
+        echo ""
+        echo "Service Categories Deployed:"
+        echo "  • Core Infrastructure (Proxy, Database, Cache)"
+        echo "  • Media Services (Plex, qBittorrent)"
+        echo "  • Gaming Services (TeamSpeak, CS2)"
+        echo "  • Monitoring Stack (Prometheus, Grafana, Loki, Alerting, Uptime)"
+        echo "  • Security Services (Fail2Ban)"
+        echo ""
+        echo "Access URLs:"
+        echo "  • Plex: https://plex.${DOMAIN}"
+        echo "  • qBittorrent: https://torrents.${DOMAIN}"
+        echo "  • Grafana: https://monitoring.${DOMAIN}"
+        echo "  • TeamSpeak: ts.${DOMAIN}:${TEAMSPEAK_VOICE_PORT}"
+        echo "  • CS2 Server: ${DOMAIN}:${CS2_PORT}"

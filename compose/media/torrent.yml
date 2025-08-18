@@ -1,0 +1,36 @@
+services:
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:4.6.2
+    container_name: qbittorrent
+    restart: unless-stopped
+    networks:
+      - frontend
+      - backend
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - WEBUI_PORT=8080
+    volumes:
+      - ${SSD_PATH}/config/qbittorrent:/config
+      - ${SSD_PATH}/cache/qbittorrent:/cache
+      - ${HDD_PATH}/downloads/complete:/downloads
+    ports:
+      - "${QBITTORRENT_PORT}:8080"
+      - "6881:6881/tcp"
+      - "6881:6881/udp"
+    mem_limit: 2g
+    cpus: 2
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  frontend:
+    external: true
+  backend:
+    external: true

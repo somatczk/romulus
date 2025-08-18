@@ -1,0 +1,37 @@
+services:
+  cs2-server:
+    image: joedwards32/cs2:2.0.9
+    container_name: cs2-server
+    restart: unless-stopped
+    networks:
+      - frontend
+    ports:
+      - "${CS2_PORT}:27015/tcp"
+      - "${CS2_PORT}:27015/udp"
+      - "${CS2_RCON_PORT}:27015/tcp"
+    environment:
+      - SRCDS_TOKEN=${STEAM_TOKEN}
+      - CS2_SERVERNAME=${CS2_SERVER_NAME}
+      - CS2_PASSWORD=${CS2_SERVER_PASSWORD}
+      - CS2_RCONPW=${CS2_RCON_PASSWORD}
+      - CS2_LAN=0
+      - CS2_RCON=1
+      - CS2_MAXPLAYERS=16
+      - CS2_TICKRATE=128
+      - CS2_ADDITIONAL_ARGS="-nohltv +sv_hibernate_when_empty 1"
+    volumes:
+      - ${NVME_PATH}/games/cs2:/home/steam/cs2-dedicated/game/csgo/cfg
+      - ${SSD_PATH}/config/cs2:/home/steam/cs2-dedicated
+    mem_limit: ${CS2_MEMORY_LIMIT:-4g}
+    cpus: ${CS2_CPU_LIMIT:-4}
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "27015"]
+      interval: 60s
+      timeout: 10s
+      retries: 2
+
+networks:
+  frontend:
+    external: true

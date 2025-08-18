@@ -1,0 +1,41 @@
+services:
+  teamspeak:
+    image: teamspeak:3.13.7
+    container_name: teamspeak
+    restart: unless-stopped
+    networks:
+      - frontend
+      - backend
+    ports:
+      - "${TEAMSPEAK_VOICE_PORT}:9987/udp"
+      - "${TEAMSPEAK_QUERY_PORT}:10011/tcp"
+      - "${TEAMSPEAK_FILES_PORT}:30033/tcp"
+    environment:
+      - TS3SERVER_LICENSE=accept
+      - TS3SERVER_DB_PLUGIN=ts3db_mariadb
+      - TS3SERVER_DB_SQLCREATEPATH=create_mariadb
+      - TS3SERVER_DB_HOST=mariadb
+      - TS3SERVER_DB_USER=teamspeak
+      - TS3SERVER_DB_PASSWORD=${TS3SERVER_DB_PASSWORD}
+      - TS3SERVER_DB_NAME=teamspeak
+      - TS3SERVER_DB_WAITUNTILREADY=30
+    volumes:
+      - ${SSD_PATH}/config/teamspeak:/var/ts3server
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    mem_limit: 1g
+    cpus: 2
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "10011"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+networks:
+  frontend:
+    external: true
+  backend:
+    external: true

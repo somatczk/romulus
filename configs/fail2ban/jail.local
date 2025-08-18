@@ -45,7 +45,7 @@ dbfile = /var/lib/fail2ban/fail2ban.sqlite3
 dbpurgeage = 1d
 
 [sshd]
-enabled = true
+enabled = false
 port = ssh
 filter = sshd
 logpath = /var/log/auth.log

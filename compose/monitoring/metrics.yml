@@ -3,6 +3,7 @@ services:
     image: prom/prometheus:latest
     container_name: prometheus
     restart: unless-stopped
+    user: "65534:65534"
     networks:
       - monitoring
       - frontend
@@ -29,6 +30,7 @@ services:
       - '--query.timeout=2m'
       - '--query.max-concurrency=20'
       - '--query.max-samples=50000000'
+      - '--query.lookback-delta=5m'
     mem_limit: 2g
     cpus: 2
     security_opt:
@@ -43,6 +45,7 @@ services:
     image: grafana/grafana:latest
     container_name: grafana
     restart: unless-stopped
+    user: "472:472"
     networks:
       - monitoring
       - frontend

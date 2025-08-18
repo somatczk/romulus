@@ -19,6 +19,14 @@ jobs:
     timeout-minutes: 29
     
     steps:
+    - name: Clean Previous Run Files
+      run: |
+        # Fix permissions on any files from previous runs that might block checkout
+        sudo chown -R $USER:$USER . || true
+        sudo chmod -R u+w . || true
+        # Remove any problematic directories
+        sudo rm -rf compose/core/configs/ || true
+
     - name: Checkout Repository
       uses: actions/checkout@v4
       with:
@@ -75,10 +83,14 @@ jobs:
         sudo rm -rf "${SSD_PATH}/config" || true
         
         # Create application directories (removed config/{...} that was conflicting with Caddy)
-        mkdir -p "${SSD_PATH}"/{caddy/{data,config},databases/{mariadb,redis},monitoring/{prometheus,grafana,loki,alertmanager,uptime-kuma}}
-        mkdir -p "${NVME_PATH}/games/cs2"
-        mkdir -p "${HDD_PATH}"/{media,downloads/complete}
+        sudo mkdir -p "${SSD_PATH}"/{caddy/{data,config},databases/{mariadb,redis},monitoring/{prometheus,grafana,loki,alertmanager,uptime-kuma}}
+        sudo mkdir -p "${NVME_PATH}/games/cs2"
+        sudo mkdir -p "${HDD_PATH}"/{media,downloads/complete}
+        
+        # Set proper ownership from the start
         sudo chown -R "${PUID}:${PGID}" "${SSD_PATH}" "${NVME_PATH}" "${HDD_PATH}" || true
+        # Ensure the runner user can also access these directories
+        sudo chmod -R u+rwx,g+rwx "${SSD_PATH}" "${NVME_PATH}" "${HDD_PATH}" || true
 
     - name: Deploy Core Infrastructure
       run: |
@@ -204,6 +216,16 @@ jobs:
           rm -rf $HOME/secrets
           echo "Decrypted secrets cleaned up"
         fi
+
+    # Fix permissions for next run
+    - name: Fix Permissions for Next Run
+      if: always()
+      run: |
+        echo "Fixing permissions for next run..."
+        # Fix ownership of any created files/directories
+        sudo chown -R $USER:$USER . || true
+        sudo chmod -R u+w . || true
+        echo "Permissions fixed"
 
     - name: Deployment Summary
       run: |

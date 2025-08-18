@@ -380,12 +380,6 @@ groups:
   - name: security_metrics_rules
     interval: 60s
     rules:
-      # Failed authentication attempts rate
-      - record: homeserver:auth_failures_rate
-        expr: rate(authelia_authentication_failures_total[5m])
-        labels:
-          component: security
-          metric_type: failures
       
       # Fail2ban active bans
       - record: homeserver:fail2ban_active_bans

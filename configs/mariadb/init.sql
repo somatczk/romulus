@@ -2,7 +2,7 @@
 -- Homeserver Infrastructure Database Setup
 -- 
 -- Purpose: Initialize databases and users for homeserver services
--- Services: TeamSpeak 3, Authelia, Application data
+-- Services: TeamSpeak 3, Application data
 -- 
 -- Security: Uses environment variables for passwords
 -- Performance: Optimized for SSD storage with InnoDB
@@ -10,12 +10,6 @@
 -- Create TeamSpeak 3 database (already created by docker-compose environment)
 -- The main teamspeak database is created automatically via MYSQL_DATABASE
 
--- Create additional database for Authelia authentication
-CREATE DATABASE IF NOT EXISTS `authelia` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
--- Create user for Authelia service (if using MariaDB backend)
--- CREATE USER IF NOT EXISTS 'authelia'@'%' IDENTIFIED BY '${AUTHELIA_DB_PASSWORD}';
--- GRANT ALL PRIVILEGES ON `authelia`.* TO 'authelia'@'%';
 
 -- Create database for application logs and metadata
 CREATE DATABASE IF NOT EXISTS `homeserver_logs` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -99,7 +93,6 @@ INSERT INTO `service_status` (`service_name`, `status`) VALUES
     ('prometheus', 'unknown'),
     ('grafana', 'unknown'),
     ('loki', 'unknown'),
-    ('authelia', 'unknown'),
     ('mariadb', 'healthy')
 ON DUPLICATE KEY UPDATE `last_check` = CURRENT_TIMESTAMP;
 

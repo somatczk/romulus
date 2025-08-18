@@ -16,10 +16,10 @@
 
 global:
   # Default SMTP configuration for email notifications
-  smtp_smarthost: '${SMTP_HOST:-smtp.gmail.com}:${SMTP_PORT:-587}'
-  smtp_from: 'alerts@${DOMAIN:-homeserver.local}'
-  smtp_auth_username: '${SMTP_USER:-}'  # Set via environment variable
-  smtp_auth_password: '${SMTP_PASSWORD:-}'  # Set via environment variable
+  smtp_smarthost: '${SMTP_HOST}:${SMTP_PORT}'
+  smtp_from: 'alerts@${DOMAIN}'
+  smtp_auth_username: '${SMTP_USER}'  # Set via environment variable
+  smtp_auth_password: '${SMTP_PASSWORD}'  # Set via environment variable
   smtp_require_tls: true
   
   # Default notification URLs
@@ -138,7 +138,7 @@ receivers:
     
     # Optional email notifications (uncomment and set SMTP_* variables to enable)
     # email_configs:
-    #   - to: 'admin@${DOMAIN:-homeserver.local}'
+    #   - to: 'admin@${DOMAIN}'
     #     subject: 'Homeserver Alert: {{ .GroupLabels.alertname }}'
     #     body: |
     #       Alert Details:

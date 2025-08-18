@@ -22,8 +22,8 @@ services:
     volumes:
       - ${NVME_PATH}/games/cs2:/home/steam/cs2-dedicated/game/csgo/cfg
       - ${SSD_PATH}/config/cs2:/home/steam/cs2-dedicated
-    mem_limit: ${CS2_MEMORY_LIMIT:-4g}
-    cpus: ${CS2_CPU_LIMIT:-4}
+    mem_limit: ${CS2_MEMORY_LIMIT}
+    cpus: ${CS2_CPU_LIMIT}
     security_opt:
       - no-new-privileges:true
     healthcheck:

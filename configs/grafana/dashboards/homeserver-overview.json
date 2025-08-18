@@ -627,12 +627,6 @@
           "refId": "D"
         },
         {
-          "expr": "up{job=\"authelia\"}",
-          "interval": "",
-          "legendFormat": "Authelia (Auth)",
-          "refId": "E"
-        },
-        {
           "expr": "up{job=\"uptime-kuma\"}",
           "interval": "",
           "legendFormat": "Uptime Kuma",

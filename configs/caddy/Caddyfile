@@ -22,24 +22,6 @@
 	# Email for Let's Encrypt certificate notifications
 	email {env.CLOUDFLARE_EMAIL}
 	
-	# Global security headers
-	header /* {
-		# Security headers
-		X-Content-Type-Options nosniff
-		X-Frame-Options DENY
-		X-XSS-Protection "1; mode=block"
-		Referrer-Policy strict-origin-when-cross-origin
-		
-		# HSTS (HTTP Strict Transport Security)
-		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
-		
-		# Content Security Policy (basic - adjust per service needs)
-		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"
-		
-		# Remove server identification
-		-Server
-	}
-	
 	# Enable request/response logging
 	log {
 		output file /var/log/caddy/access.log

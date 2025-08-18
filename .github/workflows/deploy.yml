@@ -92,6 +92,20 @@ jobs:
         # Ensure the runner user can also access these directories
         sudo chmod -R u+rwx,g+rwx "${SSD_PATH}" "${NVME_PATH}" "${HDD_PATH}" || true
 
+    - name: Set Container-Specific Permissions
+      run: |
+        # Load environment variables for this step only
+        export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
+        echo "Setting container-specific directory permissions..."
+        # Set permissions for monitoring services with their specific user IDs
+        sudo chown -R 472:472 "${SSD_PATH}/monitoring/grafana" || true
+        sudo chown -R 65534:65534 "${SSD_PATH}/monitoring/prometheus" || true
+        sudo chown -R 10001:10001 "${SSD_PATH}/monitoring/loki" || true
+        sudo chown -R 65534:65534 "${SSD_PATH}/monitoring/alertmanager" || true
+        sudo chown -R root:root "${SSD_PATH}/monitoring/uptime-kuma" || true
+        sudo chown -R root:root "${SSD_PATH}/monitoring/fail2ban" || true
+        echo "Container permissions set successfully"
+
     - name: Deploy Core Infrastructure
       run: |
         # Load environment variables for this step only

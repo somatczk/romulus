@@ -361,5 +361,3 @@ mute_time_intervals:
             end_time: '08:00'
         weekdays: ['saturday', 'sunday']
 
-# Global Discord webhook template (can be overridden per receiver)
-# discord_api_url: 'https://discord.com/api/webhooks/'

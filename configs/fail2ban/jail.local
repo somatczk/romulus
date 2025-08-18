@@ -56,7 +56,7 @@ findtime = 10m
 
 # Caddy HTTP Authentication Failures
 [caddy-auth]
-enabled = true
+enabled = false
 port = http,https
 filter = caddy-auth
 logpath = /var/log/caddy/access.log
@@ -66,7 +66,7 @@ findtime = 10m
 
 # Caddy Rate Limiting Violations
 [caddy-rate-limit]
-enabled = true
+enabled = false
 port = http,https
 filter = caddy-rate-limit
 logpath = /var/log/caddy/access.log
@@ -78,17 +78,17 @@ findtime = 1m
 
 # Plex Media Server
 [plex]
-enabled = true
+enabled = false
 port = 32400
 filter = plex
-logpath = /mnt/ssd/config/plex/Library/Application Support/Plex Media Server/Logs/Plex Media Server.log
+logpath = ${SSD_PATH}/config/plex/Library/Application Support/Plex Media Server/Logs/Plex Media Server.log
 maxretry = 10
 bantime = 2h
 findtime = 10m
 
 # qBittorrent WebUI
 [qbittorrent]
-enabled = true
+enabled = false
 port = 8080
 filter = qbittorrent
 logpath = /var/lib/docker/containers/*qbittorrent*/*.log
@@ -98,7 +98,7 @@ findtime = 5m
 
 # Grafana Dashboard
 [grafana]
-enabled = true
+enabled = false
 port = 3000
 filter = grafana
 logpath = /var/lib/docker/containers/*grafana*/*.log
@@ -109,7 +109,7 @@ findtime = 10m
 
 # Docker Container Exploitation Attempts
 [docker-exploit]
-enabled = true
+enabled = false
 port = all
 filter = docker-exploit
 logpath = /var/lib/docker/containers/*/*.log
@@ -120,7 +120,7 @@ findtime = 1h
 
 # Kernel Exploitation Attempts
 [kernel-exploit]
-enabled = true
+enabled = false
 port = all
 filter = kernel-exploit
 logpath = /var/log/kern.log

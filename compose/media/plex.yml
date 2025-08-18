@@ -21,8 +21,8 @@ services:
       - /dev/dri:/dev/dri
     ports:
       - "${PLEX_PORT}:32400"
-    mem_limit: ${PLEX_MEMORY_LIMIT:-8g}
-    cpus: ${PLEX_CPU_LIMIT:-6}
+    mem_limit: ${PLEX_MEMORY_LIMIT}
+    cpus: ${PLEX_CPU_LIMIT}
     tmpfs:
       - /transcode:rw,noexec,nosuid,size=4g
     security_opt:

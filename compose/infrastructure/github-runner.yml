@@ -6,9 +6,9 @@ services:
     networks:
       - frontend
     environment:
-      - RUNNER_NAME=${RUNNER_NAME:-homeserver-runner}
+      - RUNNER_NAME=${RUNNER_NAME}
       - RUNNER_WORKDIR=/tmp/runner/work
-      - RUNNER_GROUP=${RUNNER_GROUP:-default}
+      - RUNNER_GROUP=${RUNNER_GROUP}
       - RUNNER_SCOPE=repo
       - LABELS=self-hosted,Linux,X64,homeserver,docker
       - REPO_URL=https://github.com/${GITHUB_REPOSITORY}
@@ -19,18 +19,18 @@ services:
       - DOCKER_HOST=unix:///var/run/docker.sock
       - START_DOCKER_SERVICE=false
       - RUNNER_ALLOW_RUNASROOT=1
-      - TZ=${TZ:-UTC}
+      - TZ=${TZ}
     volumes:
       - ${SSD_PATH}/runner/work:/tmp/runner/work
       - /var/run/docker.sock:/var/run/docker.sock:rw
-      - ${PROJECT_PATH:-/opt/homeserver}:/workspace:ro
+      - ${PROJECT_PATH}:/workspace:ro
       - /usr/bin/docker:/usr/bin/docker:ro
       - /usr/local/bin/docker-compose:/usr/local/bin/docker-compose:ro
-    mem_limit: ${RUNNER_MEMORY_LIMIT:-4g}
-    cpus: ${RUNNER_CPU_LIMIT:-4.0}
+    mem_limit: ${RUNNER_MEMORY_LIMIT}
+    cpus: ${RUNNER_CPU_LIMIT}
     security_opt:
       - no-new-privileges:true
-    user: "${PUID:-1000}:${PGID:-1000}"
+    user: "${PUID}:${PGID}"
     healthcheck:
       test: ["CMD", "pgrep", "-f", "Runner.Listener"]
       interval: 30s

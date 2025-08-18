@@ -70,7 +70,7 @@ services:
     ports:
       - "9104:9104"
     environment:
-      - DATA_SOURCE_NAME=monitoring:${MONITORING_DB_PASSWORD:-monitoring_password}@(mariadb:3306)/
+      - DATA_SOURCE_NAME=monitoring:${MONITORING_DB_PASSWORD}@(mariadb:3306)/
     depends_on:
       - mariadb
     mem_limit: 128m

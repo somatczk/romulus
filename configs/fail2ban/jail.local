@@ -75,16 +75,6 @@ bantime = 1h
 findtime = 1m
 
 
-# Authelia Authentication Failures
-[authelia]
-enabled = true
-port = http,https
-filter = authelia
-logpath = /var/lib/docker/containers/*/*.log
-maxretry = 3
-bantime = 1h
-findtime = 10m
-
 
 # Plex Media Server
 [plex]

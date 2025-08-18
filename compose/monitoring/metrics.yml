@@ -8,7 +8,7 @@ services:
       - frontend
       - backend
     ports:
-      - "${PROMETHEUS_PORT:-9090}:9090"
+      - "${PROMETHEUS_PORT}:9090"
     volumes:
       - ./configs/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./configs/prometheus/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
@@ -47,7 +47,7 @@ services:
       - monitoring
       - frontend
     ports:
-      - "${GRAFANA_PORT:-3000}:3000"
+      - "${GRAFANA_PORT}:3000"
     volumes:
       - ${SSD_PATH}/monitoring/grafana:/var/lib/grafana
       - ./configs/grafana/provisioning:/etc/grafana/provisioning:ro

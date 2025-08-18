@@ -156,81 +156,8 @@ status.{env.DOMAIN} {
 	}
 }
 
-# Authelia Authentication Service
-# Single Sign-On and 2FA authentication
-auth.{env.DOMAIN} {
-	reverse_proxy authelia:9091 {
-		header_up X-Real-IP {remote_host}
-		header_up X-Forwarded-For {remote_host}
-		header_up X-Forwarded-Proto {scheme}
-		header_up X-Forwarded-Host {host}
-		header_up X-Forwarded-Uri {uri}
-	}
-	
-	# Custom headers for Authelia
-	header {
-		# Authelia handles its own security headers
-		-X-Frame-Options
-		-Content-Security-Policy
-	}
-}
 
-# Admin Panel (protected by Authelia)
-# Administrative interface for system management
-admin.{env.DOMAIN} {
-	# Authelia forward auth middleware
-	forward_auth authelia:9091 {
-		uri /api/verify?rd=https://auth.{env.DOMAIN}/
-		copy_headers Remote-User Remote-Groups Remote-Name Remote-Email
-	}
-	
-	# Serve static admin interface or forward to admin service
-	reverse_proxy admin-panel:8080 {
-		header_up X-Real-IP {remote_host}
-		header_up X-Forwarded-For {remote_host}
-		header_up X-Forwarded-Proto {scheme}
-		header_up X-Forwarded-Host {host}
-		
-		# Pass through Authelia headers
-		header_up Remote-User {>Remote-User}
-		header_up Remote-Groups {>Remote-Groups}
-		header_up Remote-Name {>Remote-Name}
-		header_up Remote-Email {>Remote-Email}
-	}
-}
 
-# API Gateway (protected)
-# Protected API endpoints for automation
-api.{env.DOMAIN} {
-	# Authelia forward auth protection
-	forward_auth authelia:9091 {
-		uri /api/verify?rd=https://auth.{env.DOMAIN}/
-		copy_headers Remote-User Remote-Groups Remote-Name Remote-Email
-	}
-	
-	# API versioning and routing
-	handle_path /v1/plex/* {
-		reverse_proxy plex:32400 {
-			header_up X-Real-IP {remote_host}
-			header_up Authorization {>Authorization}
-		}
-	}
-	
-	handle_path /v1/metrics/* {
-		reverse_proxy prometheus:9090 {
-			header_up X-Real-IP {remote_host}
-		}
-	}
-	
-	# Rate limiting for API endpoints
-	rate_limit {
-		zone api {
-			key {remote_host}
-			events 300
-			window 1m
-		}
-	}
-}
 
 # Health Check Endpoint
 # Simple health check for load balancers/monitoring

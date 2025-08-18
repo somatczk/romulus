@@ -12,14 +12,15 @@ permissions:
   contents: read
 
 env:
-  TZ: ${{ secrets.TZ || 'UTC' }}
-  PUID: ${{ secrets.PUID || '1000' }}
-  PGID: ${{ secrets.PGID || '1000' }}
+  TZ: ${{ secrets.TZ }}
+  PUID: ${{ secrets.PUID }}
+  PGID: ${{ secrets.PGID }}
   DOMAIN: ${{ secrets.DOMAIN }}
-  NVME_PATH: ${{ secrets.NVME_PATH || '/mnt/nvme' }}
-  SSD_PATH: ${{ secrets.SSD_PATH || '/mnt/ssd' }}
-  HDD_PATH: ${{ secrets.HDD_PATH || '/mnt/hdd' }}
+  NVME_PATH: ${{ secrets.NVME_PATH }}
+  SSD_PATH: ${{ secrets.SSD_PATH }}
+  HDD_PATH: ${{ secrets.HDD_PATH }}
   CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  CLOUDFLARE_DOMAINS: ${{ secrets.CLOUDFLARE_DOMAINS }}
   MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
   TS3SERVER_DB_PASSWORD: ${{ secrets.TS3SERVER_DB_PASSWORD }}
   REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
@@ -31,25 +32,25 @@ env:
   STEAM_TOKEN: ${{ secrets.STEAM_TOKEN }}
   TS3_SERVER_ADMIN_PASSWORD: ${{ secrets.TS3_SERVER_ADMIN_PASSWORD }}
   GF_SECURITY_ADMIN_PASSWORD: ${{ secrets.GF_SECURITY_ADMIN_PASSWORD }}
-  PLEX_MEMORY_LIMIT: ${{ secrets.PLEX_MEMORY_LIMIT || '8g' }}
-  PLEX_CPU_LIMIT: ${{ secrets.PLEX_CPU_LIMIT || '6' }}
-  CS2_MEMORY_LIMIT: ${{ secrets.CS2_MEMORY_LIMIT || '4g' }}
-  CS2_CPU_LIMIT: ${{ secrets.CS2_CPU_LIMIT || '4' }}
-  PLEX_PORT: ${{ secrets.PLEX_PORT || '32400' }}
-  QBITTORRENT_PORT: ${{ secrets.QBITTORRENT_PORT || '8080' }}
-  GRAFANA_PORT: ${{ secrets.GRAFANA_PORT || '3000' }}
-  PROMETHEUS_PORT: ${{ secrets.PROMETHEUS_PORT || '9090' }}
-  TEAMSPEAK_VOICE_PORT: ${{ secrets.TEAMSPEAK_VOICE_PORT || '9987' }}
-  TEAMSPEAK_QUERY_PORT: ${{ secrets.TEAMSPEAK_QUERY_PORT || '10011' }}
-  TEAMSPEAK_FILES_PORT: ${{ secrets.TEAMSPEAK_FILES_PORT || '30033' }}
-  CS2_PORT: ${{ secrets.CS2_PORT || '27015' }}
-  CS2_RCON_PORT: ${{ secrets.CS2_RCON_PORT || '27025' }}
+  PLEX_MEMORY_LIMIT: ${{ secrets.PLEX_MEMORY_LIMIT }}
+  PLEX_CPU_LIMIT: ${{ secrets.PLEX_CPU_LIMIT }}
+  CS2_MEMORY_LIMIT: ${{ secrets.CS2_MEMORY_LIMIT }}
+  CS2_CPU_LIMIT: ${{ secrets.CS2_CPU_LIMIT }}
+  PLEX_PORT: ${{ secrets.PLEX_PORT }}
+  QBITTORRENT_PORT: ${{ secrets.QBITTORRENT_PORT }}
+  GRAFANA_PORT: ${{ secrets.GRAFANA_PORT }}
+  PROMETHEUS_PORT: ${{ secrets.PROMETHEUS_PORT }}
+  TEAMSPEAK_VOICE_PORT: ${{ secrets.TEAMSPEAK_VOICE_PORT }}
+  TEAMSPEAK_QUERY_PORT: ${{ secrets.TEAMSPEAK_QUERY_PORT }}
+  TEAMSPEAK_FILES_PORT: ${{ secrets.TEAMSPEAK_FILES_PORT }}
+  CS2_PORT: ${{ secrets.CS2_PORT }}
+  CS2_RCON_PORT: ${{ secrets.CS2_RCON_PORT }}
   DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-  SMTP_HOST: ${{ secrets.SMTP_HOST || 'smtp.gmail.com' }}
-  SMTP_PORT: ${{ secrets.SMTP_PORT || '587' }}
+  SMTP_HOST: ${{ secrets.SMTP_HOST }}
+  SMTP_PORT: ${{ secrets.SMTP_PORT }}
   SMTP_USER: ${{ secrets.SMTP_USER }}
   SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
-  MONITORING_DB_PASSWORD: ${{ secrets.MONITORING_DB_PASSWORD || 'monitoring_password' }}
+  MONITORING_DB_PASSWORD: ${{ secrets.MONITORING_DB_PASSWORD }}
 
 jobs:
   deploy:

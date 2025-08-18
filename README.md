@@ -87,7 +87,7 @@ docker-compose -f docker-compose.runner.yml up -d
 
 Configure the following GitHub Secrets in your repository settings:
 
-#### Required Secrets
+#### Required Secrets (All Must Be Set)
 - `DOMAIN`: Your domain name (e.g., `example.com`)
 - `CLOUDFLARE_API_TOKEN`: Cloudflare API token for DNS management
 - `MYSQL_ROOT_PASSWORD`: MariaDB root password
@@ -103,12 +103,28 @@ Configure the following GitHub Secrets in your repository settings:
 - `STEAM_TOKEN`: Steam game server token
 - `TS3_SERVER_ADMIN_PASSWORD`: TeamSpeak admin password
 
-#### Optional Configuration Secrets
-- `TZ`: Timezone (default: UTC)
-- `PUID`/`PGID`: User/Group IDs (default: 1000)
-- `NVME_PATH`/`SSD_PATH`/`HDD_PATH`: Storage paths
-- `*_MEMORY_LIMIT`/`*_CPU_LIMIT`: Resource limits for services
-- Port configurations for services
+#### System Configuration Secrets
+- `TZ`: Timezone (e.g., `UTC`, `America/New_York`)
+- `PUID`/`PGID`: User/Group IDs (e.g., `1000`)
+- `NVME_PATH`/`SSD_PATH`/`HDD_PATH`: Storage mount paths
+- `CLOUDFLARE_DOMAINS`: Comma-separated list of domains to manage DNS for
+
+#### Resource Limit Secrets
+- `PLEX_MEMORY_LIMIT`/`PLEX_CPU_LIMIT`: Plex resource limits
+- `CS2_MEMORY_LIMIT`/`CS2_CPU_LIMIT`: CS2 server resource limits
+- `RUNNER_MEMORY_LIMIT`/`RUNNER_CPU_LIMIT`: GitHub runner resource limits
+
+#### Port Configuration Secrets
+- `PLEX_PORT`, `QBITTORRENT_PORT`, `GRAFANA_PORT`, `PROMETHEUS_PORT`
+- `TEAMSPEAK_VOICE_PORT`, `TEAMSPEAK_QUERY_PORT`, `TEAMSPEAK_FILES_PORT`
+- `CS2_PORT`, `CS2_RCON_PORT`
+
+#### Monitoring & Alerting Secrets
+- `DISCORD_WEBHOOK_URL`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`
+- `MONITORING_DB_PASSWORD`
+
+#### GitHub Runner Secrets
+- `GITHUB_REPOSITORY`, `GITHUB_RUNNER_TOKEN`, `RUNNER_NAME`, `RUNNER_GROUP`, `PROJECT_PATH`
 
 ### 4. Runner Permissions
 

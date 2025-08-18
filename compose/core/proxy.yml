@@ -32,8 +32,10 @@ services:
       - frontend
     environment:
       - CF_API_TOKEN=${CLOUDFLARE_API_TOKEN}
-      - DOMAINS=${DOMAIN}
+      - DOMAINS=${CLOUDFLARE_DOMAINS}
       - PROXIED=true
+      - IP6_PROVIDER=none
+      - UPDATE_CRON=@every 5m
     mem_limit: 64m
     security_opt:
       - no-new-privileges:true

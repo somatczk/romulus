@@ -31,8 +31,8 @@ jobs:
       env:
         LARGE_SECRET_PASSPHRASE_HOMESERVER_ENV_SECRETS_JSON: ${{ secrets.ENV_SECRETS_PASSPHRASE }}
 
-    # Load all environment variables from the decrypted JSON file
-    - name: Load Environment Variables
+    # Verify and prepare environment variables from the decrypted JSON file
+    - name: Prepare Environment Variables
       run: |
         # Verify the JSON file exists and is valid
         if [ ! -f "$HOME/secrets/homeserver-env-secrets.json" ]; then
@@ -46,14 +46,11 @@ jobs:
           exit 1
         fi
         
-        # Load all key-value pairs into GITHUB_ENV
-        jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" >> $GITHUB_ENV
-        
         # Count loaded variables (for verification)
         VARIABLE_COUNT=$(jq 'keys | length' "$HOME/secrets/homeserver-env-secrets.json")
-        echo "::notice::Loaded $VARIABLE_COUNT environment variables"
+        echo "::notice::Environment file contains $VARIABLE_COUNT variables"
         
-        # Verify critical variables are loaded (without exposing values)
+        # Verify critical variables are present (without exposing values)
         CRITICAL_VARS=("DOMAIN" "CLOUDFLARE_API_TOKEN" "MYSQL_ROOT_PASSWORD" "REDIS_PASSWORD")
         for var in "${CRITICAL_VARS[@]}"; do
           if jq -e "has(\"$var\")" "$HOME/secrets/homeserver-env-secrets.json" >/dev/null; then
@@ -66,13 +63,14 @@ jobs:
 
     - name: Validate Configuration
       run: |
-        docker-compose config --quiet 2>/dev/null || {
-          echo "::error::Docker Compose configuration validation failed"
-          exit 1
-        }
+        # Load environment variables for this step only
+        export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
+        docker-compose config --quiet
 
     - name: Create Required Directories
       run: |
+        # Load environment variables for this step only
+        export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
         mkdir -p "${SSD_PATH}"/{caddy/{data,config},databases/{mariadb,redis},config/{plex,qbittorrent,teamspeak,fail2ban},monitoring/{prometheus,grafana,loki,alertmanager,uptime-kuma}}
         mkdir -p "${NVME_PATH}/games/cs2"
         mkdir -p "${HDD_PATH}"/{media,downloads/complete}
@@ -80,6 +78,8 @@ jobs:
 
     - name: Deploy Core Infrastructure
       run: |
+        # Load environment variables for this step only
+        export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
         echo "Deploying core infrastructure services..."
         docker-compose -f compose/core/proxy.yml up -d
         docker-compose -f compose/core/database.yml up -d
@@ -93,6 +93,8 @@ jobs:
 
     - name: Deploy Application Services  
       run: |
+        # Load environment variables for this step only
+        export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
         echo "Deploying application services..."
         docker-compose -f compose/media/plex.yml up -d
         docker-compose -f compose/media/torrent.yml up -d
@@ -102,6 +104,8 @@ jobs:
 
     - name: Deploy Monitoring Stack
       run: |
+        # Load environment variables for this step only
+        export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
         echo "Deploying monitoring services..."
         docker-compose -f compose/monitoring/metrics.yml up -d
         docker-compose -f compose/monitoring/logging.yml up -d
@@ -112,12 +116,16 @@ jobs:
 
     - name: Deploy Security Services
       run: |
+        # Load environment variables for this step only
+        export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
         echo "Deploying security services..."
         docker-compose -f compose/security/fail2ban.yml up -d
         sleep 10
 
     - name: Health Check
       run: |
+        # Load environment variables for this step only
+        export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
         echo "Performing health checks..."
         
         # Check core services
@@ -171,6 +179,8 @@ jobs:
 
     - name: Test External Access
       run: |
+        # Load environment variables for this step only
+        export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
         echo "Testing external access..."
         sleep 30
         

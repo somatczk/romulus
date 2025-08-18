@@ -43,5 +43,3 @@ services:
     depends_on:
       - loki
 
-networks:
-  monitoring:

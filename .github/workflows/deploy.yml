@@ -75,12 +75,6 @@ jobs:
         export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
         docker-compose config --quiet
 
-    - name: Stop Existing Services
-      run: |
-        echo "Stopping any existing Docker containers to free up ports..."
-        docker-compose down --remove-orphans || true
-        docker system prune -f || true
-
     - name: Create Required Directories
       run: |
         # Load environment variables for this step only
@@ -102,6 +96,10 @@ jobs:
       run: |
         # Load environment variables for this step only
         export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
+        echo "Stopping existing core infrastructure containers..."
+        docker-compose stop caddy cloudflare-ddns mariadb redis || true
+        docker-compose rm -f caddy cloudflare-ddns mariadb redis || true
+        
         echo "Deploying core infrastructure services..."
         docker-compose up -d caddy cloudflare-ddns mariadb redis
         
@@ -115,6 +113,10 @@ jobs:
       run: |
         # Load environment variables for this step only
         export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
+        echo "Stopping existing application services..."
+        docker-compose stop plex qbittorrent teamspeak cs2-server || true
+        docker-compose rm -f plex qbittorrent teamspeak cs2-server || true
+        
         echo "Deploying application services..."
         docker-compose up -d plex qbittorrent teamspeak cs2-server
         sleep 30
@@ -123,6 +125,10 @@ jobs:
       run: |
         # Load environment variables for this step only
         export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
+        echo "Stopping existing monitoring services..."
+        docker-compose stop prometheus grafana loki promtail alertmanager uptime-kuma node-exporter cadvisor redis-exporter mariadb-exporter blackbox-exporter || true
+        docker-compose rm -f prometheus grafana loki promtail alertmanager uptime-kuma node-exporter cadvisor redis-exporter mariadb-exporter blackbox-exporter || true
+        
         echo "Deploying monitoring services..."
         docker-compose up -d prometheus grafana loki promtail alertmanager uptime-kuma node-exporter cadvisor redis-exporter mariadb-exporter blackbox-exporter
         sleep 20
@@ -131,6 +137,10 @@ jobs:
       run: |
         # Load environment variables for this step only
         export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
+        echo "Stopping existing security services..."
+        docker-compose stop fail2ban || true
+        docker-compose rm -f fail2ban || true
+        
         echo "Deploying security services..."
         docker-compose up -d fail2ban
         sleep 10

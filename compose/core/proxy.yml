@@ -20,6 +20,8 @@ services:
       - ${SSD_PATH}/caddy/config:/config
     environment:
       - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}
+      - CLOUDFLARE_EMAIL=${CLOUDFLARE_EMAIL}
+      - DOMAIN=${DOMAIN}
     mem_limit: 512m
     cpus: 1
     security_opt:

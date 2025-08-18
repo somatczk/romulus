@@ -1,6 +1,6 @@
 services:
   cs2-server:
-    image: joedwards32/cs2:2.0.9
+    image: joedwards32/cs2:latest
     container_name: cs2-server
     restart: unless-stopped
     networks:

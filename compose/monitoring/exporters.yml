@@ -105,7 +105,7 @@ services:
     ports:
       - "9115:9115"
     volumes:
-      - ./configs/blackbox/blackbox.yml:/etc/blackbox_exporter/config.yml:ro
+      - ../../configs/blackbox/blackbox.yml:/etc/blackbox_exporter/config.yml:ro
     mem_limit: 256m
     security_opt:
       - no-new-privileges:true

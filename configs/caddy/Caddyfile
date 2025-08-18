@@ -17,10 +17,10 @@
 {
 	# Use Cloudflare DNS challenge for automatic SSL certificates
 	# This allows certificates for internal services without port 80/443 exposure
-	acme_dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+	acme_dns cloudflare {$CLOUDFLARE_API_TOKEN}
 	
 	# Email for Let's Encrypt certificate notifications
-	email {env.CLOUDFLARE_EMAIL}
+	email {$CLOUDFLARE_EMAIL}
 	
 	# Enable request/response logging
 	log {
@@ -32,7 +32,7 @@
 
 # Plex Media Server
 # Direct connection to Plex container with real IP preservation
-plex.{env.DOMAIN} {
+plex.{$DOMAIN} {
 	# Forward all traffic to Plex container
 	reverse_proxy plex:32400 {
 		# Preserve real client IP for Plex logs and access control
@@ -62,7 +62,7 @@ plex.{env.DOMAIN} {
 
 # qBittorrent WebUI
 # Torrent client web interface with authentication
-torrents.{env.DOMAIN} {
+torrents.{$DOMAIN} {
 	# Forward to qBittorrent WebUI
 	reverse_proxy qbittorrent:8080 {
 		header_up X-Real-IP {remote_host}
@@ -83,7 +83,7 @@ torrents.{env.DOMAIN} {
 
 # Grafana Monitoring Dashboard
 # Observability and metrics visualization
-monitoring.{env.DOMAIN} {
+monitoring.{$DOMAIN} {
 	# Forward to Grafana container
 	reverse_proxy grafana:3000 {
 		header_up X-Real-IP {remote_host}
@@ -106,7 +106,7 @@ monitoring.{env.DOMAIN} {
 
 # Prometheus Metrics Endpoint
 # Protected metrics collection endpoint
-metrics.{env.DOMAIN} {
+metrics.{$DOMAIN} {
 	# Basic auth protection for Prometheus
 	basicauth {
 		admin $2a$14$Zkx19XLiW6VYouLHR5NbfOeNhNAf6.j5wy8xjJJAk8M5w.9.qmL6u  # Change this hash
@@ -122,7 +122,7 @@ metrics.{env.DOMAIN} {
 
 # Uptime Kuma Status Page
 # Service availability monitoring dashboard
-status.{env.DOMAIN} {
+status.{$DOMAIN} {
 	reverse_proxy uptime-kuma:3001 {
 		header_up X-Real-IP {remote_host}
 		header_up X-Forwarded-For {remote_host}
@@ -140,20 +140,20 @@ status.{env.DOMAIN} {
 
 # Health Check Endpoint
 # Simple health check for load balancers/monitoring
-health.{env.DOMAIN} {
+health.{$DOMAIN} {
 	respond /health "OK" 200
 	respond /version "Homeserver v1.0" 200
 }
 
 # Default catch-all for undefined subdomains
 # Redirect to main domain or show maintenance page
-*.{env.DOMAIN} {
+*.{$DOMAIN} {
 	# Redirect undefined subdomains to monitoring dashboard
-	redir https://monitoring.{env.DOMAIN}{uri} permanent
+	redir https://monitoring.{$DOMAIN}{uri} permanent
 }
 
 # Main domain redirect
 # Redirect root domain to monitoring dashboard
-{env.DOMAIN} {
-	redir https://monitoring.{env.DOMAIN} permanent
+{$DOMAIN} {
+	redir https://monitoring.{$DOMAIN} permanent
 }

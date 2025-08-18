@@ -78,8 +78,5 @@ services:
 
 networks:
   monitoring:
-    external: true
   frontend:
-    external: true
   backend:
-    external: true

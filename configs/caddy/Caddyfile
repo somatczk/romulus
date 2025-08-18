@@ -72,13 +72,13 @@ torrents.{env.DOMAIN} {
 	}
 	
 	# Rate limiting to prevent abuse
-	rate_limit {
-		zone qbittorrent {
-			key {remote_host}
-			events 100
-			window 1m
-		}
-	}
+	# rate_limit {
+	#	zone qbittorrent {
+	#		key {remote_host}
+	#		events 100
+	#		window 1m
+	#	}
+	# }
 }
 
 # Grafana Monitoring Dashboard

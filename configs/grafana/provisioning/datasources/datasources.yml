@@ -222,9 +222,3 @@ datasources:
     orgId: 1
     secureJsonData: {}
 
-# Prevent accidental deletion of provisioned data sources
-deleteDatasources:
-  - name: 'Old Prometheus'
-    orgId: 1
-  - name: 'Test Datasource'
-    orgId: 1

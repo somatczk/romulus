@@ -173,15 +173,3 @@ scrape_configs:
 #       username: prometheus
 #       password: ${REMOTE_PROMETHEUS_PASSWORD}
 
-# Storage and query configuration will be handled via command line arguments:
-# --storage.tsdb.retention.time=30d
-# --storage.tsdb.retention.size=10GB  
-# --storage.tsdb.path=/prometheus/data
-# --storage.tsdb.wal-compression
-# --query.timeout=2m
-# --query.max-concurrency=20
-# --query.max-samples=50000000
-# --web.console.templates=/etc/prometheus/consoles
-# --web.console.libraries=/etc/prometheus/console_libraries
-# --web.enable-lifecycle
-# --web.enable-admin-api

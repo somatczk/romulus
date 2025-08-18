@@ -75,6 +75,12 @@ jobs:
         export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
         docker-compose config --quiet
 
+    - name: Stop Existing Services
+      run: |
+        echo "Stopping any existing Docker containers to free up ports..."
+        docker-compose down --remove-orphans || true
+        docker system prune -f || true
+
     - name: Create Required Directories
       run: |
         # Load environment variables for this step only

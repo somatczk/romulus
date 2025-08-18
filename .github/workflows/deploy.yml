@@ -66,7 +66,10 @@ jobs:
 
     - name: Validate Configuration
       run: |
-        docker-compose config --quiet
+        docker-compose config --quiet 2>/dev/null || {
+          echo "::error::Docker Compose configuration validation failed"
+          exit 1
+        }
 
     - name: Create Required Directories
       run: |

@@ -27,4 +27,3 @@ services:
 
 networks:
   backend:
-    external: true

@@ -45,5 +45,3 @@ services:
       timeout: 10s
       retries: 2
 
-networks:
-  frontend:

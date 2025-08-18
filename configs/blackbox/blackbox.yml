@@ -24,7 +24,6 @@ modules:
     http:
       # Allow HTTP redirects (up to 3)
       follow_redirects: true
-      max_redirects: 3
       
       # Valid HTTP status codes
       valid_status_codes: [200, 201, 202, 204, 301, 302, 307, 308]
@@ -60,7 +59,6 @@ modules:
     timeout: 15s
     http:
       follow_redirects: true
-      max_redirects: 5
       valid_status_codes: [200, 401, 403]  # 401/403 are OK for auth-protected services
       method: GET
       headers:
@@ -315,7 +313,6 @@ modules:
         max_version: "TLS13"
       preferred_ip_protocol: "ip4"
       follow_redirects: true
-      max_redirects: 3
 
   # ===== PROMETHEUS METRICS ENDPOINTS =====
   
@@ -334,5 +331,4 @@ modules:
       preferred_ip_protocol: "ip4"
       body: ""
 
-# Global configuration
-timeout: 30s
+# Global configuration (removed - timeout specified per module)

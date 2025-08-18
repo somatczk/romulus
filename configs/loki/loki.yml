@@ -90,13 +90,13 @@ limits_config:
   # Split queries by time range for better performance
   split_queries_by_interval: 15m
   
-  # Compaction settings
-  compactor:
-    working_directory: /loki/compactor
-    compaction_interval: 10m
-    retention_enabled: true
-    retention_delete_delay: 2h
-    retention_delete_worker_count: 150
+# Compaction settings (moved to separate section)
+compactor:
+  working_directory: /loki/compactor
+  compaction_interval: 10m
+  retention_enabled: true
+  retention_delete_delay: 2h
+  retention_delete_worker_count: 150
 
 # Storage configuration optimized for SSD
 storage_config:
@@ -113,10 +113,9 @@ frontend:
   max_outstanding_per_tenant: 100
   compress_responses: true
 
-# Frontend worker configuration
+# Frontend worker configuration (parallelism deprecated)
 frontend_worker:
   frontend_address: 127.0.0.1:9095
-  parallelism: 10
 
 # Query scheduler for better resource management
 query_scheduler:

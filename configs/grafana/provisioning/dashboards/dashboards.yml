@@ -21,8 +21,7 @@ providers:
   - name: 'homeserver-dashboards'
     type: file
     orgId: 1
-    folder: 'Homeserver'
-    folderUid: 'homeserver-folder'
+    # When using foldersFromFilesStructure, don't specify folder/folderUid
     
     # Dashboard loading options
     options:
@@ -63,12 +62,11 @@ providers:
       - 'infrastructure'
       - 'node-exporter'
 
-  # Application monitoring dashboards
+  # Application monitoring dashboards  
   - name: 'application-dashboards'
     type: file
     orgId: 1
-    folder: 'Applications'
-    folderUid: 'apps-folder'
+    # When using foldersFromFilesStructure, don't specify folder/folderUid
     
     options:
       path: '/var/lib/grafana/dashboards/applications'

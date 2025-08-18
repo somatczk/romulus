@@ -1,0 +1,27 @@
+global:
+  smtp_smarthost: '${SMTP_HOST}:${SMTP_PORT}'
+  smtp_from: 'alerts@${DOMAIN}'
+  smtp_auth_username: '${SMTP_USER}'
+  smtp_auth_password: '${SMTP_PASSWORD}'
+  smtp_require_tls: true
+  resolve_timeout: 5m
+
+route:
+  group_by: ['alertname']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 1h
+  receiver: 'default'
+
+receivers:
+- name: 'default'
+  email_configs:
+  - to: 'admin@${DOMAIN}'
+    subject: 'Homeserver Alert: {{ .GroupLabels.alertname }}'
+    body: |
+      Alert fired:
+      {{ range .Alerts }}
+      - Alert: {{ .Annotations.summary }}
+      - Description: {{ .Annotations.description }}
+      - Time: {{ .StartsAt }}
+      {{ end }}

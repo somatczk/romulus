@@ -17,6 +17,8 @@ CREATE DATABASE IF NOT EXISTS `homeserver_logs` DEFAULT CHARACTER SET utf8mb4 CO
 -- Create read-only user for monitoring/backup services
 CREATE USER IF NOT EXISTS 'monitoring'@'%' IDENTIFIED BY '${MONITORING_DB_PASSWORD}';
 GRANT SELECT ON *.* TO 'monitoring'@'%';
+GRANT PROCESS ON *.* TO 'monitoring'@'%';
+GRANT REPLICATION CLIENT ON *.* TO 'monitoring'@'%';
 
 -- Create backup user with specific privileges
 CREATE USER IF NOT EXISTS 'backup'@'%' IDENTIFIED BY '${BACKUP_DB_PASSWORD}';

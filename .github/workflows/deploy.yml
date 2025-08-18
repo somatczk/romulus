@@ -110,7 +110,7 @@ jobs:
         # Load environment variables for this step only
         export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
         echo "Deploying application services..."
-        docker-compose up -d plex qbittorrent teamspeak cs2
+        docker-compose up -d plex qbittorrent teamspeak cs2-server
         sleep 30
 
     - name: Deploy Monitoring Stack
@@ -118,7 +118,7 @@ jobs:
         # Load environment variables for this step only
         export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
         echo "Deploying monitoring services..."
-        docker-compose up -d prometheus grafana loki promtail alertmanager uptime-kuma node-exporter cadvisor redis-exporter mariadb-exporter
+        docker-compose up -d prometheus grafana loki promtail alertmanager uptime-kuma node-exporter cadvisor redis-exporter mariadb-exporter blackbox-exporter
         sleep 20
 
     - name: Deploy Security Services

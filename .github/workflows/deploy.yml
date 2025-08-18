@@ -71,9 +71,16 @@ jobs:
       run: |
         # Load environment variables for this step only
         export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
-        mkdir -p "${SSD_PATH}"/{caddy/{data,config},databases/{mariadb,redis},config/{plex,qbittorrent,teamspeak,fail2ban},monitoring/{prometheus,grafana,loki,alertmanager,uptime-kuma}}
-        mkdir -p "${NVME_PATH}/games/cs2"
-        mkdir -p "${HDD_PATH}"/{media,downloads/complete}
+        
+        # Create mount points with sudo if they don't exist
+        sudo mkdir -p "${SSD_PATH}" "${NVME_PATH}" "${HDD_PATH}" || true
+        
+        # Create application directories
+        sudo mkdir -p "${SSD_PATH}"/{caddy/{data,config},databases/{mariadb,redis},config/{plex,qbittorrent,teamspeak,fail2ban},monitoring/{prometheus,grafana,loki,alertmanager,uptime-kuma}}
+        sudo mkdir -p "${NVME_PATH}/games/cs2"
+        sudo mkdir -p "${HDD_PATH}"/{media,downloads/complete}
+        
+        # Set proper ownership
         sudo chown -R "${PUID}:${PGID}" "${SSD_PATH}" "${NVME_PATH}" "${HDD_PATH}" || true
 
     - name: Deploy Core Infrastructure

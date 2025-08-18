@@ -85,46 +85,39 @@ docker-compose -f docker-compose.runner.yml up -d
 
 ### 3. GitHub Repository Configuration
 
-Configure the following GitHub Secrets in your repository settings:
+The system uses encrypted environment secrets instead of individual GitHub Secrets for simplified management.
 
-#### Required Secrets (All Must Be Set)
-- `DOMAIN`: Your domain name (e.g., `example.com`)
-- `CLOUDFLARE_API_TOKEN`: Cloudflare API token for DNS management
-- `MYSQL_ROOT_PASSWORD`: MariaDB root password
-- `REDIS_PASSWORD`: Redis authentication password
-- `PLEX_CLAIM`: Plex claim token from https://plex.tv/claim
-- `GF_SECURITY_ADMIN_PASSWORD`: Grafana admin password
+#### Required Setup
 
-#### Service-Specific Secrets
-- `QBITTORRENT_PASSWORD`: qBittorrent WebUI password
-- `CS2_SERVER_NAME`: Counter-Strike 2 server name
-- `CS2_RCON_PASSWORD`: CS2 RCON password
-- `CS2_SERVER_PASSWORD`: CS2 server password (optional)
-- `STEAM_TOKEN`: Steam game server token
-- `TS3_SERVER_ADMIN_PASSWORD`: TeamSpeak admin password
+1. **Prepare Environment Secrets**:
+   ```bash
+   # Fill in your values in .env.template, then encrypt it
+   ./scripts/prepare-env-secrets.sh
+   ```
 
-#### System Configuration Secrets
-- `TZ`: Timezone (e.g., `UTC`, `America/New_York`)
-- `PUID`/`PGID`: User/Group IDs (e.g., `1000`)
-- `NVME_PATH`/`SSD_PATH`/`HDD_PATH`: Storage mount paths
-- `CLOUDFLARE_DOMAINS`: Comma-separated list of domains to manage DNS for
+2. **Commit Encrypted Secrets**:
+   ```bash
+   git add secrets-encrypted/homeserver-env-secrets.json.gpg
+   git commit -m "Add encrypted environment secrets"
+   ```
 
-#### Resource Limit Secrets
-- `PLEX_MEMORY_LIMIT`/`PLEX_CPU_LIMIT`: Plex resource limits
-- `CS2_MEMORY_LIMIT`/`CS2_CPU_LIMIT`: CS2 server resource limits
-- `RUNNER_MEMORY_LIMIT`/`RUNNER_CPU_LIMIT`: GitHub runner resource limits
+3. **Create Single GitHub Secret**:
+   - Secret name: `ENV_SECRETS_PASSPHRASE`
+   - Secret value: The passphrase you used for encryption
 
-#### Port Configuration Secrets
-- `PLEX_PORT`, `QBITTORRENT_PORT`, `GRAFANA_PORT`, `PROMETHEUS_PORT`
-- `TEAMSPEAK_VOICE_PORT`, `TEAMSPEAK_QUERY_PORT`, `TEAMSPEAK_FILES_PORT`
-- `CS2_PORT`, `CS2_RCON_PORT`
+#### Environment Variables Included
 
-#### Monitoring & Alerting Secrets
-- `DISCORD_WEBHOOK_URL`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`
-- `MONITORING_DB_PASSWORD`
+All variables from `.env.template` are automatically loaded, including:
 
-#### GitHub Runner Secrets
-- `GITHUB_REPOSITORY`, `GITHUB_RUNNER_TOKEN`, `RUNNER_NAME`, `RUNNER_GROUP`, `PROJECT_PATH`
+- **System Configuration**: `TZ`, `PUID`, `PGID`, storage paths
+- **Domain & DNS**: `DOMAIN`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_DOMAINS`
+- **Service Authentication**: Database passwords, API tokens, service credentials
+- **Resource Limits**: Memory and CPU limits for all services
+- **Port Configuration**: All service port mappings
+- **Monitoring**: Discord, SMTP, and monitoring database settings
+- **GitHub Runner**: Repository and runner configuration
+
+**Total**: 46+ environment variables managed with a single passphrase secret.
 
 ### 4. Runner Permissions
 

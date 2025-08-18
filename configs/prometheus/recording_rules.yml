@@ -84,7 +84,7 @@ groups:
       
       # Container memory usage percentage (of host total)
       - record: homeserver:container_memory_usage_percent
-        expr: (container_memory_usage_bytes{name!=""} / on() node_memory_MemTotal_bytes) * 100
+        expr: (container_memory_usage_bytes{name!=""} / on() group_left() node_memory_MemTotal_bytes) * 100
         labels:
           component: container
           metric_type: resource

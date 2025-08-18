@@ -71,6 +71,9 @@ analytics:
 
 # Limits configuration to prevent resource exhaustion
 limits_config:
+  # Disable structured metadata to avoid schema v13 requirement
+  allow_structured_metadata: false
+  
   # Retention period for logs
   retention_period: 168h  # 7 days
   
@@ -97,6 +100,7 @@ compactor:
   retention_enabled: true
   retention_delete_delay: 2h
   retention_delete_worker_count: 150
+  delete_request_store: filesystem
 
 # Storage configuration optimized for SSD
 storage_config:

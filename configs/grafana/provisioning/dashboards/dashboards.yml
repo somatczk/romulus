@@ -17,166 +17,24 @@
 apiVersion: 1
 
 providers:
-  # Homeserver custom dashboards
+  # Homeserver custom dashboards - only provision if directory exists
   - name: 'homeserver-dashboards'
     type: file
     orgId: 1
-    # When using foldersFromFilesStructure, don't specify folder/folderUid
+    folder: 'Homeserver'
+    folderUid: 'homeserver-folder'
     
     # Dashboard loading options
     options:
       path: '/var/lib/grafana/dashboards'
-      
-      # Watch for file changes and reload dashboards
-      foldersFromFilesStructure: true
-      
-      # Dashboard update settings
-      disableDeletion: false    # Allow deletion of dashboards
-      updateIntervalSeconds: 30  # Check for updates every 30 seconds
-      
-      # Permissions
-      allowUiUpdates: true      # Allow editing via UI
+      foldersFromFilesStructure: false
+      disableDeletion: false
+      updateIntervalSeconds: 60
+      allowUiUpdates: true
       
     # Dashboard search tags
     searchTags:
       - 'homeserver'
       - 'infrastructure'
       - 'monitoring'
-
-  # System monitoring dashboards
-  - name: 'system-dashboards'
-    type: file
-    orgId: 1
-    folder: 'System Monitoring'
-    folderUid: 'system-folder'
-    
-    options:
-      path: '/var/lib/grafana/dashboards/system'
-      foldersFromFilesStructure: false
-      disableDeletion: false
-      updateIntervalSeconds: 60
-      allowUiUpdates: true
-      
-    searchTags:
-      - 'system'
-      - 'infrastructure'
-      - 'node-exporter'
-
-  # Application monitoring dashboards  
-  - name: 'application-dashboards'
-    type: file
-    orgId: 1
-    # When using foldersFromFilesStructure, don't specify folder/folderUid
-    
-    options:
-      path: '/var/lib/grafana/dashboards/applications'
-      foldersFromFilesStructure: true
-      disableDeletion: false
-      updateIntervalSeconds: 60
-      allowUiUpdates: true
-      
-    searchTags:
-      - 'applications'
-      - 'services'
-      - 'plex'
-      - 'gaming'
-
-  # Container monitoring dashboards
-  - name: 'container-dashboards'
-    type: file
-    orgId: 1
-    folder: 'Containers'
-    folderUid: 'containers-folder'
-    
-    options:
-      path: '/var/lib/grafana/dashboards/containers'
-      foldersFromFilesStructure: false
-      disableDeletion: false
-      updateIntervalSeconds: 60
-      allowUiUpdates: true
-      
-    searchTags:
-      - 'containers'
-      - 'docker'
-      - 'cadvisor'
-
-  # Network and security dashboards
-  - name: 'network-security-dashboards'
-    type: file
-    orgId: 1
-    folder: 'Network & Security'
-    folderUid: 'netsec-folder'
-    
-    options:
-      path: '/var/lib/grafana/dashboards/network'
-      foldersFromFilesStructure: false
-      disableDeletion: false
-      updateIntervalSeconds: 60
-      allowUiUpdates: true
-      
-    searchTags:
-      - 'network'
-      - 'security'
-      - 'blackbox'
-      - 'connectivity'
-
-  # Log analysis dashboards
-  - name: 'logs-dashboards'
-    type: file
-    orgId: 1
-    folder: 'Logs & Events'
-    folderUid: 'logs-folder'
-    
-    options:
-      path: '/var/lib/grafana/dashboards/logs'
-      foldersFromFilesStructure: false
-      disableDeletion: false
-      updateIntervalSeconds: 60
-      allowUiUpdates: true
-      
-    searchTags:
-      - 'logs'
-      - 'events'
-      - 'loki'
-      - 'security-events'
-
-  # Business/service level dashboards
-  - name: 'business-dashboards'
-    type: file
-    orgId: 1
-    folder: 'Service Level'
-    folderUid: 'business-folder'
-    
-    options:
-      path: '/var/lib/grafana/dashboards/business'
-      foldersFromFilesStructure: false
-      disableDeletion: false
-      updateIntervalSeconds: 300  # Check every 5 minutes
-      allowUiUpdates: true
-      
-    searchTags:
-      - 'business'
-      - 'sla'
-      - 'service-level'
-      - 'overview'
-
-  # Alert and incident dashboards
-  - name: 'alerting-dashboards'
-    type: file
-    orgId: 1
-    folder: 'Alerts & Incidents'
-    folderUid: 'alerts-folder'
-    
-    options:
-      path: '/var/lib/grafana/dashboards/alerts'
-      foldersFromFilesStructure: false
-      disableDeletion: false
-      updateIntervalSeconds: 30   # More frequent for alerts
-      allowUiUpdates: true
-      
-    searchTags:
-      - 'alerts'
-      - 'incidents'
-      - 'alertmanager'
-      - 'notifications'
 

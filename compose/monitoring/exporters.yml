@@ -69,6 +69,8 @@ services:
       - "9104:9104"
     environment:
       - DATA_SOURCE_NAME=monitoring:${MONITORING_DB_PASSWORD}@(mariadb:3306)/
+    command:
+      - '--config.my-cnf=/dev/null'
     depends_on:
       - mariadb
     mem_limit: 128m

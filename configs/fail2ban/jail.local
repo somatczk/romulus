@@ -5,8 +5,8 @@ maxretry = 3
 backend = auto
 ignoreip = 127.0.0.1/8 ::1 10.0.0.0/8 192.168.0.0/16 172.16.0.0/12
 action = %(action_)s
-loglevel = INFO
-logtarget = /var/log/fail2ban.log
+loglevel = ERROR
+logtarget = STDOUT
 
 # No jails enabled by default - add as needed
 # [sshd]

@@ -76,7 +76,3 @@ services:
       timeout: 10s
       retries: 3
 
-networks:
-  monitoring:
-  frontend:
-  backend:

@@ -17,7 +17,7 @@ services:
       - EPHEMERAL=true
       - DOCKER_HOST=unix:///var/run/docker.sock
       - START_DOCKER_SERVICE=false
-      - RUN_AS_ROOT=true
+      - RUN_AS_ROOT=false
       - TZ=${TZ}
     volumes:
       - ${SSD_PATH}/actions-runner/_work:/actions-runner/_work

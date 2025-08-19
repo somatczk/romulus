@@ -138,12 +138,6 @@ runners.{$DOMAIN} {
 	# respond * "Forbidden" 403
 }
 
-# Health Check Endpoint
-# Simple health check for load balancers/monitoring
-health.{$DOMAIN} {
-	respond /health "OK" 200
-	respond /version "Homeserver v1.0" 200
-}
 
 # Default catch-all for undefined subdomains
 # Redirect to main domain or show maintenance page

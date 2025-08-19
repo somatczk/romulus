@@ -154,8 +154,8 @@ host = mariadb
 port = 3306
 EOF
         
-        # Set appropriate permissions
-        chmod 600 configs/mariadb/exporter.my.cnf
+        # Set appropriate permissions (readable by container user)
+        chmod 644 configs/mariadb/exporter.my.cnf
         echo "MySQL exporter configuration created successfully"
 
     - name: Deploy Monitoring Stack

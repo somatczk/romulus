@@ -44,7 +44,6 @@ include:
   - compose/monitoring/alerting.yml
   - compose/monitoring/backup-monitor.yml
   - compose/monitoring/metrics-collector.yml
-  - compose/monitoring/nvidia-exporter.yml
   - compose/monitoring/uptime.yml
   
   # Security Services

@@ -9,7 +9,7 @@ services:
     ports:
       - "3100:3100"
     volumes:
-      - ${PWD}/configs/loki/loki.yml:/etc/loki/local-config.yaml:ro
+      - ../../configs/loki/loki.yml:/etc/loki/local-config.yaml:ro
       - ${SSD_PATH}/monitoring/loki:/loki
     command:
       - '-config.file=/etc/loki/local-config.yaml'
@@ -31,7 +31,7 @@ services:
     networks:
       - monitoring
     volumes:
-      - ${PWD}/configs/promtail/promtail.yml:/etc/promtail/config.yml:ro
+      - ../../configs/promtail/promtail.yml:/etc/promtail/config.yml:ro
       - /var/log:/var/log:ro
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro

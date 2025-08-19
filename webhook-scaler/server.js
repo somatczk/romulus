@@ -107,8 +107,6 @@ function createRunnerContainer() {
       `-v /var/run/docker.sock:/var/run/docker.sock:rw`
     ];
     
-    // Skip PROJECT_PATH mount entirely for autoscaled containers
-    // Ephemeral runners will checkout their own workspace via GitHub Actions
     const projectPath = process.env.PROJECT_PATH;
     log('info', `Skipping PROJECT_PATH mount for autoscaled runner`, { 
       projectPath: projectPath,

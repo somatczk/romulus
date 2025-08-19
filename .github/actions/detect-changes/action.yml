@@ -63,6 +63,9 @@ runs:
           
           # Only attempt diff if we haven't already decided on full deployment
           if [[ "$full_deploy" != "true" ]]; then
+            # Configure git safe directory to avoid ownership issues in runner
+            git config --global --add safe.directory "${{ github.workspace }}" 2>/dev/null || true
+            
             # Ensure we have both commits locally before attempting diff
             for commit in "$PREVIOUS_COMMIT" "$CURRENT_COMMIT"; do
               if ! git cat-file -e "$commit" 2>/dev/null; then

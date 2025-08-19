@@ -1,0 +1,176 @@
+services:
+  teamspeak-exporter:
+    image: python:3.12-alpine
+    container_name: teamspeak-exporter
+    restart: unless-stopped
+    networks:
+      - monitoring
+      - backend
+    environment:
+      - TS3_SERVER_HOST=teamspeak3
+      - TS3_SERVER_QUERY_PORT=10011
+      - TS3_SERVER_ADMIN_LOGIN=serveradmin
+      - TS3_SERVER_ADMIN_PASSWORD=${TS3_SERVER_ADMIN_PASSWORD}
+      - TZ=${TZ}
+    command: >
+      sh -c "
+        apk add --no-cache gcc musl-dev &&
+        pip install --no-cache-dir prometheus-client ts3 telnetlib3 &&
+        cat > /app/ts3_exporter.py << 'EOF'
+        #!/usr/bin/env python3
+        import time
+        import os
+        import socket
+        import re
+        from prometheus_client import start_http_server, Gauge, Info
+        
+        # TeamSpeak 3 Metrics
+        ts3_clients_online = Gauge('ts3_clients_online', 'Number of clients online')
+        ts3_channels_count = Gauge('ts3_channels_count', 'Number of channels')
+        ts3_max_clients = Gauge('ts3_max_clients', 'Maximum number of clients')
+        ts3_uptime_seconds = Gauge('ts3_uptime_seconds', 'Server uptime in seconds')
+        ts3_server_status = Gauge('ts3_server_status', 'TeamSpeak server status (1=up, 0=down)')
+        ts3_bytes_sent = Gauge('ts3_bytes_sent_total', 'Total bytes sent')
+        ts3_bytes_received = Gauge('ts3_bytes_received_total', 'Total bytes received')
+        
+        class TeamSpeakExporter:
+            def __init__(self):
+                self.host = os.getenv('TS3_SERVER_HOST', 'teamspeak3')
+                self.query_port = int(os.getenv('TS3_SERVER_QUERY_PORT', '10011'))
+                self.admin_login = os.getenv('TS3_SERVER_ADMIN_LOGIN', 'serveradmin')
+                self.admin_password = os.getenv('TS3_SERVER_ADMIN_PASSWORD', '')
+                self.socket = None
+                self.logged_in = False
+        
+            def connect(self):
+                try:
+                    self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    self.socket.settimeout(10)
+                    self.socket.connect((self.host, self.query_port))
+                    
+                    # Read welcome message
+                    welcome = self.socket.recv(1024).decode('utf-8')
+                    if 'TS3' in welcome:
+                        return True
+                except Exception as e:
+                    print(f'TeamSpeak connection error: {e}')
+                return False
+        
+            def send_command(self, command):
+                try:
+                    if not self.socket:
+                        if not self.connect():
+                            return None
+                    
+                    self.socket.send((command + '\\n').encode('utf-8'))
+                    response = self.socket.recv(4096).decode('utf-8')
+                    return response
+                except Exception as e:
+                    print(f'TeamSpeak command error: {e}')
+                    self.socket = None
+                    self.logged_in = False
+                    return None
+        
+            def login(self):
+                if self.logged_in:
+                    return True
+                
+                # Login
+                login_response = self.send_command(f'login {self.admin_login} {self.admin_password}')
+                if login_response and 'error id=0' in login_response:
+                    # Use virtual server 1
+                    use_response = self.send_command('use 1')
+                    if use_response and 'error id=0' in use_response:
+                        self.logged_in = True
+                        return True
+                return False
+        
+            def get_server_info(self):
+                if not self.login():
+                    ts3_server_status.set(0)
+                    return
+                
+                try:
+                    # Get server info
+                    server_info = self.send_command('serverinfo')
+                    if server_info and 'error id=0' in server_info:
+                        ts3_server_status.set(1)
+                        
+                        # Parse server info
+                        info_lines = server_info.split('\\n')
+                        for line in info_lines:
+                            if 'virtualserver_clientsonline=' in line:
+                                clients_online = re.search(r'virtualserver_clientsonline=(\d+)', line)
+                                if clients_online:
+                                    ts3_clients_online.set(int(clients_online.group(1)))
+                            
+                            if 'virtualserver_maxclients=' in line:
+                                max_clients = re.search(r'virtualserver_maxclients=(\d+)', line)
+                                if max_clients:
+                                    ts3_max_clients.set(int(max_clients.group(1)))
+                            
+                            if 'virtualserver_uptime=' in line:
+                                uptime = re.search(r'virtualserver_uptime=(\d+)', line)
+                                if uptime:
+                                    ts3_uptime_seconds.set(int(uptime.group(1)))
+                            
+                            if 'connection_bytes_sent_total=' in line:
+                                bytes_sent = re.search(r'connection_bytes_sent_total=(\d+)', line)
+                                if bytes_sent:
+                                    ts3_bytes_sent.set(int(bytes_sent.group(1)))
+                            
+                            if 'connection_bytes_received_total=' in line:
+                                bytes_received = re.search(r'connection_bytes_received_total=(\d+)', line)
+                                if bytes_received:
+                                    ts3_bytes_received.set(int(bytes_received.group(1)))
+                    
+                    # Get channel count
+                    channel_list = self.send_command('channellist')
+                    if channel_list and 'error id=0' in channel_list:
+                        channel_count = len(re.findall(r'cid=\d+', channel_list))
+                        ts3_channels_count.set(channel_count)
+                    
+                except Exception as e:
+                    print(f'TeamSpeak server info error: {e}')
+                    ts3_server_status.set(0)
+                    self.logged_in = False
+        
+            def collect_metrics(self):
+                self.get_server_info()
+        
+            def disconnect(self):
+                if self.socket:
+                    try:
+                        self.socket.close()
+                    except:
+                        pass
+                    self.socket = None
+                    self.logged_in = False
+        
+        if __name__ == '__main__':
+            exporter = TeamSpeakExporter()
+            start_http_server(9189)
+            
+            try:
+                while True:
+                    try:
+                        exporter.collect_metrics()
+                    except Exception as e:
+                        print(f'TeamSpeak metrics collection error: {e}')
+                    time.sleep(60)  # Check every minute
+            finally:
+                exporter.disconnect()
+        EOF
+        mkdir -p /app && cd /app && python3 ts3_exporter.py
+      "
+    ports:
+      - "9189:9189"
+    mem_limit: 64m
+    cpus: 0.2
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9189/metrics"]
+      interval: 60s
+      timeout: 10s
+      retries: 3

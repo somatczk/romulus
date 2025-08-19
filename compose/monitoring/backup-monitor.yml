@@ -1,0 +1,63 @@
+services:
+  backup-monitor:
+    image: prom/node-exporter:v1.8.2
+    container_name: backup-monitor
+    restart: unless-stopped
+    networks:
+      - monitoring
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+      - '--collector.textfile.directory=/var/lib/node_exporter/textfile_collector'
+      - '--web.listen-address=0.0.0.0:8080'
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+      - ${SSD_PATH}/monitoring/backup-metrics:/var/lib/node_exporter/textfile_collector:ro
+    environment:
+      - TZ=${TZ}
+    mem_limit: 128m
+    cpus: 0.5
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/metrics"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  backup-script:
+    image: alpine:3.21
+    container_name: backup-script
+    restart: unless-stopped
+    networks:
+      - monitoring
+    volumes:
+      - ${SSD_PATH}/monitoring/backup-metrics:/metrics
+      - ${SSD_PATH}/databases:/backup/databases:ro
+      - ${HDD_PATH}:/backup/media:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - TZ=${TZ}
+      - BACKUP_RETENTION_DAYS=7
+    command: >
+      sh -c "
+        apk add --no-cache docker-cli curl &&
+        while true; do
+          echo '# HELP backup_last_run_timestamp Unix timestamp of last backup run' > /metrics/backup.prom &&
+          echo '# TYPE backup_last_run_timestamp gauge' >> /metrics/backup.prom &&
+          echo \"backup_last_run_timestamp $$(date +%s)\" >> /metrics/backup.prom &&
+          echo '# HELP backup_database_size_bytes Size of database backups in bytes' >> /metrics/backup.prom &&
+          echo '# TYPE backup_database_size_bytes gauge' >> /metrics/backup.prom &&
+          du -sb /backup/databases 2>/dev/null | awk '{print \"backup_database_size_bytes \" $$1}' >> /metrics/backup.prom &&
+          echo '# HELP backup_media_size_bytes Size of media backups in bytes' >> /metrics/backup.prom &&
+          echo '# TYPE backup_media_size_bytes gauge' >> /metrics/backup.prom &&
+          du -sb /backup/media 2>/dev/null | awk '{print \"backup_media_size_bytes \" $$1}' >> /metrics/backup.prom &&
+          sleep 300
+        done
+      "
+    mem_limit: 64m
+    cpus: 0.2

@@ -1,0 +1,21 @@
+services:
+  docker-proxy:
+    image: alpine/socat:1.8.0.1
+    container_name: docker-proxy
+    restart: unless-stopped
+    networks:
+      - monitoring
+    command: ["TCP-LISTEN:9323,fork,reuseaddr", "UNIX-CONNECT:/var/run/docker.sock"]
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - TZ=${TZ}
+    mem_limit: 32m
+    cpus: 0.1
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "9323"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

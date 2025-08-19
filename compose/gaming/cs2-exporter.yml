@@ -1,0 +1,128 @@
+services:
+  cs2-exporter:
+    image: alpine:3.21
+    container_name: cs2-exporter
+    restart: unless-stopped
+    networks:
+      - monitoring
+      - backend
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - TZ=${TZ}
+      - CS2_RCON_PASSWORD=${CS2_RCON_PASSWORD}
+      - CS2_RCON_PORT=${CS2_RCON_PORT:-27025}
+    command: >
+      sh -c "
+        apk add --no-cache python3 py3-pip docker-cli socat &&
+        pip3 install --no-cache-dir prometheus-client requests &&
+        cat > /app/cs2_exporter.py << 'EOF'
+        #!/usr/bin/env python3
+        import time
+        import socket
+        import struct
+        import os
+        import docker
+        from prometheus_client import start_http_server, Gauge, Info
+        from prometheus_client.core import CollectorRegistry, REGISTRY
+        
+        # CS2 Server Metrics
+        server_info = Info('cs2_server', 'CS2 Server Information')
+        players_current = Gauge('cs2_players_current', 'Current number of players')
+        players_max = Gauge('cs2_players_max', 'Maximum number of players')
+        map_current = Gauge('cs2_map_current', 'Current map', ['map_name'])
+        server_fps = Gauge('cs2_server_fps', 'Server FPS')
+        server_uptime = Gauge('cs2_server_uptime_seconds', 'Server uptime in seconds')
+        container_status = Gauge('cs2_container_status', 'CS2 container status (1=running, 0=stopped)')
+        
+        class CS2Exporter:
+            def __init__(self):
+                self.rcon_password = os.getenv('CS2_RCON_PASSWORD', '')
+                self.rcon_port = int(os.getenv('CS2_RCON_PORT', '27025'))
+                self.docker_client = docker.from_env()
+        
+            def get_container_status(self):
+                try:
+                    container = self.docker_client.containers.get('cs2-server')
+                    return 1 if container.status == 'running' else 0
+                except:
+                    return 0
+        
+            def rcon_command(self, command):
+                try:
+                    # Simple RCON implementation
+                    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                    sock.settimeout(5)
+                    sock.connect(('cs2-server', self.rcon_port))
+                    
+                    # RCON auth packet
+                    auth_packet = struct.pack('<iii', 10, 1, 3) + self.rcon_password.encode() + b'\\0\\0'
+                    sock.send(auth_packet)
+                    
+                    # Command packet
+                    cmd_packet = struct.pack('<iii', len(command) + 10, 2, 2) + command.encode() + b'\\0\\0'
+                    sock.send(cmd_packet)
+                    
+                    # Read response
+                    response = sock.recv(4096)
+                    sock.close()
+                    return response.decode('utf-8', errors='ignore')
+                except Exception as e:
+                    print(f'RCON error: {e}')
+                    return ''
+        
+            def collect_metrics(self):
+                # Container status
+                container_status.set(self.get_container_status())
+                
+                if self.get_container_status() == 0:
+                    return
+                
+                # Server status via RCON
+                status = self.rcon_command('status')
+                if status:
+                    # Parse status output for metrics
+                    lines = status.split('\\n')
+                    for line in lines:
+                        if 'players :' in line:
+                            parts = line.split()
+                            if len(parts) >= 3:
+                                current = int(parts[2].split('(')[0])
+                                max_players = int(parts[4].split(')')[0])
+                                players_current.set(current)
+                                players_max.set(max_players)
+                        elif 'map     :' in line:
+                            map_name = line.split(':')[1].strip().split()[0]
+                            map_current.labels(map_name=map_name).set(1)
+        
+                # FPS info
+                fps_info = self.rcon_command('stats')
+                if 'fps' in fps_info.lower():
+                    try:
+                        fps_value = float([x for x in fps_info.split() if 'fps' in x.lower()][0].replace('fps', ''))
+                        server_fps.set(fps_value)
+                    except:
+                        pass
+        
+        if __name__ == '__main__':
+            exporter = CS2Exporter()
+            start_http_server(9590)
+            
+            while True:
+                try:
+                    exporter.collect_metrics()
+                except Exception as e:
+                    print(f'Metrics collection error: {e}')
+                time.sleep(30)
+        EOF
+        cd /app && python3 cs2_exporter.py
+      "
+    ports:
+      - "9590:9590"
+    mem_limit: 128m
+    cpus: 0.3
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9590/metrics"]
+      interval: 60s
+      timeout: 10s
+      retries: 3

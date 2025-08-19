@@ -1,16 +1,204 @@
 global:
-  resolve_timeout: 5m
+  resolve_timeout: 10m  # Wait 10 minutes before resolving alerts
+  smtp_smarthost: '${SMTP_HOST}:${SMTP_PORT}'
+  smtp_from: 'prometheus-alerts@${DOMAIN}'
+  smtp_auth_username: '${SMTP_USER}'
+  smtp_auth_password: '${SMTP_PASSWORD}'
 
+# Main routing tree - organize alerts by severity and category
 route:
-  group_by: ['alertname']
-  group_wait: 10s
-  group_interval: 10s
-  repeat_interval: 1h
-  receiver: 'null'
+  group_by: ['severity', 'category']
+  group_wait: 30s        # Wait 30s to collect similar alerts
+  group_interval: 5m     # Wait 5m between sending grouped alerts
+  repeat_interval: 4h    # Repeat critical alerts every 4 hours
+  receiver: 'default'    # Default receiver
 
+  routes:
+    # Critical alerts - immediate notification
+    - matchers:
+        - severity=~"critical"
+      group_wait: 10s
+      group_interval: 1m
+      repeat_interval: 2h
+      receiver: 'critical-alerts'
+
+    # Security alerts - special handling
+    - matchers:
+        - category=~"security|backup"
+      group_wait: 1m
+      group_interval: 10m
+      repeat_interval: 6h
+      receiver: 'security-alerts'
+
+    # Infrastructure alerts - group by component
+    - matchers:
+        - category=~"infrastructure|database"
+      group_by: ['component', 'severity']
+      group_wait: 2m
+      group_interval: 10m
+      repeat_interval: 8h
+      receiver: 'infrastructure-alerts'
+
+    # Performance warnings - less frequent
+    - matchers:
+        - category=~"performance"
+        - severity=~"warning"
+      group_wait: 5m
+      group_interval: 30m
+      repeat_interval: 12h
+      receiver: 'performance-alerts'
+
+    # Non-critical service alerts during business hours only
+    - matchers:
+        - category=~"media|gaming"
+        - severity=~"warning"
+      group_wait: 10m
+      group_interval: 1h
+      repeat_interval: 24h
+      receiver: 'service-alerts'
+      active_time_intervals:
+        - business-hours
+
+    # Info alerts - minimal notification
+    - matchers:
+        - severity=~"info"
+      group_wait: 15m
+      group_interval: 2h
+      repeat_interval: 24h
+      receiver: 'info-alerts'
+
+# Time intervals for conditional routing
+time_intervals:
+  - name: business-hours
+    time_intervals:
+      - times:
+        - start_time: '09:00'
+          end_time: '18:00'
+        weekdays: ['monday:friday']
+
+# Alert receivers - different channels for different alert types
 receivers:
-- name: 'null'
-  # No notification channels configured - alerts are logged only
-  # Add email_configs, webhook_configs, or other receivers as needed
+  # Default catch-all receiver
+  - name: 'default'
+    discord_configs:
+      - webhook_url: '${DISCORD_WEBHOOK_URL}'
+        title: 'Homeserver Alert'
+        message: |
+          **{{ .GroupLabels.severity | toUpper }}**: {{ .GroupLabels.alertname }}
+          
+          {{ range .Alerts }}
+          • **{{ .Annotations.summary }}**
+          {{ .Annotations.description }}
+          {{ end }}
 
-inhibit_rules: []
+  # Critical alerts - multiple channels
+  - name: 'critical-alerts'
+    discord_configs:
+      - webhook_url: '${DISCORD_WEBHOOK_URL}'
+        title: '🚨 CRITICAL ALERT'
+        message: |
+          **CRITICAL INFRASTRUCTURE ISSUE**
+          
+          {{ range .Alerts }}
+          🔥 **{{ .Annotations.summary }}**
+          📝 {{ .Annotations.description }}
+          🔗 {{ .Annotations.runbook_url }}
+          {{ end }}
+    # email_configs:
+    #   - to: 'admin@${DOMAIN}'
+    #     subject: '🚨 Critical Homeserver Alert'
+    #     body: |
+    #       Critical alert in homeserver infrastructure:
+    #       {{ range .Alerts }}
+    #       {{ .Annotations.summary }}: {{ .Annotations.description }}
+    #       {{ end }}
+
+  # Security alerts - high priority
+  - name: 'security-alerts'
+    discord_configs:
+      - webhook_url: '${DISCORD_WEBHOOK_URL}'
+        title: '🛡️ Security Alert'
+        message: |
+          **SECURITY EVENT DETECTED**
+          
+          {{ range .Alerts }}
+          🛡️ **{{ .Annotations.summary }}**
+          📝 {{ .Annotations.description }}
+          {{ end }}
+
+  # Infrastructure alerts - grouped by component
+  - name: 'infrastructure-alerts'
+    discord_configs:
+      - webhook_url: '${DISCORD_WEBHOOK_URL}'
+        title: '⚙️ Infrastructure Alert'
+        message: |
+          **Infrastructure Issue - {{ .GroupLabels.component | toUpper }}**
+          
+          {{ range .Alerts }}
+          ⚙️ **{{ .Annotations.summary }}**
+          📝 {{ .Annotations.description }}
+          {{ end }}
+
+  # Performance alerts - less urgent
+  - name: 'performance-alerts'
+    discord_configs:
+      - webhook_url: '${DISCORD_WEBHOOK_URL}'
+        title: '📊 Performance Alert'
+        message: |
+          **Performance Issue Detected**
+          
+          {{ range .Alerts }}
+          📊 {{ .Annotations.summary }}: {{ .Annotations.description }}
+          {{ end }}
+
+  # Service alerts - non-critical services
+  - name: 'service-alerts'
+    discord_configs:
+      - webhook_url: '${DISCORD_WEBHOOK_URL}'
+        title: '📺 Service Alert'
+        message: |
+          **Service Issue**
+          
+          {{ range .Alerts }}
+          📺 {{ .Annotations.summary }}: {{ .Annotations.description }}
+          {{ end }}
+
+  # Info alerts - lowest priority
+  - name: 'info-alerts'
+    discord_configs:
+      - webhook_url: '${DISCORD_WEBHOOK_URL}'
+        title: 'ℹ️ Info'
+        message: |
+          {{ range .Alerts }}
+          ℹ️ {{ .Annotations.summary }}
+          {{ end }}
+
+# Inhibition rules - prevent alert spam
+inhibit_rules:
+  # If host is down, don't alert on services running on that host
+  - source_matchers:
+      - alertname="HostDown"
+    target_matchers:
+      - severity=~"warning|critical"
+    equal: ['instance']
+
+  # If a critical alert is firing, silence related warnings
+  - source_matchers:
+      - severity="critical"
+    target_matchers:
+      - severity="warning"
+    equal: ['alertname', 'instance']
+
+  # If service is down, don't alert on its performance metrics
+  - source_matchers:
+      - alertname=~".*Down"
+    target_matchers:
+      - alertname=~"High.*Usage|.*Performance.*"
+    equal: ['instance', 'job']
+
+  # If Docker daemon is down, don't alert on container issues
+  - source_matchers:
+      - alertname="DockerDaemonDown"
+    target_matchers:
+      - alertname=~"Container.*"
+    equal: ['instance']

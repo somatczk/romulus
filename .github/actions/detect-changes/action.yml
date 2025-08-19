@@ -63,26 +63,20 @@ runs:
           
           # Only attempt diff if we haven't already decided on full deployment
           if [[ "$full_deploy" != "true" ]]; then
-            # Ensure we have both commits locally before attempting diff
-            for commit in "$PREVIOUS_COMMIT" "$CURRENT_COMMIT"; do
-              if ! git cat-file -e "$commit" 2>/dev/null; then
-                echo "Commit $commit not found locally, fetching..."
-                git fetch --unshallow 2>/dev/null || git fetch origin || {
-                  echo "Failed to fetch commits, cannot determine changes"
-                  full_deploy="true"
-                  break
-                }
-              fi
-            done
+            # Configure git safe directory to avoid ownership issues in runner
+            git config --global --add safe.directory "${{ github.workspace }}" 2>/dev/null || true
             
-            if [[ "$full_deploy" != "true" ]]; then
-              # Use simple space-separated syntax for git diff
-              if git diff --name-only "$PREVIOUS_COMMIT" "$CURRENT_COMMIT" > changed_files.txt 2>/dev/null; then
-                echo "Successfully detected file changes"
-              else
-                echo "Git diff failed, triggering full deployment"
-                full_deploy="true"
-              fi
+            # GitHub checkout with fetch-depth: 0 should provide all commits we need
+            echo "Attempting git diff with provided commit references..."
+            if git diff --name-only "$PREVIOUS_COMMIT" "$CURRENT_COMMIT" > changed_files.txt 2>/dev/null; then
+              echo "Successfully detected file changes"
+            else
+              echo "Git diff failed - commits may not be available in checkout"
+              echo "Debug: Previous commit exists: $(git cat-file -e "$PREVIOUS_COMMIT" 2>/dev/null && echo 'YES' || echo 'NO')"
+              echo "Debug: Current commit exists: $(git cat-file -e "$CURRENT_COMMIT" 2>/dev/null && echo 'YES' || echo 'NO')"
+              echo "Debug: Available commits: $(git log --oneline -5 | tr '\n' '; ')"
+              echo "Triggering full deployment as fallback"
+              full_deploy="true"
             fi
           else
             echo "Full deployment already triggered, skipping file change detection"

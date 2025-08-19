@@ -188,11 +188,6 @@ scrape_configs:
       - targets: ['qbittorrent-exporter:8080']
     scrape_interval: 60s
 
-  # NVIDIA GPU Metrics (for Plex transcoding monitoring)
-  - job_name: 'nvidia-gpu'
-    static_configs:
-      - targets: ['nvidia-exporter:9835']
-    scrape_interval: 30s
 
   # Custom Application Metrics - Internal service metrics
   - job_name: 'homeserver-custom'

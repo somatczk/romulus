@@ -22,14 +22,15 @@ RUN npm install --omit=dev && npm cache clean --force
 # Copy application code
 COPY . .
 
-# Create non-root user and add to docker group
+# Create non-root user for development, but allow running as root for Docker access
 RUN groupadd -g 1001 nodejs && \
-    useradd -r -u 1001 -g nodejs nodejs && \
-    usermod -aG docker nodejs
+    useradd -r -u 1001 -g nodejs nodejs
 
-# Change ownership of app directory
-RUN chown -R nodejs:nodejs /app
+# Change ownership of app directory (support both root and nodejs user)
+RUN chown -R nodejs:nodejs /app && \
+    chmod -R 755 /app
 
+# Default to nodejs user, but allow override via docker-compose user directive
 USER nodejs
 
 EXPOSE 3000

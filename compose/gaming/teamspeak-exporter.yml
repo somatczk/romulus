@@ -14,7 +14,11 @@ services:
       - TZ=${TZ}
     command: >
       sh -c "
-        apk update && apk add --no-cache gcc musl-dev wget &&
+        echo 'http://dl-cdn.alpinelinux.org/alpine/v3.22/main' > /etc/apk/repositories &&
+        echo 'http://dl-cdn.alpinelinux.org/alpine/v3.22/community' >> /etc/apk/repositories &&
+        echo 'http://mirror.leaseweb.com/alpine/v3.22/main' >> /etc/apk/repositories &&
+        echo 'http://mirror.leaseweb.com/alpine/v3.22/community' >> /etc/apk/repositories &&
+        apk update --no-cache && apk add --no-cache gcc musl-dev wget &&
         pip install --no-cache-dir prometheus-client ts3 telnetlib3 &&
         cat > /app/ts3_exporter.py << 'EOF'
         #!/usr/bin/env python3

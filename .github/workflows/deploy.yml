@@ -2,7 +2,7 @@ name: Deploy Homeserver
 
 on:
   push:
-    branches: [ main ]
+    branches: [ master ]
   workflow_dispatch:
 
 concurrency:
@@ -146,13 +146,11 @@ jobs:
         mkdir -p configs/mariadb/
         
         # Create .my.cnf file with current environment variables
-        cat > configs/mariadb/exporter.my.cnf << 'EOF'
-[client]
-user = monitoring
-password = ${MONITORING_DB_PASSWORD}
-host = mariadb
-port = 3306
-EOF
+        echo "[client]" > configs/mariadb/exporter.my.cnf
+        echo "user = monitoring" >> configs/mariadb/exporter.my.cnf
+        echo "password = ${MONITORING_DB_PASSWORD}" >> configs/mariadb/exporter.my.cnf
+        echo "host = mariadb" >> configs/mariadb/exporter.my.cnf
+        echo "port = 3306" >> configs/mariadb/exporter.my.cnf
         
         # Set appropriate permissions
         chmod 600 configs/mariadb/exporter.my.cnf

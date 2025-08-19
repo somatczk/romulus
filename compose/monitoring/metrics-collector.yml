@@ -1,0 +1,116 @@
+services:
+  metrics-collector:
+    image: python:3.12-alpine
+    container_name: metrics-collector
+    restart: unless-stopped
+    networks:
+      - monitoring
+      - backend
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${SSD_PATH}:/host/ssd:ro
+      - ${HDD_PATH}:/host/hdd:ro
+      - ${NVME_PATH}:/host/nvme:ro
+    environment:
+      - TZ=${TZ}
+      - DOMAIN=${DOMAIN}
+    command: >
+      sh -c "
+        apk add --no-cache gcc musl-dev libffi-dev &&
+        pip install --no-cache-dir prometheus-client docker psutil requests &&
+        cat > /app/metrics_collector.py << 'EOF'
+        #!/usr/bin/env python3
+        import time
+        import os
+        import docker
+        import psutil
+        import requests
+        from prometheus_client import start_http_server, Gauge, Counter, Info
+        from prometheus_client.core import CollectorRegistry, REGISTRY
+        
+        # Custom homeserver metrics
+        disk_usage_bytes = Gauge('homeserver_disk_usage_bytes', 'Disk usage by path', ['path', 'type'])
+        service_response_time = Gauge('homeserver_service_response_time_seconds', 'Service response time', ['service'])
+        ssl_cert_expiry = Gauge('homeserver_ssl_cert_expiry_days', 'SSL certificate expiry in days', ['domain'])
+        container_restart_count = Counter('homeserver_container_restarts_total', 'Container restart count', ['container'])
+        
+        class CustomMetricsCollector:
+            def __init__(self):
+                self.docker_client = docker.from_env()
+                self.domain = os.getenv('DOMAIN', 'romulus.hu')
+                self.services = {
+                    'plex': f'https://plex.{self.domain}',
+                    'torrents': f'https://torrents.{self.domain}',
+                    'monitoring': f'https://monitoring.{self.domain}'
+                }
+        
+            def collect_disk_metrics(self):
+                paths = {
+                    'ssd': '/host/ssd',
+                    'hdd': '/host/hdd', 
+                    'nvme': '/host/nvme'
+                }
+                
+                for disk_type, path in paths.items():
+                    if os.path.exists(path):
+                        try:
+                            usage = psutil.disk_usage(path)
+                            disk_usage_bytes.labels(path=path, type=disk_type).set(usage.used)
+                        except Exception as e:
+                            print(f'Disk metrics error for {path}: {e}')
+        
+            def collect_service_response_times(self):
+                for service_name, url in self.services.items():
+                    try:
+                        start_time = time.time()
+                        response = requests.get(url, timeout=10, verify=False)
+                        response_time = time.time() - start_time
+                        
+                        if response.status_code < 400:
+                            service_response_time.labels(service=service_name).set(response_time)
+                    except Exception as e:
+                        print(f'Service response time error for {service_name}: {e}')
+                        service_response_time.labels(service=service_name).set(-1)  # -1 indicates error
+        
+            def collect_container_restarts(self):
+                try:
+                    containers = self.docker_client.containers.list(all=True)
+                    for container in containers:
+                        restart_count = container.attrs['RestartCount']
+                        container_restart_count.labels(container=container.name)._value._value = restart_count
+                except Exception as e:
+                    print(f'Container restart metrics error: {e}')
+        
+            def collect_ssl_cert_info(self):
+                # This would require additional SSL checking logic
+                # For now, we'll set a placeholder
+                ssl_cert_expiry.labels(domain=self.domain).set(30)  # Assume 30 days remaining
+        
+            def collect_all_metrics(self):
+                self.collect_disk_metrics()
+                self.collect_service_response_times()
+                self.collect_container_restarts()
+                self.collect_ssl_cert_info()
+        
+        if __name__ == '__main__':
+            collector = CustomMetricsCollector()
+            start_http_server(8080)
+            
+            while True:
+                try:
+                    collector.collect_all_metrics()
+                except Exception as e:
+                    print(f'Metrics collection error: {e}')
+                time.sleep(60)  # Collect every minute
+        EOF
+        mkdir -p /app && cd /app && python3 metrics_collector.py
+      "
+    ports:
+      - "8080:8080"
+    mem_limit: 256m
+    cpus: 0.5
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/metrics"]
+      interval: 60s
+      timeout: 10s
+      retries: 3

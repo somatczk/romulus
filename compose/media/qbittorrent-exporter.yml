@@ -1,0 +1,28 @@
+services:
+  qbittorrent-exporter:
+    image: esanchezm/prometheus-qbittorrent-exporter:v1.5.1
+    container_name: qbittorrent-exporter
+    restart: unless-stopped
+    networks:
+      - monitoring
+      - backend
+    environment:
+      - QBITTORRENT_HOST=qbittorrent
+      - QBITTORRENT_PORT=8080
+      - QBITTORRENT_USER=admin
+      - QBITTORRENT_PASS=${QBITTORRENT_PASSWORD}
+      - EXPORTER_PORT=8080
+      - EXPORTER_LOG_LEVEL=INFO
+      - METRICS_PREFIX=qbittorrent
+      - TZ=${TZ}
+    ports:
+      - "9393:8080"
+    mem_limit: 64m
+    cpus: 0.2
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/metrics"]
+      interval: 60s
+      timeout: 10s
+      retries: 3

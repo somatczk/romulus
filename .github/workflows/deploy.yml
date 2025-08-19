@@ -155,6 +155,8 @@ jobs:
         chown -R $USER:$USER . || true
         chmod -R u+w . || true
         rm -rf compose/core/configs/ || true
+        
+        sleep $((RANDOM % 10 + 1))
 
     - name: Checkout Repository
       uses: actions/checkout@v4

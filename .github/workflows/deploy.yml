@@ -208,7 +208,7 @@ jobs:
     needs: [detect-changes, deploy-core]
     runs-on: self-hosted
     timeout-minutes: 29
-    if: ${{ always() && (needs.detect-changes.outputs.full_deploy == 'true' || needs.detect-changes.outputs[matrix.group] == 'true') }}
+    if: ${{ always() && (needs.detect-changes.outputs.full_deploy == 'true' || needs.detect-changes.outputs.application == 'true' || needs.detect-changes.outputs.monitoring == 'true' || needs.detect-changes.outputs.security == 'true' || needs.detect-changes.outputs.infrastructure == 'true') }}
     strategy:
       matrix:
         include:

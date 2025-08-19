@@ -115,7 +115,8 @@ function createRunnerContainer() {
     execSync(dockerCmd, {
       stdio: 'pipe',
       timeout: 30000,
-      encoding: 'utf8'
+      encoding: 'utf8',
+      cwd: '/app'
     });
     
     log('info', `Created new runner container: ${containerName}`);

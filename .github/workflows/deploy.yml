@@ -87,6 +87,9 @@ jobs:
         sudo mkdir -p "${NVME_PATH}/games/cs2"
         sudo mkdir -p "${HDD_PATH}"/{media,downloads/complete}
         
+        # Create GitHub runner directories
+        sudo mkdir -p "${SSD_PATH}/runner/work" || true
+        
         # Set proper ownership from the start
         sudo chown -R "${PUID}:${PGID}" "${SSD_PATH}" "${NVME_PATH}" "${HDD_PATH}" || true
         # Ensure the runner user can also access these directories
@@ -105,6 +108,25 @@ jobs:
         sudo chown -R root:root "${SSD_PATH}/monitoring/uptime-kuma" || true
         sudo chown -R root:root "${SSD_PATH}/monitoring/fail2ban" || true
         echo "Container permissions set successfully"
+
+    - name: Fix GitHub Runner Permissions
+      run: |
+        # Load environment variables for this step only
+        export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
+        echo "Fixing GitHub runner directory permissions..."
+        
+        # Ensure runner directories exist and have correct permissions
+        sudo mkdir -p "${SSD_PATH}/runner/work" || true
+        sudo chown -R "${PUID}:${PGID}" "${SSD_PATH}/runner" || true
+        sudo chmod -R 755 "${SSD_PATH}/runner" || true
+        
+        # Fix any existing runner work directory permissions
+        if [ -d "${SSD_PATH}/runner/work" ]; then
+          sudo chown -R "${PUID}:${PGID}" "${SSD_PATH}/runner/work" || true
+          sudo chmod -R 755 "${SSD_PATH}/runner/work" || true
+        fi
+        
+        echo "GitHub runner permissions fixed successfully"
 
     - name: Deploy Core Infrastructure
       run: |

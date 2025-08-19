@@ -1,6 +1,6 @@
 services:
   teamspeak:
-    image: teamspeak:latest
+    image: teamspeak:3.13.7
     container_name: teamspeak
     restart: unless-stopped
     networks:

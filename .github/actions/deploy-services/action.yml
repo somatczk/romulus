@@ -21,7 +21,7 @@ runs:
       run: |
         export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "${{ inputs.secrets-file }}" | xargs)
         
-        echo "Setting up directories and permissions (running as root)..."
+        echo "Preparing environment..."
         rm -rf "${SSD_PATH}/config" || true
         mkdir -p "${SSD_PATH}"/{caddy/{data,config},databases/{mariadb,redis},monitoring/{prometheus,grafana,loki,alertmanager,uptime-kuma}}
         mkdir -p "${NVME_PATH}/games/cs2"
@@ -34,30 +34,23 @@ runs:
       shell: bash
       run: |
         export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "${{ inputs.secrets-file }}" | xargs)
-        echo "Setting container-specific directory permissions..."
         chown -R 472:472 "${SSD_PATH}/monitoring/grafana" || true
         chown -R 65534:65534 "${SSD_PATH}/monitoring/prometheus" || true
         chown -R 10001:10001 "${SSD_PATH}/monitoring/loki" || true
         chown -R 65534:65534 "${SSD_PATH}/monitoring/alertmanager" || true
         chown -R root:root "${SSD_PATH}/monitoring/uptime-kuma" || true
         chown -R root:root "${SSD_PATH}/monitoring/fail2ban" || true
-        echo "Container permissions set successfully"
 
     - name: Fix GitHub Runner Permissions
       shell: bash
       run: |
         export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "${{ inputs.secrets-file }}" | xargs)
-        echo "Fixing GitHub runner directory permissions..."
-        
         mkdir -p "${SSD_PATH}/actions-runner/_work" || true
         chown -R "${PUID}:${PGID}" "${SSD_PATH}/actions-runner" || true
         chmod -R 755 "${SSD_PATH}/actions-runner" || true
         if [ -d "${SSD_PATH}/runner" ]; then
-          echo "Cleaning up old runner directory..."
           rm -rf "${SSD_PATH}/runner" || true
         fi
-        
-        echo "GitHub runner permissions fixed successfully"
 
     - name: Deploy Services
       shell: bash

@@ -37,9 +37,6 @@ plex.{$DOMAIN} {
 	reverse_proxy plex:32400 {
 		# Preserve real client IP for Plex logs and access control
 		header_up X-Real-IP {remote_host}
-		header_up X-Forwarded-For {remote_host}
-		header_up X-Forwarded-Proto {scheme}
-		header_up X-Forwarded-Host {host}
 		
 		# Plex-specific headers
 		header_up X-Plex-Client-Identifier "Caddy-Reverse-Proxy"
@@ -66,9 +63,6 @@ torrents.{$DOMAIN} {
 	# Forward to qBittorrent WebUI
 	reverse_proxy qbittorrent:8080 {
 		header_up X-Real-IP {remote_host}
-		header_up X-Forwarded-For {remote_host}
-		header_up X-Forwarded-Proto {scheme}
-		header_up X-Forwarded-Host {host}
 	}
 	
 	# Rate limiting to prevent abuse
@@ -87,9 +81,6 @@ monitoring.{$DOMAIN} {
 	# Forward to Grafana container
 	reverse_proxy grafana:3000 {
 		header_up X-Real-IP {remote_host}
-		header_up X-Forwarded-For {remote_host}
-		header_up X-Forwarded-Proto {scheme}
-		header_up X-Forwarded-Host {host}
 		
 		# Grafana WebSocket support
 		header_up Connection {>Connection}
@@ -108,15 +99,12 @@ monitoring.{$DOMAIN} {
 # Protected metrics collection endpoint
 metrics.{$DOMAIN} {
 	# Basic auth protection for Prometheus
-	basicauth {
+	basic_auth {
 		admin $2a$14$Zkx19XLiW6VYouLHR5NbfOeNhNAf6.j5wy8xjJJAk8M5w.9.qmL6u  # Change this hash
 	}
 	
 	reverse_proxy prometheus:9090 {
 		header_up X-Real-IP {remote_host}
-		header_up X-Forwarded-For {remote_host}
-		header_up X-Forwarded-Proto {scheme}
-		header_up X-Forwarded-Host {host}
 	}
 }
 
@@ -125,9 +113,6 @@ metrics.{$DOMAIN} {
 status.{$DOMAIN} {
 	reverse_proxy uptime-kuma:3001 {
 		header_up X-Real-IP {remote_host}
-		header_up X-Forwarded-For {remote_host}
-		header_up X-Forwarded-Proto {scheme}
-		header_up X-Forwarded-Host {host}
 		
 		# WebSocket support for real-time updates
 		header_up Connection {>Connection}

@@ -146,7 +146,7 @@ jobs:
         mkdir -p configs/mariadb/
         
         # Create .my.cnf file with current environment variables
-        cat > configs/mariadb/exporter.my.cnf <<EOF
+        cat > configs/mariadb/exporter.my.cnf << 'EOF'
 [client]
 user = monitoring
 password = ${MONITORING_DB_PASSWORD}

@@ -5,7 +5,7 @@ services:
     networks:
       - frontend
     environment:
-      - RUNNER_NAME=${RUNNER_NAME}-${HOSTNAME}
+      # Let the container auto-generate unique names (RUNNER_NAME not set)
       - RUNNER_WORKDIR=/tmp/runner/work
       - RUNNER_GROUP=${RUNNER_GROUP}
       - RUNNER_SCOPE=repo

@@ -42,7 +42,7 @@ services:
       retries: 3
 
   grafana:
-    image: grafana/grafana:12.2.0
+    image: grafana/grafana:12.1-ubuntu
     container_name: grafana
     restart: unless-stopped
     user: "472:472"

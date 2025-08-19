@@ -10,7 +10,6 @@ services:
       - '--path.rootfs=/rootfs'
       - '--path.sysfs=/host/sys'
       - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
-      - '--collector.docker'
       - '--collector.systemd'
       - '--web.listen-address=:9323'
     volumes:

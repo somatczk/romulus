@@ -1,21 +1,31 @@
 services:
   docker-proxy:
-    image: alpine/socat:1.8.0.1
+    image: prom/node-exporter:v1.8.2
     container_name: docker-proxy
     restart: unless-stopped
     networks:
       - monitoring
-    command: ["TCP-LISTEN:9323,fork,reuseaddr", "UNIX-CONNECT:/var/run/docker.sock"]
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+      - '--collector.docker'
+      - '--collector.systemd'
+      - '--web.listen-address=:9323'
     volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
       - TZ=${TZ}
-    mem_limit: 32m
-    cpus: 0.1
+    mem_limit: 128m
+    cpus: 0.2
     security_opt:
       - no-new-privileges:true
     healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "9323"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9323/metrics"]
       interval: 30s
       timeout: 5s
       retries: 3

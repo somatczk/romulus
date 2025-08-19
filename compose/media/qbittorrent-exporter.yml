@@ -1,6 +1,6 @@
 services:
   qbittorrent-exporter:
-    image: esanchezm/prometheus-qbittorrent-exporter:v1.5.1
+    image: esanchezm/prometheus-qbittorrent-exporter:v1.5.0
     container_name: qbittorrent-exporter
     restart: unless-stopped
     networks:
@@ -14,6 +14,8 @@ services:
       - EXPORTER_PORT=8080
       - EXPORTER_LOG_LEVEL=INFO
       - METRICS_PREFIX=qbittorrent
+      - VERIFY_WEBUI_CERTIFICATE=false
+      - REQUEST_TIMEOUT=30
       - TZ=${TZ}
     ports:
       - "9393:8080"

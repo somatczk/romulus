@@ -194,7 +194,7 @@ scrape_configs:
     static_configs:
       - targets: ['metrics-collector:8080']
     scrape_interval: 30s
-    metrics_path: /api/metrics
+    metrics_path: /metrics
 
   # Loki for log-based metrics
   - job_name: 'loki'

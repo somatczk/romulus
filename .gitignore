@@ -21,5 +21,8 @@ override.tf.json
 terraform.rc
 
 # Ignore lock files
-.terraform.lock.hcl .env
+.terraform.lock.hcl
+
+# Ignore environment files with sensitive data
+.env
 .env.template

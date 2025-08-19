@@ -4,6 +4,11 @@ on:
   push:
     branches: [ master ]
   workflow_dispatch:
+    inputs:
+      force_full:
+        description: 'Force full deployment (true/false)'
+        required: false
+        default: 'false'
 
 concurrency:
   group: deploy
@@ -13,12 +18,181 @@ permissions:
   contents: read
 
 jobs:
-  deploy:
-    name: Deploy Infrastructure
+  # Detect which service groups need deployment based on file changes
+  detect-changes:
+    name: Detect Changes
     runs-on: self-hosted
-    timeout-minutes: 29
+    outputs:
+      core: ${{ steps.changes.outputs.core }}
+      application: ${{ steps.changes.outputs.application }}
+      monitoring: ${{ steps.changes.outputs.monitoring }}
+      security: ${{ steps.changes.outputs.security }}
+      full_deploy: ${{ steps.changes.outputs.full_deploy }}
     
     steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        clean: true
+    
+    - name: Detect File Changes and Map to Service Groups
+      id: changes
+      run: |
+        set -e
+        
+        # Initialize variables
+        core="false"
+        application="false"
+        monitoring="false"
+        security="false"
+        full_deploy="false"
+        
+        # Handle manual override for full deployment
+        if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.force_full }}" == "true" ]]; then
+          echo "Manual full deployment requested"
+          full_deploy="true"
+        else
+          # Get changed files between previous commit and current commit
+          echo "Detecting changed files..."
+          
+          # For push events, compare with previous commit
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            PREVIOUS_COMMIT="${{ github.event.before }}"
+            CURRENT_COMMIT="${{ github.sha }}"
+          else
+            # For other events (like workflow_dispatch), compare with previous commit
+            PREVIOUS_COMMIT="HEAD~1"
+            CURRENT_COMMIT="HEAD"
+          fi
+          
+          # Get list of changed files
+          git diff --name-only "$PREVIOUS_COMMIT" "$CURRENT_COMMIT" > changed_files.txt || {
+            echo "Failed to detect changes, falling back to full deployment"
+            full_deploy="true"
+          }
+          
+          if [[ "$full_deploy" != "true" ]]; then
+            echo "Changed files:"
+            cat changed_files.txt
+            echo ""
+            
+            # Check for global changes that require full deployment
+            if grep -qE '^(docker-compose\.yml|scripts/|\.github/workflows/)' changed_files.txt; then
+              echo "Global files changed, triggering full deployment"
+              full_deploy="true"
+            else
+              # Map file changes to service groups
+              if grep -qE '^compose/core/' changed_files.txt; then
+                core="true"
+                echo "Core infrastructure changes detected"
+              fi
+              
+              if grep -qE '^compose/(media|gaming)/' changed_files.txt; then
+                application="true"
+                echo "Application service changes detected"
+              fi
+              
+              if grep -qE '^compose/monitoring/' changed_files.txt; then
+                monitoring="true"
+                echo "Monitoring service changes detected"
+              fi
+              
+              if grep -qE '^compose/security/' changed_files.txt; then
+                security="true"
+                echo "Security service changes detected"
+              fi
+              
+              # Check for config file changes that affect specific groups
+              if grep -qE '^configs/(caddy|mariadb|redis)/' changed_files.txt; then
+                core="true"
+                echo "Core configuration changes detected"
+              fi
+              
+              if grep -qE '^configs/(prometheus|grafana|loki|alertmanager)/' changed_files.txt; then
+                monitoring="true"
+                echo "Monitoring configuration changes detected"
+              fi
+              
+              # Auto-include core when other groups change (dependency handling)
+              if [[ "$application" == "true" || "$monitoring" == "true" || "$security" == "true" ]]; then
+                core="true"
+                echo "Auto-including core infrastructure due to service dependencies"
+              fi
+            fi
+          fi
+        fi
+        
+        # Set outputs
+        echo "core=$core" >> $GITHUB_OUTPUT
+        echo "application=$application" >> $GITHUB_OUTPUT
+        echo "monitoring=$monitoring" >> $GITHUB_OUTPUT
+        echo "security=$security" >> $GITHUB_OUTPUT
+        echo "full_deploy=$full_deploy" >> $GITHUB_OUTPUT
+        
+        # Upload changed files as artifact for debugging
+        if [[ -f changed_files.txt ]]; then
+          echo "Uploading changed files list as artifact"
+        fi
+        
+        # Log deployment decision summary
+        echo ""
+        echo "=== DEPLOYMENT DECISION SUMMARY ==="
+        echo "Service group deployment decisions:"
+        echo "  • Core ............. $core"
+        echo "  • Application ...... $application"
+        echo "  • Monitoring ....... $monitoring"
+        echo "  • Security ......... $security"
+        echo "  • Full deploy ...... $full_deploy"
+        echo "==================================="
+    
+    - name: Upload Changed Files List
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: changed-files
+        path: changed_files.txt
+        if-no-files-found: ignore
+        retention-days: 7
+
+  deploy:
+    name: Deploy Infrastructure
+    needs: detect-changes
+    runs-on: self-hosted
+    timeout-minutes: 29
+    # Only run this job if changes are detected for this specific group or full deployment is required
+    if: ${{ needs.detect-changes.outputs.full_deploy == 'true' ||
+            needs.detect-changes.outputs.core == 'true' ||
+            needs.detect-changes.outputs.application == 'true' ||
+            needs.detect-changes.outputs.monitoring == 'true' ||
+            needs.detect-changes.outputs.security == 'true' }}
+    strategy:
+      matrix:
+        group: [core, application, monitoring, security]
+      fail-fast: false
+    env:
+      GROUP: ${{ matrix.group }}
+    
+    steps:
+    # Announce which service group this matrix job will deploy
+    - name: Announce Deployment Scope
+      run: |
+        echo "🚀 Deploying service group: ${{ matrix.group }}"
+        echo "Full deployment mode: ${{ needs.detect-changes.outputs.full_deploy }}"
+        echo "Group-specific deployment: ${{ needs.detect-changes.outputs[matrix.group] }}"
+    
+    # Skip this matrix job if this specific group doesn't need deployment
+    - name: Check Deployment Requirement
+      run: |
+        if [[ "${{ needs.detect-changes.outputs.full_deploy }}" == "true" ]]; then
+          echo "Full deployment requested - proceeding with ${{ matrix.group }}"
+        elif [[ "${{ needs.detect-changes.outputs[matrix.group] }}" == "true" ]]; then
+          echo "Changes detected for ${{ matrix.group }} - proceeding"
+        else
+          echo "⏭No changes detected for ${{ matrix.group }} - skipping"
+          exit 0
+        fi
+    
     - name: Clean Previous Run Files
       run: |
         # Fix permissions on any files from previous runs that might block checkout
@@ -164,6 +338,7 @@ jobs:
 
 
     - name: Deploy Core Infrastructure
+      if: env.GROUP == 'core' || needs.detect-changes.outputs.full_deploy == 'true'
       run: |
         # Load environment variables for this step only
         export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
@@ -189,6 +364,7 @@ jobs:
         echo "Webhook scaler is running and will manage GitHub runners automatically"
 
     - name: Deploy Application Services  
+      if: env.GROUP == 'application' || needs.detect-changes.outputs.full_deploy == 'true'
       run: |
         # Load environment variables for this step only
         export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
@@ -203,6 +379,7 @@ jobs:
         sleep 30
 
     - name: Create MySQL Exporter Configuration
+      if: env.GROUP == 'monitoring' || needs.detect-changes.outputs.full_deploy == 'true'
       run: |
         # Load environment variables for this step only
         export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
@@ -226,6 +403,7 @@ jobs:
         echo "MySQL exporter configuration created successfully"
 
     - name: Deploy Monitoring Stack
+      if: env.GROUP == 'monitoring' || needs.detect-changes.outputs.full_deploy == 'true'
       run: |
         # Load environment variables for this step only
         export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
@@ -240,6 +418,7 @@ jobs:
         sleep 20
 
     - name: Deploy Security Services
+      if: env.GROUP == 'security' || needs.detect-changes.outputs.full_deploy == 'true'
       run: |
         # Load environment variables for this step only
         export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)

@@ -137,10 +137,51 @@ sudo chown -R 1000:1000 /mnt/{nvme,ssd,hdd}
 
 ## 🔄 Deployment Process
 
+### Selective Deployments (New!)
+
+The deployment system now intelligently detects which services need updates based on file changes, significantly reducing deployment time and risk.
+
+#### How It Works
+
+1. **Change Detection**: Analyzes git diff to identify modified files
+2. **Service Mapping**: Maps file changes to service groups:
+   - `compose/core/` → Core Infrastructure (caddy, mariadb, redis)
+   - `compose/media/`, `compose/gaming/` → Application Services (plex, qbittorrent, teamspeak, cs2)
+   - `compose/monitoring/` → Monitoring Stack (prometheus, grafana, loki, exporters)
+   - `compose/security/` → Security Services (fail2ban)
+   - `configs/` → Mapped to relevant service groups
+3. **Dependency Handling**: Core infrastructure automatically included when other services change
+4. **Parallel Deployment**: Service groups deploy in parallel matrix jobs
+
+#### Deployment Triggers
+
+- **Automatic**: Push to `master` branch → deploys only changed service groups
+- **Full Manual**: Use "Force full deployment" option in workflow dispatch
+- **Fallback**: Any detection errors → automatic full deployment
+
+#### Examples
+
+```bash
+# Change only Plex config → deploys application + core groups
+git add compose/media/plex.yml
+git commit -m "Update Plex configuration"
+git push
+
+# Change monitoring config → deploys monitoring + core groups  
+git add compose/monitoring/metrics.yml
+git commit -m "Add new Prometheus rules"
+git push
+
+# Change workflow or scripts → full deployment
+git add .github/workflows/deploy.yml
+git commit -m "Update deployment workflow"
+git push
+```
+
 ### Automatic Deployment
-- Push changes to the `main` branch
-- GitHub Actions automatically deploys to your server
-- The runner performs a fresh git pull and deploys all services
+- Push changes to the `master` branch
+- GitHub Actions intelligently deploys only affected service groups
+- The runner performs change detection and targeted deployments
 - Health checks ensure successful deployment
 
 ### Manual Deployment (Local)

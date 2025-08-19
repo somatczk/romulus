@@ -235,17 +235,6 @@ jobs:
           fi
         done
 
-    # Clean up decrypted secrets (security best practice)
-    - name: Cleanup Decrypted Secrets
-      if: always()
-      run: |
-        echo "Cleaning up decrypted secrets..."
-        if [ -d "$HOME/secrets" ]; then
-          # Securely overwrite files before deletion
-          find $HOME/secrets -type f -exec shred -vfz -n 3 {} \; 2>/dev/null || true
-          rm -rf $HOME/secrets
-          echo "Decrypted secrets cleaned up"
-        fi
 
     # Fix permissions for next run
     - name: Fix Permissions for Next Run

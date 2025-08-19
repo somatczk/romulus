@@ -1,5 +1,4 @@
 -- Create database for application logs and metadata
--- This database stores centralized logging and system metrics for monitoring
 CREATE DATABASE IF NOT EXISTS `homeserver_logs` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Create read-only user for monitoring/backup services

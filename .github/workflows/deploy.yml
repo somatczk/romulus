@@ -111,7 +111,7 @@ jobs:
     needs: [detect-changes, deploy-core]
     runs-on: self-hosted
     timeout-minutes: 29
-    if: ${{ always() && (needs.detect-changes.outputs.full_deploy == 'true' || contains(fromJson(needs.detect-changes.outputs.changed_groups), matrix.group)) }}
+    if: ${{ always() && (needs.detect-changes.outputs.full_deploy == 'true' || needs.detect-changes.outputs.changed_groups != '[]') }}
     strategy:
       matrix:
         include:
@@ -129,6 +129,20 @@ jobs:
       SERVICES: ${{ matrix.services }}
     
     steps:
+    - name: Check if Group Should Deploy
+      run: |
+        if [[ "${{ needs.detect-changes.outputs.full_deploy }}" == "true" ]]; then
+          echo "Full deployment requested - proceeding with ${{ matrix.group }}"
+        else
+          changed_groups='${{ needs.detect-changes.outputs.changed_groups }}'
+          if echo "$changed_groups" | jq -e --arg group "${{ matrix.group }}" 'contains([$group])' > /dev/null; then
+            echo "Changes detected for ${{ matrix.group }} - proceeding"
+          else
+            echo "No changes detected for ${{ matrix.group }} - skipping"
+            exit 0
+          fi
+        fi
+    
     - name: Announce Deployment Scope
       run: |
         echo "🚀 Deploying service group: ${{ matrix.group }}"

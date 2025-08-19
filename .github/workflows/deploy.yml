@@ -62,6 +62,12 @@ jobs:
           if [[ "${{ github.event_name }}" == "push" ]]; then
             PREVIOUS_COMMIT="${{ github.event.before }}"
             CURRENT_COMMIT="${{ github.sha }}"
+            
+            # Handle edge cases where github.event.before is invalid (zero hash, new branch, force push)
+            if [[ "$PREVIOUS_COMMIT" == "0000000000000000000000000000000000000000" ]] || ! git cat-file -e "$PREVIOUS_COMMIT" 2>/dev/null; then
+              echo "Invalid or missing previous commit reference, using HEAD~1"
+              PREVIOUS_COMMIT="HEAD~1"
+            fi
           else
             # For workflow_dispatch, get the last successful run commit or compare with HEAD~1
             PREVIOUS_COMMIT="HEAD~1"
@@ -70,11 +76,19 @@ jobs:
           
           echo "Comparing $PREVIOUS_COMMIT to $CURRENT_COMMIT"
           
-          # Get list of changed files
-          git diff --name-only "$PREVIOUS_COMMIT" "$CURRENT_COMMIT" > changed_files.txt || {
-            echo "Failed to detect changes, falling back to incremental deployment"
-            echo "configs/caddy/Caddyfile" > changed_files.txt  # Force at least one change for testing
-          }
+          # Get list of changed files with additional error handling
+          if git diff --name-only "$PREVIOUS_COMMIT" "$CURRENT_COMMIT" > changed_files.txt 2>/dev/null; then
+            echo "Successfully detected file changes"
+          else
+            echo "Failed to detect changes using $PREVIOUS_COMMIT..$CURRENT_COMMIT"
+            # Try alternative approaches
+            if git diff --name-only HEAD~1 HEAD > changed_files.txt 2>/dev/null; then
+              echo "Fallback: Using HEAD~1..HEAD comparison"
+            else
+              echo "All change detection methods failed, triggering full deployment"
+              full_deploy="true"
+            fi
+          fi
           
           if [[ "$full_deploy" != "true" ]]; then
             echo "Changed files:"

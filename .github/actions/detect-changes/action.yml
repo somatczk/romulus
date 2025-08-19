@@ -26,6 +26,9 @@ outputs:
   full_deploy:
     description: 'Full deployment needed'
     value: ${{ steps.changes.outputs.full_deploy }}
+  changed_groups:
+    description: 'JSON array of service groups that need deployment'
+    value: ${{ steps.changes.outputs.changed_groups }}
 
 runs:
   using: 'composite'
@@ -145,6 +148,29 @@ runs:
         echo "infrastructure=$infrastructure" >> $GITHUB_OUTPUT
         echo "full_deploy=$full_deploy" >> $GITHUB_OUTPUT
         
+        # Generate JSON array of changed groups
+        changed_groups_array=()
+        if [[ "$full_deploy" == "true" ]]; then
+          changed_groups_array=("infrastructure" "application" "monitoring" "security")
+          # Core is always included when other groups change, so we add it separately
+          changed_groups_array+=("core")
+        else
+          [[ "$core" == "true" ]] && changed_groups_array+=("core")
+          [[ "$application" == "true" ]] && changed_groups_array+=("application")
+          [[ "$monitoring" == "true" ]] && changed_groups_array+=("monitoring")
+          [[ "$security" == "true" ]] && changed_groups_array+=("security")
+          [[ "$infrastructure" == "true" ]] && changed_groups_array+=("infrastructure")
+        fi
+        
+        # Convert to JSON array
+        if [[ ${#changed_groups_array[@]} -eq 0 ]]; then
+          changed_groups_json="[]"
+        else
+          changed_groups_json=$(printf '%s\n' "${changed_groups_array[@]}" | jq -R . | jq -s .)
+        fi
+        
+        echo "changed_groups=$changed_groups_json" >> $GITHUB_OUTPUT
+        
         if [[ -f changed_files.txt ]]; then
           echo "Uploading changed files list as artifact"
         fi
@@ -158,4 +184,5 @@ runs:
         echo "  • Security ......... $security"
         echo "  • Infrastructure ... $infrastructure"
         echo "  • Full deploy ...... $full_deploy"
+        echo "  • Changed groups ... $changed_groups_json"
         echo "==================================="

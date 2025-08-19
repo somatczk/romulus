@@ -77,11 +77,12 @@ function getCurrentRunnerCount() {
 // Function to scale runners to a specific count
 function scaleRunners(targetCount) {
   try {
-    // Use docker-compose to scale the github-runner service
+    // Use docker-compose to scale the github-runner service from app directory
     const output = execSync(`docker-compose up -d --scale github-runner=${targetCount}`, {
       stdio: 'pipe',
       timeout: 30000,
-      encoding: 'utf8'
+      encoding: 'utf8',
+      cwd: '/app'
     });
     log('info', `Scaled github-runner service to ${targetCount} containers`);
     return true;

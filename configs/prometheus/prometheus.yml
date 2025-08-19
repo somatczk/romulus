@@ -63,10 +63,10 @@ scrape_configs:
         target_label: container_name
         replacement: '${1}'
 
-  # Docker Daemon - Docker engine metrics
+  # Docker Daemon - Docker engine metrics via proxy
   - job_name: 'docker'
     static_configs:
-      - targets: ['172.17.0.1:9323']  # Docker daemon metrics endpoint
+      - targets: ['docker-proxy:9323']
     scrape_interval: 30s
     metrics_path: /metrics
 

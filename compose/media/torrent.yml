@@ -11,6 +11,7 @@ services:
       - PGID=${PGID}
       - TZ=${TZ}
       - WEBUI_PORT=8080
+      - QBITTORRENT_PASS=${QBITTORRENT_PASSWORD}
     volumes:
       - ${SSD_PATH}/config/qbittorrent:/config
       - ${SSD_PATH}/cache/qbittorrent:/cache

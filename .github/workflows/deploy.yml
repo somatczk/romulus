@@ -141,7 +141,7 @@ jobs:
         docker-compose up -d caddy cloudflare-ddns mariadb redis
         
         echo "Deploying webhook scaler..."
-        docker-compose up -d runner-webhook
+        docker-compose up -d --build runner-webhook
         
         echo "Waiting for core services and webhook scaler..."
         sleep 30

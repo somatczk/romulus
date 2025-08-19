@@ -90,7 +90,7 @@ function createRunnerContainer() {
       '--label "com.github.runner.scaler=worker"',
       '--label "com.docker.compose.project=romulus"',
       '--label "com.docker.compose.service=github-runner"',
-      `-e RUNNER_WORKDIR=/tmp/runner/work`,
+      `-e RUNNER_WORKDIR=/actions-runner/_work`,
       `-e RUNNER_GROUP=${process.env.RUNNER_GROUP || 'default'}`,
       `-e RUNNER_SCOPE=repo`,
       `-e LABELS=self-hosted,Linux,X64,homeserver,docker`,
@@ -101,9 +101,9 @@ function createRunnerContainer() {
       `-e EPHEMERAL=true`,
       `-e DOCKER_HOST=unix:///var/run/docker.sock`,
       `-e START_DOCKER_SERVICE=false`,
-      `-e RUN_AS_ROOT=true`,
+      `-e RUN_AS_ROOT=false`,
       `-e TZ=${process.env.TZ || 'UTC'}`,
-      `-v ${process.env.SSD_PATH || '/tmp'}/runner/work:/tmp/runner/work`,
+      `-v ${process.env.SSD_PATH || '/tmp'}/actions-runner/_work:/actions-runner/_work`,
       `-v /var/run/docker.sock:/var/run/docker.sock:rw`
     ];
     

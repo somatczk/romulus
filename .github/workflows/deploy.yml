@@ -133,8 +133,8 @@ jobs:
         # Load environment variables for this step only
         export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
         echo "Stopping existing core infrastructure containers..."
-        docker-compose stop caddy cloudflare-ddns mariadb redis || true
-        docker-compose rm -f caddy cloudflare-ddns mariadb redis || true
+        docker-compose stop caddy cloudflare-ddns mariadb redis runner-webhook || true
+        docker-compose rm -f caddy cloudflare-ddns mariadb redis runner-webhook || true
 
         echo "Deploying core infrastructure services..."
         docker-compose up -d caddy cloudflare-ddns mariadb redis

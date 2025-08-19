@@ -1,0 +1,39 @@
+services:
+  runner-webhook:
+    build:
+      context: ../../webhook-scaler
+      dockerfile: Dockerfile
+    container_name: runner-webhook
+    restart: unless-stopped
+    networks:
+      - frontend
+      - backend
+    environment:
+      - GITHUB_WEBHOOK_SECRET=${GITHUB_WEBHOOK_SECRET}
+      - GITHUB_RUNNER_TOKEN=${GITHUB_RUNNER_TOKEN}
+      - GITHUB_REPOSITORY=${GITHUB_REPOSITORY}
+      - MIN_RUNNERS=${MIN_RUNNERS}
+      - MAX_RUNNERS=${MAX_RUNNERS}
+      - SCALE_UP_FACTOR=${SCALE_UP_FACTOR}
+      - SCALE_DOWN_DELAY=${SCALE_DOWN_DELAY}
+      - LOG_LEVEL=${LOG_LEVEL}
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:rw
+      - ${PROJECT_PATH}:/workspace:ro
+    ports:
+      - "127.0.0.1:3001:3000"
+    mem_limit: 256m
+    cpus: 0.5
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    labels:
+      - "com.github.runner.scaler=webhook-receiver"

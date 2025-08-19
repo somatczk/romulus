@@ -45,3 +45,4 @@ include:
   
   # Infrastructure
   - compose/infrastructure/github-runner.yml
+  - compose/infrastructure/runner-webhook.yml

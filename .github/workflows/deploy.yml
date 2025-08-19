@@ -111,11 +111,11 @@ jobs:
         # Load environment variables for this step only
         export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
         echo "Stopping existing core infrastructure containers..."
-        docker-compose stop caddy cloudflare-ddns mariadb redis || true
-        docker-compose rm -f caddy cloudflare-ddns mariadb redis || true
+        docker-compose stop caddy cloudflare-ddns mariadb redis github-runner runner-webhook || true
+        docker-compose rm -f caddy cloudflare-ddns mariadb redis github-runner runner-webhook || true
         
         echo "Deploying core infrastructure services..."
-        docker-compose up -d caddy cloudflare-ddns mariadb redis
+        docker-compose up -d caddy cloudflare-ddns mariadb redis github-runner runner-webhook
         
         echo "Waiting for core services..."
         sleep 30
@@ -190,7 +190,7 @@ jobs:
         echo "Performing health checks..."
         
         # Check core services
-        for service in caddy mariadb redis; do
+        for service in caddy mariadb redis runner-webhook; do
           echo "Checking $service..."
           timeout=60
           elapsed=0
@@ -210,6 +210,12 @@ jobs:
                 fi
                 ;;
               redis)
+                if docker-compose ps "$service" | grep -q "Up"; then
+                  echo "$service is running"
+                  break
+                fi
+                ;;
+              runner-webhook)
                 if docker-compose ps "$service" | grep -q "Up"; then
                   echo "$service is running"
                   break
@@ -248,6 +254,7 @@ jobs:
         endpoints=(
           "https://monitoring.${DOMAIN}/api/health"
           "https://status.${DOMAIN}"
+          "https://runners.${DOMAIN}/health"
         )
         
         for endpoint in "${endpoints[@]}"; do
@@ -275,7 +282,7 @@ jobs:
         echo "Deployment completed successfully!"
         echo ""
         echo "Service Categories Deployed:"
-        echo "  • Core Infrastructure (Proxy, Database, Cache)"
+        echo "  • Core Infrastructure (Proxy, Database, Cache, GitHub Runners)"
         echo "  • Media Services (Plex, qBittorrent)"
         echo "  • Gaming Services (TeamSpeak, CS2)"
         echo "  • Monitoring Stack (Prometheus, Grafana, Loki, Alerting, Uptime)"

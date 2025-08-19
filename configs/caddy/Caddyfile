@@ -123,6 +123,21 @@ status.{$DOMAIN} {
 
 
 
+# GitHub Runner Webhook
+# Auto-scaling webhook endpoint for GitHub Actions runners
+runners.{$DOMAIN} {
+	reverse_proxy runner-webhook:3000 {
+		header_up X-Real-IP {remote_host}
+	}
+	
+	# Only allow GitHub webhook IPs (if needed)
+	# @github_ips remote_ip 140.82.112.0/20 185.199.108.0/22 192.30.252.0/22
+	# handle @github_ips {
+	#	reverse_proxy runner-webhook:3000
+	# }
+	# respond * "Forbidden" 403
+}
+
 # Health Check Endpoint
 # Simple health check for load balancers/monitoring
 health.{$DOMAIN} {

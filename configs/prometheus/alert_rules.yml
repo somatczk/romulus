@@ -1,14 +1,3 @@
-# Prometheus Alert Rules - Homeserver Infrastructure
-# 
-# Purpose: Define alerting conditions for critical infrastructure monitoring
-# Integration: Sends alerts to Alertmanager for notification routing
-# Thresholds: Tuned for homeserver environment with 15+ services
-#
-# Alert Severity Levels:
-# - critical: Immediate action required (service down, data loss risk)
-# - warning: Attention needed (resource usage high, performance degraded)
-# - info: Informational (configuration changes, maintenance notices)
-
 groups:
   # ===== INFRASTRUCTURE ALERTS =====
   - name: infrastructure

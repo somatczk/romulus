@@ -1,14 +1,15 @@
 services:
   alertmanager:
-    image: prom/alertmanager:v0.26.0
+    image: prom/alertmanager:latest
     container_name: alertmanager
     restart: unless-stopped
+    user: "65534:65534"
     networks:
       - monitoring
     ports:
       - "9093:9093"
     volumes:
-      - ./configs/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ../../configs/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
       - ${SSD_PATH}/monitoring/alertmanager:/alertmanager
     command:
       - '--config.file=/etc/alertmanager/alertmanager.yml'

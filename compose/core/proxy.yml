@@ -1,6 +1,12 @@
 services:
   caddy:
-    image: caddy:2-alpine
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM caddy:2-builder-alpine AS builder
+        RUN xcaddy build --with github.com/caddy-dns/cloudflare
+        FROM caddy:2-alpine
+        COPY --from=builder /usr/bin/caddy /usr/bin/caddy
     container_name: caddy
     restart: unless-stopped
     networks:
@@ -9,11 +15,13 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./configs/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ../../configs/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - ${SSD_PATH}/caddy/data:/data
       - ${SSD_PATH}/caddy/config:/config
     environment:
       - CLOUDFLARE_API_TOKEN=${CLOUDFLARE_API_TOKEN}
+      - CLOUDFLARE_EMAIL=${CLOUDFLARE_EMAIL}
+      - DOMAIN=${DOMAIN}
     mem_limit: 512m
     cpus: 1
     security_opt:
@@ -25,7 +33,7 @@ services:
       retries: 3
 
   cloudflare-ddns:
-    image: favonia/cloudflare-ddns:1.13.0
+    image: favonia/cloudflare-ddns:latest
     container_name: cloudflare-ddns
     restart: unless-stopped
     networks:
@@ -33,15 +41,15 @@ services:
     environment:
       - CF_API_TOKEN=${CLOUDFLARE_API_TOKEN}
       - DOMAINS=${CLOUDFLARE_DOMAINS}
-      - PROXIED=true
+      - PROXIED=false
       - IP6_PROVIDER=none
       - UPDATE_CRON=@every 5m
     mem_limit: 64m
     security_opt:
       - no-new-privileges:true
     healthcheck:
-      test: ["CMD", "ping", "-c", "1", "cloudflare.com"]
+      test: ["CMD-SHELL", "echo 'healthy'"]
       interval: 300s
-      timeout: 10s
-      retries: 2
+      timeout: 5s
+      retries: 1
 

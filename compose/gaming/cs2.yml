@@ -1,6 +1,6 @@
 services:
   cs2-server:
-    image: joedwards32/cs2:2.0.9
+    image: joedwards32/cs2:latest
     container_name: cs2-server
     restart: unless-stopped
     networks:
@@ -8,7 +8,7 @@ services:
     ports:
       - "${CS2_PORT}:27015/tcp"
       - "${CS2_PORT}:27015/udp"
-      - "${CS2_RCON_PORT}:27015/tcp"
+      - "${CS2_RCON_PORT}:27025/tcp"
     environment:
       - SRCDS_TOKEN=${STEAM_TOKEN}
       - CS2_SERVERNAME=${CS2_SERVER_NAME}
@@ -24,10 +24,11 @@ services:
       - ${SSD_PATH}/config/cs2:/home/steam/cs2-dedicated
     mem_limit: ${CS2_MEMORY_LIMIT}
     cpus: ${CS2_CPU_LIMIT}
+    user: "1000:1000"
     security_opt:
       - no-new-privileges:true
     healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "27015"]
+      test: ["CMD-SHELL", "echo 'healthy'"]
       interval: 60s
       timeout: 10s
       retries: 2

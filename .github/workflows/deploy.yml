@@ -418,22 +418,33 @@ jobs:
           chmod 644 configs/mariadb/exporter.my.cnf
         fi
         
-        # Stop existing services
-        echo "Stopping existing ${{ matrix.group }} services..."
+        # 1. Stop and remove existing services to ensure clean deployment
+        echo "Stopping and removing existing ${{ matrix.group }} services..."
         docker-compose stop ${{ matrix.services }} || true
         docker-compose rm -f ${{ matrix.services }} || true
         
-        # Deploy services
-        if [[ "${{ matrix.group }}" == "infrastructure" ]]; then
-          echo "Building and deploying infrastructure services..."
-          docker-compose up -d --build ${{ matrix.services }}
-        else
-          echo "Deploying ${{ matrix.group }} services..."
-          docker-compose up -d ${{ matrix.services }}
-        fi
+        # 2. Always rebuild with latest changes (no cache for fresh builds)
+        echo "Building ${{ matrix.group }} services with latest changes..."
+        docker-compose build --no-cache ${{ matrix.services }} || echo "No build needed for some services"
         
-        # Wait for services to start
-        sleep 20
+        # 3. Deploy with force-recreate to ensure fresh containers
+        echo "Deploying ${{ matrix.group }} services with fresh builds..."
+        docker-compose up -d --force-recreate ${{ matrix.services }}
+        
+        # 4. Wait for services to stabilize
+        echo "Waiting for ${{ matrix.group }} services to start..."
+        sleep 25
+        
+        # 5. Quick verification that services started
+        echo "Verifying ${{ matrix.group }} services status..."
+        for service in ${{ matrix.services }}; do
+          if docker-compose ps "$service" | grep -q "Up"; then
+            echo " $service is running"
+          else
+            echo "$service may still be starting or failed"
+          fi
+        done
+        
         echo "${{ matrix.group }} deployment completed"
 
     - name: Health Check

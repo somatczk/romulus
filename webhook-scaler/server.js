@@ -74,15 +74,32 @@ function getCurrentRunnerCount() {
   }
 }
 
-// Function to start a single runner instance
+// Function to start a single runner instance with unique name
 function startSingleRunner() {
   try {
     process.chdir('/workspace');
-    execSync('docker-compose up -d --no-deps github-runner', {
+    
+    // Generate unique identifier for this runner
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substring(2, 8);
+    const runnerSuffix = `${timestamp}-${random}`;
+    
+    // Set unique container name via environment variable
+    const env = {
+      ...process.env,
+      COMPOSE_PROJECT_NAME: 'romulus',
+      RUNNER_SUFFIX: runnerSuffix
+    };
+    
+    // Use docker-compose run to create a new detached runner instance
+    // This creates a new container with a unique name each time
+    execSync(`docker-compose run -d --name github-runner-${runnerSuffix} github-runner`, {
       stdio: 'pipe',
-      timeout: 60000
+      timeout: 60000,
+      env: env
     });
-    log('info', 'Successfully started a new runner instance');
+    
+    log('info', `Successfully started runner instance: github-runner-${runnerSuffix}`);
     return true;
   } catch (error) {
     log('error', 'Failed to start runner instance', { error: error.message });

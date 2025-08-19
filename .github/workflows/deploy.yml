@@ -135,6 +135,29 @@ jobs:
         docker-compose up -d plex qbittorrent teamspeak cs2-server
         sleep 30
 
+    # Create MySQL exporter configuration file
+    - name: Create MySQL Exporter Configuration
+      run: |
+        # Load environment variables for this step only
+        export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
+        echo "Creating MySQL exporter .my.cnf configuration..."
+        
+        # Create the config directory if it doesn't exist
+        mkdir -p configs/mariadb/
+        
+        # Create .my.cnf file with current environment variables
+        cat > configs/mariadb/exporter.my.cnf <<EOF
+[client]
+user = monitoring
+password = ${MONITORING_DB_PASSWORD}
+host = mariadb
+port = 3306
+EOF
+        
+        # Set appropriate permissions
+        chmod 600 configs/mariadb/exporter.my.cnf
+        echo "MySQL exporter configuration created successfully"
+
     - name: Deploy Monitoring Stack
       run: |
         # Load environment variables for this step only

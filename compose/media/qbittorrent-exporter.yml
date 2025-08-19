@@ -7,7 +7,9 @@ services:
       - monitoring
       - backend
     environment:
-      - QBITTORRENT_URL=http://qbittorrent:8080
+      - QBITTORRENT_HOST=qbittorrent
+      - QBITTORRENT_PORT=8080
+      - QBITTORRENT_PROTOCOL=http
       - QBITTORRENT_USERNAME=admin
       - QBITTORRENT_PASSWORD=${QBITTORRENT_PASSWORD}
       - PORT=8080

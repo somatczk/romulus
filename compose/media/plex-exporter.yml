@@ -1,6 +1,6 @@
 services:
   plex-exporter:
-    image: granra/plex_exporter:latest
+    image: granra/plex_exporter:v0.2.0
     container_name: plex-exporter
     restart: unless-stopped
     networks:

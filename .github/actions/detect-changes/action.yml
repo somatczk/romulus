@@ -53,27 +53,49 @@ runs:
             PREVIOUS_COMMIT="${{ github.event.before }}"
             CURRENT_COMMIT="${{ github.sha }}"
             
-            if [[ "$PREVIOUS_COMMIT" == "0000000000000000000000000000000000000000" ]] || ! git cat-file -e "$PREVIOUS_COMMIT" 2>/dev/null; then
-              echo "Invalid or missing previous commit reference, using HEAD~1"
+            # Check if previous commit is valid
+            if [[ "$PREVIOUS_COMMIT" == "0000000000000000000000000000000000000000" ]]; then
+              echo "New branch or first commit detected, triggering full deployment"
+              full_deploy="true"
+            elif ! git cat-file -e "$PREVIOUS_COMMIT" 2>/dev/null; then
+              echo "Previous commit $PREVIOUS_COMMIT not found, using HEAD~1"
               PREVIOUS_COMMIT="HEAD~1"
+              # Verify HEAD~1 exists
+              if ! git cat-file -e "HEAD~1" 2>/dev/null; then
+                echo "HEAD~1 also not found, likely first commit - triggering full deployment"
+                full_deploy="true"
+              fi
             fi
           else
             PREVIOUS_COMMIT="HEAD~1"
             CURRENT_COMMIT="HEAD"
+            # Verify HEAD~1 exists for non-push events
+            if ! git cat-file -e "HEAD~1" 2>/dev/null; then
+              echo "HEAD~1 not found, likely first commit - triggering full deployment"
+              full_deploy="true"
+            fi
           fi
           
-          echo "Comparing $PREVIOUS_COMMIT to $CURRENT_COMMIT"
-          
-          if git diff --name-only "$PREVIOUS_COMMIT" "$CURRENT_COMMIT" > changed_files.txt 2>/dev/null; then
-            echo "Successfully detected file changes"
-          else
-            echo "Failed to detect changes using $PREVIOUS_COMMIT..$CURRENT_COMMIT"
-            if git diff --name-only HEAD~1 HEAD > changed_files.txt 2>/dev/null; then
+          # Only attempt diff if we haven't already decided on full deployment
+          if [[ "$full_deploy" != "true" ]]; then
+            echo "Comparing $PREVIOUS_COMMIT to $CURRENT_COMMIT"
+            
+            # Try primary method with range syntax
+            if git diff --name-only "$PREVIOUS_COMMIT..$CURRENT_COMMIT" > changed_files.txt 2>/dev/null && [[ -s changed_files.txt || $(git diff --name-only "$PREVIOUS_COMMIT..$CURRENT_COMMIT" | wc -l) -eq 0 ]]; then
+              echo "Successfully detected file changes using range syntax"
+            # Fallback to space-separated commits
+            elif git diff --name-only "$PREVIOUS_COMMIT" "$CURRENT_COMMIT" > changed_files.txt 2>/dev/null; then
+              echo "Successfully detected file changes using space-separated syntax"
+            # Final fallback to HEAD~1
+            elif git diff --name-only HEAD~1 HEAD > changed_files.txt 2>/dev/null; then
               echo "Fallback: Using HEAD~1..HEAD comparison"
             else
               echo "All change detection methods failed, triggering full deployment"
+              echo "Debug info: PREVIOUS_COMMIT=$PREVIOUS_COMMIT, CURRENT_COMMIT=$CURRENT_COMMIT"
               full_deploy="true"
             fi
+          else
+            echo "Full deployment already triggered, skipping file change detection"
           fi
           
           if [[ "$full_deploy" != "true" ]]; then

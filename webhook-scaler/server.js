@@ -104,15 +104,25 @@ function createRunnerContainer() {
       `-e RUN_AS_ROOT=true`,
       `-e TZ=${process.env.TZ || 'UTC'}`,
       `-v ${process.env.SSD_PATH || '/tmp'}/runner/work:/tmp/runner/work`,
-      `-v /var/run/docker.sock:/var/run/docker.sock:rw`,
-      `-v ${process.env.PROJECT_PATH || '/workspace'}:/workspace:ro`,
+      `-v /var/run/docker.sock:/var/run/docker.sock:rw`
+    ];
+    
+    // Only add PROJECT_PATH mount if it's set and not a GitHub Actions workspace
+    const projectPath = process.env.PROJECT_PATH;
+    if (projectPath && !projectPath.includes('/runner/work/')) {
+      dockerCmd.push(`-v ${projectPath}:/workspace:ro`);
+    }
+    
+    dockerCmd.push(
       `--memory=${process.env.RUNNER_MEMORY_LIMIT || '4g'}`,
       `--cpus=${process.env.RUNNER_CPU_LIMIT || '4.0'}`,
       '--security-opt no-new-privileges:true',
       'myoung34/github-runner:latest'
-    ].join(' ');
+    );
     
-    execSync(dockerCmd, {
+    const dockerCmdString = dockerCmd.join(' ');
+    
+    execSync(dockerCmdString, {
       stdio: 'pipe',
       timeout: 30000,
       encoding: 'utf8',

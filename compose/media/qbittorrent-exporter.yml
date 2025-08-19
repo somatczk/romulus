@@ -1,6 +1,6 @@
 services:
   qbittorrent-exporter:
-    image: caseyscarborough/qbittorrent-exporter:1.3.0
+    image: caseyscarborough/qbittorrent-exporter:v1.3.5
     container_name: qbittorrent-exporter
     restart: unless-stopped
     networks:

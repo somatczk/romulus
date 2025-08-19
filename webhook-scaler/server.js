@@ -102,6 +102,7 @@ function createRunnerContainer() {
       `-e DOCKER_HOST=unix:///var/run/docker.sock`,
       `-e START_DOCKER_SERVICE=false`,
       `-e RUN_AS_ROOT=true`,
+      `-e USER=runner`,
       `-e TZ=${process.env.TZ || 'UTC'}`,
       `-v ${process.env.SSD_PATH || '/tmp'}/actions-runner/_work:/actions-runner/_work`,
       `-v /var/run/docker.sock:/var/run/docker.sock:rw`

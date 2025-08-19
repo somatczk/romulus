@@ -149,10 +149,6 @@ jobs:
         docker-compose ps redis | grep -q "Up" || exit 1
         docker-compose ps runner-webhook | grep -q "Up" || exit 1
         
-        echo "Copying runner compose file for webhook scaler..."
-        # Copy the runner compose file to webhook scaler's working directory
-        docker cp compose/infrastructure/github-runner.yml runner-webhook:/app/docker-compose.yml
-        
         echo "Webhook scaler is running and will manage GitHub runners automatically"
 
     - name: Deploy Application Services  
@@ -168,6 +164,31 @@ jobs:
         sleep 30
 
     # Create MySQL exporter configuration file
+    # Ensure all required configuration files exist
+    - name: Setup Configuration Files
+      run: |
+        echo "Setting up configuration files..."
+        
+        # Ensure config directories exist
+        mkdir -p configs/caddy/
+        
+        # Check if Caddyfile exists in the expected location
+        if [ ! -f "configs/caddy/Caddyfile" ]; then
+          echo "Warning: Caddyfile not found at configs/caddy/Caddyfile"
+          # Fix if possible by copying from a known location
+          if [ -f "/tmp/Caddyfile" ]; then
+            echo "Copying Caddyfile from /tmp/Caddyfile"
+            cp /tmp/Caddyfile configs/caddy/Caddyfile
+          else
+            echo "::error::Cannot find Caddyfile to copy"
+            exit 1
+          fi
+        fi
+        
+        # Verify file permissions
+        chmod 644 configs/caddy/Caddyfile
+        echo "Caddy configuration setup successfully"
+        
     - name: Create MySQL Exporter Configuration
       run: |
         # Load environment variables for this step only

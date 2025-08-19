@@ -1,6 +1,6 @@
 services:
   plex:
-    image: lscr.io/linuxserver/plex:version-1.42.1.10060-4e8b05daf-ls278
+    image: lscr.io/linuxserver/plex:1.42.1
     container_name: plex
     restart: unless-stopped
     networks:

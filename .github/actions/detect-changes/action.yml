@@ -84,6 +84,8 @@ runs:
                 full_deploy="true"
               fi
             fi
+          else
+            echo "Full deployment already triggered, skipping file change detection"
           fi
           
           if [[ "$full_deploy" == "true" ]]; then

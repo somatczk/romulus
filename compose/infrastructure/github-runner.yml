@@ -1,12 +1,11 @@
 services:
   github-runner:
     image: myoung34/github-runner:latest
-    container_name: github-runner
     restart: unless-stopped
     networks:
       - frontend
     environment:
-      - RUNNER_NAME=${RUNNER_NAME}
+      - RUNNER_NAME=${RUNNER_NAME}-${HOSTNAME}
       - RUNNER_WORKDIR=/tmp/runner/work
       - RUNNER_GROUP=${RUNNER_GROUP}
       - RUNNER_SCOPE=repo
@@ -15,7 +14,7 @@ services:
       - ACCESS_TOKEN=${GITHUB_RUNNER_TOKEN}
       - RUNNER_REPLACE_EXISTING=false
       - DISABLE_RUNNER_UPDATE=false
-      - EPHEMERAL=false
+      - EPHEMERAL=true
       - DOCKER_HOST=unix:///var/run/docker.sock
       - START_DOCKER_SERVICE=false
       - RUNNER_ALLOW_RUNASROOT=1
@@ -37,4 +36,9 @@ services:
       timeout: 10s
       retries: 3
       start_period: 60s
+    deploy:
+      mode: replicated
+      replicas: 1
+    labels:
+      - "com.github.runner.scaler=worker"
 

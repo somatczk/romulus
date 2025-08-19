@@ -107,11 +107,13 @@ function createRunnerContainer() {
       `-v /var/run/docker.sock:/var/run/docker.sock:rw`
     ];
     
-    // Only add PROJECT_PATH mount if it's set and not a GitHub Actions workspace
+    // Skip PROJECT_PATH mount entirely for autoscaled containers
+    // Ephemeral runners will checkout their own workspace via GitHub Actions
     const projectPath = process.env.PROJECT_PATH;
-    if (projectPath && !projectPath.includes('/runner/work/')) {
-      dockerCmd.push(`-v ${projectPath}:/workspace:ro`);
-    }
+    log('info', `Skipping PROJECT_PATH mount for autoscaled runner`, { 
+      projectPath: projectPath,
+      reason: 'Ephemeral runners manage their own workspace - no host mounts needed'
+    });
     
     dockerCmd.push(
       `--memory=${process.env.RUNNER_MEMORY_LIMIT || '4g'}`,

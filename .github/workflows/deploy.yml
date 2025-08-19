@@ -22,10 +22,17 @@ jobs:
     - name: Clean Previous Run Files
       run: |
         # Fix permissions on any files from previous runs that might block checkout
-        sudo chown -R $USER:$USER . || true
-        sudo chmod -R u+w . || true
-        # Remove any problematic directories
-        sudo rm -rf compose/core/configs/ || true
+        if [ "$(id -u)" = "0" ]; then
+          # Running as root, no sudo needed
+          chown -R $USER:$USER . || true
+          chmod -R u+w . || true
+          rm -rf compose/core/configs/ || true
+        else
+          # Not running as root, use sudo
+          sudo chown -R $USER:$USER . || true
+          sudo chmod -R u+w . || true
+          sudo rm -rf compose/core/configs/ || true
+        fi
 
     - name: Checkout Repository
       uses: actions/checkout@v4
@@ -79,21 +86,26 @@ jobs:
       run: |
         # Load environment variables for this step only
         export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
-        # Clean up any incorrectly created directories first
-        sudo rm -rf "${SSD_PATH}/config" || true
         
-        # Create application directories (removed config/{...} that was conflicting with Caddy)
-        sudo mkdir -p "${SSD_PATH}"/{caddy/{data,config},databases/{mariadb,redis},monitoring/{prometheus,grafana,loki,alertmanager,uptime-kuma}}
-        sudo mkdir -p "${NVME_PATH}/games/cs2"
-        sudo mkdir -p "${HDD_PATH}"/{media,downloads/complete}
-        
-        # Create GitHub runner directories with new structure
-        sudo mkdir -p "${SSD_PATH}/actions-runner/_work" || true
-        
-        # Set proper ownership from the start
-        sudo chown -R "${PUID}:${PGID}" "${SSD_PATH}" "${NVME_PATH}" "${HDD_PATH}" || true
-        # Ensure the runner user can also access these directories
-        sudo chmod -R u+rwx,g+rwx "${SSD_PATH}" "${NVME_PATH}" "${HDD_PATH}" || true
+        if [ "$(id -u)" = "0" ]; then
+          # Running as root, no sudo needed
+          rm -rf "${SSD_PATH}/config" || true
+          mkdir -p "${SSD_PATH}"/{caddy/{data,config},databases/{mariadb,redis},monitoring/{prometheus,grafana,loki,alertmanager,uptime-kuma}}
+          mkdir -p "${NVME_PATH}/games/cs2"
+          mkdir -p "${HDD_PATH}"/{media,downloads/complete}
+          mkdir -p "${SSD_PATH}/actions-runner/_work" || true
+          chown -R "${PUID}:${PGID}" "${SSD_PATH}" "${NVME_PATH}" "${HDD_PATH}" || true
+          chmod -R u+rwx,g+rwx "${SSD_PATH}" "${NVME_PATH}" "${HDD_PATH}" || true
+        else
+          # Not running as root, use sudo
+          sudo rm -rf "${SSD_PATH}/config" || true
+          sudo mkdir -p "${SSD_PATH}"/{caddy/{data,config},databases/{mariadb,redis},monitoring/{prometheus,grafana,loki,alertmanager,uptime-kuma}}
+          sudo mkdir -p "${NVME_PATH}/games/cs2"
+          sudo mkdir -p "${HDD_PATH}"/{media,downloads/complete}
+          sudo mkdir -p "${SSD_PATH}/actions-runner/_work" || true
+          sudo chown -R "${PUID}:${PGID}" "${SSD_PATH}" "${NVME_PATH}" "${HDD_PATH}" || true
+          sudo chmod -R u+rwx,g+rwx "${SSD_PATH}" "${NVME_PATH}" "${HDD_PATH}" || true
+        fi
 
     - name: Set Container-Specific Permissions
       run: |
@@ -101,12 +113,23 @@ jobs:
         export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
         echo "Setting container-specific directory permissions..."
         # Set permissions for monitoring services with their specific user IDs
-        sudo chown -R 472:472 "${SSD_PATH}/monitoring/grafana" || true
-        sudo chown -R 65534:65534 "${SSD_PATH}/monitoring/prometheus" || true
-        sudo chown -R 10001:10001 "${SSD_PATH}/monitoring/loki" || true
-        sudo chown -R 65534:65534 "${SSD_PATH}/monitoring/alertmanager" || true
-        sudo chown -R root:root "${SSD_PATH}/monitoring/uptime-kuma" || true
-        sudo chown -R root:root "${SSD_PATH}/monitoring/fail2ban" || true
+        if [ "$(id -u)" = "0" ]; then
+          # Running as root, no sudo needed
+          chown -R 472:472 "${SSD_PATH}/monitoring/grafana" || true
+          chown -R 65534:65534 "${SSD_PATH}/monitoring/prometheus" || true
+          chown -R 10001:10001 "${SSD_PATH}/monitoring/loki" || true
+          chown -R 65534:65534 "${SSD_PATH}/monitoring/alertmanager" || true
+          chown -R root:root "${SSD_PATH}/monitoring/uptime-kuma" || true
+          chown -R root:root "${SSD_PATH}/monitoring/fail2ban" || true
+        else
+          # Not running as root, use sudo
+          sudo chown -R 472:472 "${SSD_PATH}/monitoring/grafana" || true
+          sudo chown -R 65534:65534 "${SSD_PATH}/monitoring/prometheus" || true
+          sudo chown -R 10001:10001 "${SSD_PATH}/monitoring/loki" || true
+          sudo chown -R 65534:65534 "${SSD_PATH}/monitoring/alertmanager" || true
+          sudo chown -R root:root "${SSD_PATH}/monitoring/uptime-kuma" || true
+          sudo chown -R root:root "${SSD_PATH}/monitoring/fail2ban" || true
+        fi
         echo "Container permissions set successfully"
 
     - name: Fix GitHub Runner Permissions
@@ -115,15 +138,24 @@ jobs:
         export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
         echo "Fixing GitHub runner directory permissions..."
         
-        # Ensure new runner directories exist and have correct permissions
-        sudo mkdir -p "${SSD_PATH}/actions-runner/_work" || true
-        sudo chown -R "${PUID}:${PGID}" "${SSD_PATH}/actions-runner" || true
-        sudo chmod -R 755 "${SSD_PATH}/actions-runner" || true
-        
-        # Clean up old runner directory if it exists
-        if [ -d "${SSD_PATH}/runner" ]; then
-          echo "Cleaning up old runner directory..."
-          sudo rm -rf "${SSD_PATH}/runner" || true
+        if [ "$(id -u)" = "0" ]; then
+          # Running as root, no sudo needed
+          mkdir -p "${SSD_PATH}/actions-runner/_work" || true
+          chown -R "${PUID}:${PGID}" "${SSD_PATH}/actions-runner" || true
+          chmod -R 755 "${SSD_PATH}/actions-runner" || true
+          if [ -d "${SSD_PATH}/runner" ]; then
+            echo "Cleaning up old runner directory..."
+            rm -rf "${SSD_PATH}/runner" || true
+          fi
+        else
+          # Not running as root, use sudo
+          sudo mkdir -p "${SSD_PATH}/actions-runner/_work" || true
+          sudo chown -R "${PUID}:${PGID}" "${SSD_PATH}/actions-runner" || true
+          sudo chmod -R 755 "${SSD_PATH}/actions-runner" || true
+          if [ -d "${SSD_PATH}/runner" ]; then
+            echo "Cleaning up old runner directory..."
+            sudo rm -rf "${SSD_PATH}/runner" || true
+          fi
         fi
         
         echo "GitHub runner permissions fixed successfully"
@@ -301,8 +333,15 @@ jobs:
       run: |
         echo "Fixing permissions for next run..."
         # Fix ownership of any created files/directories
-        sudo chown -R $USER:$USER . || true
-        sudo chmod -R u+w . || true
+        if [ "$(id -u)" = "0" ]; then
+          # Running as root, no sudo needed
+          chown -R $USER:$USER . || true
+          chmod -R u+w . || true
+        else
+          # Not running as root, use sudo
+          sudo chown -R $USER:$USER . || true
+          sudo chmod -R u+w . || true
+        fi
         echo "Permissions fixed"
 
     - name: Deployment Summary

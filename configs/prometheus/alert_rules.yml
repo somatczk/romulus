@@ -6,38 +6,62 @@ groups:
       # Host system down - critical infrastructure failure
       - alert: HostDown
         expr: up{job="node-exporter"} == 0
-        for: 1m
+        for: 3m
         labels:
           severity: critical
           category: infrastructure
         annotations:
           summary: "Host system is down"
-          description: "Node exporter has been down for more than 1 minute. Host: {{ $labels.instance }}"
-          runbook_url: "https://docs.yourdomain.com/runbooks/host-down"
+          description: "Node exporter has been down for more than 3 minutes. Host: {{ $labels.instance }}"
+          runbook_url: "https://github.com/somatczk/romulus/wiki/Runbooks#host-down"
+
+      # Critical CPU usage - immediate attention required
+      - alert: CriticalCPUUsage
+        expr: homeserver:system_cpu_usage_percent > 95
+        for: 2m
+        labels:
+          severity: critical
+          category: performance
+        annotations:
+          summary: "Critical CPU usage detected"
+          description: "CPU usage is above 95% for more than 2 minutes. Current usage: {{ $value }}%"
+          runbook_url: "https://github.com/somatczk/romulus/wiki/Runbooks#high-cpu"
 
       # High CPU usage - performance degradation warning
       - alert: HighCPUUsage
-        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
-        for: 5m
+        expr: homeserver:system_cpu_usage_percent > 80
+        for: 10m
         labels:
           severity: warning
           category: performance
         annotations:
           summary: "High CPU usage detected"
-          description: "CPU usage is above 80% for more than 5 minutes. Current usage: {{ $value }}%"
-          runbook_url: "https://docs.yourdomain.com/runbooks/high-cpu"
+          description: "CPU usage is above 80% for more than 10 minutes. Current usage: {{ $value }}%"
+          runbook_url: "https://github.com/somatczk/romulus/wiki/Runbooks#high-cpu"
+
+      # Critical memory usage - immediate attention required
+      - alert: CriticalMemoryUsage
+        expr: homeserver:system_memory_usage_percent > 95
+        for: 2m
+        labels:
+          severity: critical
+          category: performance
+        annotations:
+          summary: "Critical memory usage detected"
+          description: "Memory usage is above 95% for more than 2 minutes. Current usage: {{ $value }}%"
+          runbook_url: "https://github.com/somatczk/romulus/wiki/Runbooks#high-memory"
 
       # High memory usage - potential resource exhaustion
       - alert: HighMemoryUsage
-        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
-        for: 5m
+        expr: homeserver:system_memory_usage_percent > 85
+        for: 10m
         labels:
           severity: warning
           category: performance
         annotations:
           summary: "High memory usage detected"
-          description: "Memory usage is above 85% for more than 5 minutes. Current usage: {{ $value }}%"
-          runbook_url: "https://docs.yourdomain.com/runbooks/high-memory"
+          description: "Memory usage is above 85% for more than 10 minutes. Current usage: {{ $value }}%"
+          runbook_url: "https://github.com/somatczk/romulus/wiki/Runbooks#high-memory"
 
       # Disk space critical - immediate action required
       - alert: DiskSpaceCritical
@@ -61,6 +85,51 @@ groups:
         annotations:
           summary: "Disk space running low"
           description: "Disk usage is above 75% on {{ $labels.mountpoint }}. Current usage: {{ $value }}%"
+
+      # Docker daemon health - container orchestration failure
+      - alert: DockerDaemonDown
+        expr: up{job="docker"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          category: infrastructure
+        annotations:
+          summary: "Docker daemon is down"
+          description: "Docker daemon has been unreachable for more than 2 minutes"
+          runbook_url: "https://github.com/somatczk/romulus/wiki/Runbooks#docker-daemon-down"
+
+      # Network latency high - connectivity issues
+      - alert: HighNetworkLatency
+        expr: probe_duration_seconds{job="blackbox-icmp"} > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          category: network
+        annotations:
+          summary: "High network latency detected"
+          description: "Network latency to {{ $labels.instance }} is {{ $value }}s"
+
+      # System load high - performance bottleneck
+      - alert: HighSystemLoad
+        expr: homeserver:system_load5 > 4
+        for: 15m
+        labels:
+          severity: warning
+          category: performance
+        annotations:
+          summary: "High system load detected"
+          description: "5-minute load average is {{ $value }}, indicating system stress"
+
+      # I/O wait high - storage bottleneck
+      - alert: HighIOWait
+        expr: rate(node_cpu_seconds_total{mode="iowait"}[5m]) * 100 > 20
+        for: 10m
+        labels:
+          severity: warning
+          category: storage
+        annotations:
+          summary: "High I/O wait detected"
+          description: "System spending {{ $value }}% time waiting for I/O operations"
 
   # ===== CONTAINER ALERTS =====
   - name: containers
@@ -342,3 +411,58 @@ groups:
         annotations:
           summary: "GitHub runner job running for over 2 hours"
           description: "A GitHub Actions job has been running for more than 2 hours"
+
+  # ===== SECURITY & BACKUP ALERTS =====
+  - name: security_backup
+    interval: 300s  # Check every 5 minutes
+    rules:
+      # Backup job failure - data protection at risk
+      - alert: BackupJobFailed
+        expr: up{job="backup"} == 0
+        for: 24h
+        labels:
+          severity: critical
+          category: backup
+        annotations:
+          summary: "Backup job has failed"
+          description: "No successful backup detected in the last 24 hours"
+          runbook_url: "https://github.com/somatczk/romulus/wiki/Runbooks#backup-failure"
+
+      # Suspicious network activity - potential security threat
+      - alert: UnusualNetworkTraffic
+        expr: |
+          (
+            sum(rate(node_network_receive_bytes_total[5m])) by (instance) > 100000000 or
+            sum(rate(node_network_transmit_bytes_total[5m])) by (instance) > 100000000
+          )
+        for: 15m
+        labels:
+          severity: warning
+          category: security
+        annotations:
+          summary: "Unusual network traffic detected"
+          description: "High network traffic (>100MB/s) detected for 15+ minutes on {{ $labels.instance }}"
+
+      # Failed login attempts spike - brute force attack
+      - alert: HighFailedLoginAttempts
+        expr: |
+          increase(node_systemd_unit_state{name="ssh.service",state="failed"}[1h]) > 10
+        for: 5m
+        labels:
+          severity: warning
+          category: security
+        annotations:
+          summary: "High number of failed SSH login attempts"
+          description: "More than 10 failed SSH login attempts in the last hour"
+
+      # Container escape detection - security breach attempt
+      - alert: ContainerPrivilegeEscalation
+        expr: |
+          container_processes{name!=""} > container_spec_memory_limit_bytes{name!=""} / 1048576
+        for: 2m
+        labels:
+          severity: critical
+          category: security
+        annotations:
+          summary: "Potential container privilege escalation detected"
+          description: "Container {{ $labels.name }} may be attempting privilege escalation"

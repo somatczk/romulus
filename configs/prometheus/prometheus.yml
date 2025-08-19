@@ -1,10 +1,11 @@
 global:
-  scrape_interval: 15s          # Balance between data granularity and resource usage
+  scrape_interval: 15s          # Balance between data granularity and resource usage  
+  scrape_timeout: 10s           # Global timeout to prevent hanging scrapes
   evaluation_interval: 15s      # How frequently to evaluate alert rules
-  # Global scrape timeout for all jobs
   external_labels:              # Labels added to all metrics for identification
     environment: 'homeserver'
     instance: 'primary'
+    cluster: 'main'
 
 # Alerting configuration
 alerting:
@@ -45,11 +46,22 @@ scrape_configs:
     static_configs:
       - targets: ['cadvisor:8080']
     scrape_interval: 30s
+    scrape_timeout: 15s
     metrics_path: /metrics
     relabel_configs:
       # Add container labels as Prometheus labels
       - source_labels: [__meta_docker_container_label_com_docker_compose_service]
         target_label: service
+    metric_relabel_configs:
+      # Drop high-cardinality metrics that aren't essential
+      - source_labels: [__name__]
+        regex: 'container_network_tcp_usage_total|container_network_udp_usage_total'
+        action: drop
+      # Simplify container names by removing hash suffixes
+      - source_labels: [name]
+        regex: '(.+)-[a-f0-9]{12}'
+        target_label: container_name
+        replacement: '${1}'
 
   # Docker Daemon - Docker engine metrics
   - job_name: 'docker'
@@ -84,17 +96,20 @@ scrape_configs:
     scrape_interval: 30s
     metrics_path: /metrics
 
-  # Blackbox Exporter - External service monitoring
+  # Blackbox Exporter - HTTP service monitoring
   - job_name: 'blackbox-http'
     metrics_path: /probe
     params:
-      module: [http_2xx]  # HTTP probe module
+      module: [http_2xx]
+    scrape_interval: 60s
+    scrape_timeout: 30s
     static_configs:
       - targets:
           - https://plex.${DOMAIN}
           - https://torrents.${DOMAIN}
           - https://monitoring.${DOMAIN}
           - https://status.${DOMAIN}
+          - https://runners.${DOMAIN}
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target
@@ -102,6 +117,47 @@ scrape_configs:
         target_label: instance
       - target_label: __address__
         replacement: blackbox-exporter:9115
+      # Add service category labels
+      - source_labels: [instance]
+        regex: '.*plex.*'
+        target_label: service_type
+        replacement: 'media'
+      - source_labels: [instance]
+        regex: '.*torrent.*'
+        target_label: service_type
+        replacement: 'download'
+      - source_labels: [instance]
+        regex: '.*monitoring.*|.*status.*'
+        target_label: service_type
+        replacement: 'infrastructure'
+
+  # Blackbox Exporter - ICMP ping monitoring
+  - job_name: 'blackbox-icmp'
+    metrics_path: /probe
+    params:
+      module: [icmp]
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    static_configs:
+      - targets:
+          - 8.8.8.8      # Google DNS
+          - 1.1.1.1      # Cloudflare DNS
+          - gateway      # Default gateway
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
+
+  # Backup monitoring - Track backup job status
+  - job_name: 'backup'
+    static_configs:
+      - targets: ['backup-monitor:8080']
+    scrape_interval: 300s  # Check every 5 minutes
+    scrape_timeout: 30s
+    honor_timestamps: true
 
   # TeamSpeak 3 Server - Custom metrics via ServerQuery
   - job_name: 'teamspeak'

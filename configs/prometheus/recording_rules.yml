@@ -365,7 +365,6 @@ groups:
   - name: security_metrics_rules
     interval: 60s
     rules:
-      
       # Fail2ban active bans
       - record: homeserver:fail2ban_active_bans
         expr: fail2ban_banned_ips or on() vector(0)
@@ -383,3 +382,121 @@ groups:
         labels:
           component: security
           metric_type: health
+
+  # ===== GOLDEN SIGNALS RULES (SRE best practices) =====
+  - name: golden_signals_rules
+    interval: 30s
+    rules:
+      # LATENCY: Request duration percentiles
+      - record: homeserver:request_duration_p50
+        expr: histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, service))
+        labels:
+          component: web
+          metric_type: latency
+          percentile: "50"
+
+      - record: homeserver:request_duration_p95
+        expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, service))
+        labels:
+          component: web
+          metric_type: latency
+          percentile: "95"
+
+      - record: homeserver:request_duration_p99
+        expr: histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, service))
+        labels:
+          component: web
+          metric_type: latency
+          percentile: "99"
+
+      # TRAFFIC: Request rate per service
+      - record: homeserver:request_rate
+        expr: sum(rate(http_requests_total[5m])) by (service, method)
+        labels:
+          component: web
+          metric_type: traffic
+
+      # ERRORS: Error rate percentage by service
+      - record: homeserver:error_rate_percent
+        expr: |
+          (
+            sum(rate(http_requests_total{status=~"5.."}[5m])) by (service) /
+            sum(rate(http_requests_total[5m])) by (service)
+          ) * 100
+        labels:
+          component: web
+          metric_type: errors
+
+      # SATURATION: Resource utilization efficiency
+      - record: homeserver:cpu_saturation_percent
+        expr: |
+          (
+            homeserver:system_cpu_usage_percent + 
+            (homeserver:system_load5 / on() scalar(count(node_cpu_seconds_total{mode="idle"})) * 100)
+          ) / 2
+        labels:
+          component: system
+          metric_type: saturation
+
+      - record: homeserver:memory_saturation_percent
+        expr: |
+          (
+            homeserver:system_memory_usage_percent + 
+            ((node_memory_SwapTotal_bytes - node_memory_SwapFree_bytes) / node_memory_SwapTotal_bytes * 100)
+          ) / 2
+        labels:
+          component: system
+          metric_type: saturation
+
+  # ===== EFFICIENCY & OPTIMIZATION RULES =====
+  - name: efficiency_optimization_rules
+    interval: 60s
+    rules:
+      # Container restart frequency (restarts per hour)
+      - record: homeserver:container_restart_rate
+        expr: rate(container_start_time_seconds[1h]) * 3600
+        labels:
+          component: container
+          metric_type: stability
+
+      # Service error budget (based on 99.9% SLA)
+      - record: homeserver:service_error_budget_remaining
+        expr: |
+          (
+            (0.999 - (1 - homeserver:service_availability_24h / 100)) /
+            0.001
+          ) * 100
+        labels:
+          component: service
+          metric_type: sla
+
+      # Cache efficiency metrics
+      - record: homeserver:redis_hit_rate_percent
+        expr: |
+          (
+            rate(redis_keyspace_hits_total[5m]) /
+            (rate(redis_keyspace_hits_total[5m]) + rate(redis_keyspace_misses_total[5m]))
+          ) * 100
+        labels:
+          component: redis
+          metric_type: efficiency
+
+      # Network bandwidth utilization
+      - record: homeserver:network_bandwidth_utilization_percent
+        expr: |
+          (
+            (homeserver:network_receive_bytes_rate + homeserver:network_transmit_bytes_rate) /
+            (1000000000)  # Assume 1Gbps interface
+          ) * 100
+        labels:
+          component: network
+          metric_type: utilization
+
+      # Storage I/O efficiency (IOPS per GB)
+      - record: homeserver:storage_iops_per_gb
+        expr: |
+          (homeserver:disk_reads_iops + homeserver:disk_writes_iops) /
+          ((node_filesystem_size_bytes - node_filesystem_avail_bytes) / 1073741824)
+        labels:
+          component: storage
+          metric_type: efficiency

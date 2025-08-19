@@ -1,17 +1,3 @@
-# Promtail Configuration - Log Collection Agent
-# 
-# Purpose: Collects logs from various sources and ships them to Loki
-# Sources: Docker containers, system logs, application logs
-# Processing: Label extraction, log parsing, filtering
-# Integration: Sends structured logs to Loki for aggregation
-#
-# Log Processing Features:
-# - Container log collection with automatic service detection
-# - System log collection from journald and files
-# - Log parsing and label extraction
-# - Multi-line log support for stack traces
-# - Rate limiting and backpressure handling
-
 server:
   http_listen_port: 9080
   grpc_listen_port: 0

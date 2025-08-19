@@ -1,16 +1,3 @@
--- MariaDB Initialization Script
--- Homeserver Infrastructure Database Setup
--- 
--- Purpose: Initialize databases and users for homeserver services
--- Services: TeamSpeak 3, Application data
--- 
--- Security: Uses environment variables for passwords
--- Performance: Optimized for SSD storage with InnoDB
-
--- Create TeamSpeak 3 database (already created by docker-compose environment)
--- The main teamspeak database is created automatically via MYSQL_DATABASE
-
-
 -- Create database for application logs and metadata
 CREATE DATABASE IF NOT EXISTS `homeserver_logs` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 

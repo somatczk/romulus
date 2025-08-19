@@ -1,0 +1,151 @@
+name: 'Detect Changes'
+description: 'Detects file changes and maps them to service groups for deployment'
+
+inputs:
+  force-full:
+    description: 'Force full deployment'
+    required: false
+    default: 'false'
+
+outputs:
+  core:
+    description: 'Core infrastructure needs deployment'
+    value: ${{ steps.changes.outputs.core }}
+  application:
+    description: 'Application services need deployment'
+    value: ${{ steps.changes.outputs.application }}
+  monitoring:
+    description: 'Monitoring services need deployment'
+    value: ${{ steps.changes.outputs.monitoring }}
+  security:
+    description: 'Security services need deployment'
+    value: ${{ steps.changes.outputs.security }}
+  infrastructure:
+    description: 'Infrastructure services need deployment'
+    value: ${{ steps.changes.outputs.infrastructure }}
+  full_deploy:
+    description: 'Full deployment needed'
+    value: ${{ steps.changes.outputs.full_deploy }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Detect File Changes and Map to Service Groups
+      id: changes
+      shell: bash
+      run: |
+        set -e
+        
+        core="false"
+        application="false"
+        monitoring="false"
+        security="false"
+        infrastructure="false"
+        full_deploy="false"
+        
+        if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.force-full }}" == "true" ]]; then
+          echo "Manual full deployment requested"
+          full_deploy="true"
+        else
+          echo "Detecting changed files..."
+          
+          if [[ "${{ github.event_name }}" == "push" ]]; then
+            PREVIOUS_COMMIT="${{ github.event.before }}"
+            CURRENT_COMMIT="${{ github.sha }}"
+            
+            if [[ "$PREVIOUS_COMMIT" == "0000000000000000000000000000000000000000" ]] || ! git cat-file -e "$PREVIOUS_COMMIT" 2>/dev/null; then
+              echo "Invalid or missing previous commit reference, using HEAD~1"
+              PREVIOUS_COMMIT="HEAD~1"
+            fi
+          else
+            PREVIOUS_COMMIT="HEAD~1"
+            CURRENT_COMMIT="HEAD"
+          fi
+          
+          echo "Comparing $PREVIOUS_COMMIT to $CURRENT_COMMIT"
+          
+          if git diff --name-only "$PREVIOUS_COMMIT" "$CURRENT_COMMIT" > changed_files.txt 2>/dev/null; then
+            echo "Successfully detected file changes"
+          else
+            echo "Failed to detect changes using $PREVIOUS_COMMIT..$CURRENT_COMMIT"
+            if git diff --name-only HEAD~1 HEAD > changed_files.txt 2>/dev/null; then
+              echo "Fallback: Using HEAD~1..HEAD comparison"
+            else
+              echo "All change detection methods failed, triggering full deployment"
+              full_deploy="true"
+            fi
+          fi
+          
+          if [[ "$full_deploy" != "true" ]]; then
+            echo "Changed files:"
+            cat changed_files.txt
+            echo ""
+            
+            if grep -qE '^(docker-compose\.yml|scripts/|\.github/workflows/deploy\.yml)' changed_files.txt; then
+              echo "Global files changed, triggering full deployment"
+              full_deploy="true"
+            else
+              if grep -qE '^compose/core/' changed_files.txt; then
+                core="true"
+                echo "Core infrastructure changes detected"
+              fi
+              
+              if grep -qE '^compose/(media|gaming)/' changed_files.txt; then
+                application="true"
+                echo "Application service changes detected"
+              fi
+              
+              if grep -qE '^compose/monitoring/' changed_files.txt; then
+                monitoring="true"
+                echo "Monitoring service changes detected"
+              fi
+              
+              if grep -qE '^compose/security/' changed_files.txt; then
+                security="true"
+                echo "Security service changes detected"
+              fi
+              
+              if grep -qE '^compose/infrastructure/' changed_files.txt; then
+                infrastructure="true"
+                echo "Infrastructure service changes detected"
+              fi
+              
+              if grep -qE '^configs/(caddy|mariadb|redis)/' changed_files.txt; then
+                core="true"
+                echo "Core configuration changes detected"
+              fi
+              
+              if grep -qE '^configs/(prometheus|grafana|loki|alertmanager)/' changed_files.txt; then
+                monitoring="true"
+                echo "Monitoring configuration changes detected"
+              fi
+              
+              if [[ "$application" == "true" || "$monitoring" == "true" || "$security" == "true" ]]; then
+                core="true"
+                echo "Auto-including core infrastructure due to service dependencies"
+              fi
+            fi
+          fi
+        fi
+        
+        echo "core=$core" >> $GITHUB_OUTPUT
+        echo "application=$application" >> $GITHUB_OUTPUT
+        echo "monitoring=$monitoring" >> $GITHUB_OUTPUT
+        echo "security=$security" >> $GITHUB_OUTPUT
+        echo "infrastructure=$infrastructure" >> $GITHUB_OUTPUT
+        echo "full_deploy=$full_deploy" >> $GITHUB_OUTPUT
+        
+        if [[ -f changed_files.txt ]]; then
+          echo "Uploading changed files list as artifact"
+        fi
+        
+        echo ""
+        echo "=== DEPLOYMENT DECISION SUMMARY ==="
+        echo "Service group deployment decisions:"
+        echo "  • Core ............. $core"
+        echo "  • Application ...... $application"
+        echo "  • Monitoring ....... $monitoring"
+        echo "  • Security ......... $security"
+        echo "  • Infrastructure ... $infrastructure"
+        echo "  • Full deploy ...... $full_deploy"
+        echo "==================================="

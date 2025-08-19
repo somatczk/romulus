@@ -1,0 +1,75 @@
+name: 'Health Check'
+description: 'Performs health checks on deployed services'
+
+inputs:
+  secrets-file:
+    description: 'Path to decrypted secrets file'
+    required: true
+    default: '$HOME/secrets/homeserver-env-secrets.json'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Service Health Check
+      shell: bash
+      run: |
+        export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "${{ inputs.secrets-file }}" | xargs)
+        cd ${{ github.workspace }}
+        echo "Performing health checks..."
+        
+        for service in caddy mariadb redis runner-webhook; do
+          echo "Checking $service..."
+          timeout=60
+          elapsed=0
+          
+          while [[ $elapsed -lt $timeout ]]; do
+            case $service in
+              caddy|mariadb|redis|runner-webhook)
+                if docker-compose ps "$service" | grep -q "Up"; then
+                  echo "$service is running"
+                  break
+                fi
+                ;;
+            esac
+            sleep 5
+            elapsed=$((elapsed + 5))
+          done
+          
+          if [[ $elapsed -ge $timeout ]]; then
+            echo "$service failed to start"
+            exit 1
+          fi
+        done
+        
+        for service in prometheus grafana; do
+          echo "Checking $service..."
+          if docker-compose ps "$service" | grep -q "Up"; then
+            echo "$service is running"
+          else
+            echo "$service not running (non-critical)"
+          fi
+        done
+        
+        echo "All critical services are running"
+
+    - name: Test External Access
+      shell: bash
+      run: |
+        export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "${{ inputs.secrets-file }}" | xargs)
+        echo "Testing external access..."
+        sleep 30
+        
+        endpoints=(
+          "https://monitoring.${DOMAIN}/api/health"
+          "https://status.${DOMAIN}"
+          "https://runners.${DOMAIN}/health"
+        )
+        
+        for endpoint in "${endpoints[@]}"; do
+          echo "Testing $endpoint..."
+          if curl -f -s --max-time 30 --insecure "$endpoint" >/dev/null 2>&1; then
+            echo "External endpoint accessible"
+          else
+            echo "External endpoint not accessible (may need more time)"
+          fi
+        done

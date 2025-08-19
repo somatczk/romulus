@@ -1,0 +1,143 @@
+name: 'Deploy Services'
+description: 'Deploys services for a specific service group'
+
+inputs:
+  group:
+    description: 'Service group to deploy'
+    required: true
+  services:
+    description: 'Space-separated list of services to deploy'
+    required: true
+  secrets-file:
+    description: 'Path to decrypted secrets file'
+    required: true
+    default: '$HOME/secrets/homeserver-env-secrets.json'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Prepare Environment
+      shell: bash
+      run: |
+        export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "${{ inputs.secrets-file }}" | xargs)
+        
+        # Log current user context for analysis
+        echo "🔍 PERMISSION ANALYSIS: Running as UID $(id -u), User: $(whoami), Groups: $(groups)"
+        
+        if [ "$(id -u)" = "0" ]; then
+          echo "📍 TAKING ROOT PATH - executing without sudo"
+          rm -rf "${SSD_PATH}/config" || true
+          mkdir -p "${SSD_PATH}"/{caddy/{data,config},databases/{mariadb,redis},monitoring/{prometheus,grafana,loki,alertmanager,uptime-kuma}}
+          mkdir -p "${NVME_PATH}/games/cs2"
+          mkdir -p "${HDD_PATH}"/{media,downloads/complete}
+          mkdir -p "${SSD_PATH}/actions-runner/_work" || true
+          chown -R "${PUID}:${PGID}" "${SSD_PATH}" "${NVME_PATH}" "${HDD_PATH}" || true
+          chmod -R u+rwx,g+rwx "${SSD_PATH}" "${NVME_PATH}" "${HDD_PATH}" || true
+        else
+          echo "📍 TAKING NON-ROOT PATH - using sudo for elevation"
+          sudo rm -rf "${SSD_PATH}/config" || true
+          sudo mkdir -p "${SSD_PATH}"/{caddy/{data,config},databases/{mariadb,redis},monitoring/{prometheus,grafana,loki,alertmanager,uptime-kuma}}
+          sudo mkdir -p "${NVME_PATH}/games/cs2"
+          sudo mkdir -p "${HDD_PATH}"/{media,downloads/complete}
+          sudo mkdir -p "${SSD_PATH}/actions-runner/_work" || true
+          sudo chown -R "${PUID}:${PGID}" "${SSD_PATH}" "${NVME_PATH}" "${HDD_PATH}" || true
+          sudo chmod -R u+rwx,g+rwx "${SSD_PATH}" "${NVME_PATH}" "${HDD_PATH}" || true
+        fi
+
+    - name: Set Container-Specific Permissions
+      shell: bash
+      run: |
+        export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "${{ inputs.secrets-file }}" | xargs)
+        echo "Setting container-specific directory permissions..."
+        echo "🔍 PERMISSION ANALYSIS: Container permissions - UID $(id -u)"
+        if [ "$(id -u)" = "0" ]; then
+          echo "📍 CONTAINER PERMISSIONS: ROOT PATH"
+          chown -R 472:472 "${SSD_PATH}/monitoring/grafana" || true
+          chown -R 65534:65534 "${SSD_PATH}/monitoring/prometheus" || true
+          chown -R 10001:10001 "${SSD_PATH}/monitoring/loki" || true
+          chown -R 65534:65534 "${SSD_PATH}/monitoring/alertmanager" || true
+          chown -R root:root "${SSD_PATH}/monitoring/uptime-kuma" || true
+          chown -R root:root "${SSD_PATH}/monitoring/fail2ban" || true
+        else
+          echo "📍 CONTAINER PERMISSIONS: NON-ROOT PATH"
+          sudo chown -R 472:472 "${SSD_PATH}/monitoring/grafana" || true
+          sudo chown -R 65534:65534 "${SSD_PATH}/monitoring/prometheus" || true
+          sudo chown -R 10001:10001 "${SSD_PATH}/monitoring/loki" || true
+          sudo chown -R 65534:65534 "${SSD_PATH}/monitoring/alertmanager" || true
+          sudo chown -R root:root "${SSD_PATH}/monitoring/uptime-kuma" || true
+          sudo chown -R root:root "${SSD_PATH}/monitoring/fail2ban" || true
+        fi
+        echo "Container permissions set successfully"
+
+    - name: Fix GitHub Runner Permissions
+      shell: bash
+      run: |
+        export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "${{ inputs.secrets-file }}" | xargs)
+        echo "Fixing GitHub runner directory permissions..."
+        echo "🔍 PERMISSION ANALYSIS: GitHub runner permissions - UID $(id -u)"
+        
+        if [ "$(id -u)" = "0" ]; then
+          echo "📍 RUNNER PERMISSIONS: ROOT PATH"
+          mkdir -p "${SSD_PATH}/actions-runner/_work" || true
+          chown -R "${PUID}:${PGID}" "${SSD_PATH}/actions-runner" || true
+          chmod -R 755 "${SSD_PATH}/actions-runner" || true
+          if [ -d "${SSD_PATH}/runner" ]; then
+            echo "Cleaning up old runner directory..."
+            rm -rf "${SSD_PATH}/runner" || true
+          fi
+        else
+          echo "📍 RUNNER PERMISSIONS: NON-ROOT PATH"
+          sudo mkdir -p "${SSD_PATH}/actions-runner/_work" || true
+          sudo chown -R "${PUID}:${PGID}" "${SSD_PATH}/actions-runner" || true
+          sudo chmod -R 755 "${SSD_PATH}/actions-runner" || true
+          if [ -d "${SSD_PATH}/runner" ]; then
+            echo "Cleaning up old runner directory..."
+            sudo rm -rf "${SSD_PATH}/runner" || true
+          fi
+        fi
+        
+        echo "GitHub runner permissions fixed successfully"
+
+    - name: Deploy Services
+      shell: bash
+      run: |
+        export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "${{ inputs.secrets-file }}" | xargs)
+        cd ${{ github.workspace }}
+        
+        echo "Deploying ${{ inputs.group }} services: ${{ inputs.services }}"
+        
+        if [[ "${{ inputs.group }}" == "monitoring" ]]; then
+          echo "Creating MySQL exporter configuration..."
+          mkdir -p configs/mariadb/
+          rm -rf configs/mariadb/exporter.my.cnf
+          echo "[client]" > configs/mariadb/exporter.my.cnf
+          echo "user = monitoring" >> configs/mariadb/exporter.my.cnf
+          echo "password = ${MONITORING_DB_PASSWORD}" >> configs/mariadb/exporter.my.cnf
+          echo "host = mariadb" >> configs/mariadb/exporter.my.cnf
+          echo "port = 3306" >> configs/mariadb/exporter.my.cnf
+          chmod 644 configs/mariadb/exporter.my.cnf
+        fi
+        
+        echo "Stopping and removing existing ${{ inputs.group }} services..."
+        docker-compose stop ${{ inputs.services }} || true
+        docker-compose rm -f ${{ inputs.services }} || true
+        
+        echo "Building ${{ inputs.group }} services with latest changes..."
+        docker-compose build --no-cache ${{ inputs.services }} || echo "No build needed for some services"
+        
+        echo "Deploying ${{ inputs.group }} services with fresh builds..."
+        docker-compose up -d --force-recreate ${{ inputs.services }}
+        
+        echo "Waiting for ${{ inputs.group }} services to start..."
+        sleep 25
+        
+        echo "Verifying ${{ inputs.group }} services status..."
+        for service in ${{ inputs.services }}; do
+          if docker-compose ps "$service" | grep -q "Up"; then
+            echo " $service is running"
+          else
+            echo "$service may still be starting or failed"
+          fi
+        done
+        
+        echo "${{ inputs.group }} deployment completed"

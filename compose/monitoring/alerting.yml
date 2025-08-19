@@ -9,7 +9,7 @@ services:
     ports:
       - "9093:9093"
     volumes:
-      - ./configs/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ${SSD_PATH}/actions-runner/_work/romulus/romulus/configs/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
       - ${SSD_PATH}/monitoring/alertmanager:/alertmanager
     command:
       - '--config.file=/etc/alertmanager/alertmanager.yml'

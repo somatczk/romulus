@@ -15,7 +15,7 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ../../configs/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ${SSD_PATH}/actions-runner/_work/romulus/romulus/configs/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - ${SSD_PATH}/caddy/data:/data
       - ${SSD_PATH}/caddy/config:/config
     environment:

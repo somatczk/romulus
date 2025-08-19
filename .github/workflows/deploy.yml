@@ -145,6 +145,9 @@ jobs:
         # Create the config directory if it doesn't exist
         mkdir -p configs/mariadb/
         
+        # Remove any existing file/directory with the same name to prevent conflicts
+        rm -rf configs/mariadb/exporter.my.cnf
+        
         # Create .my.cnf file with current environment variables
         echo "[client]" > configs/mariadb/exporter.my.cnf
         echo "user = monitoring" >> configs/mariadb/exporter.my.cnf

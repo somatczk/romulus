@@ -80,6 +80,8 @@ jobs:
       run: |
         # Load environment variables for this step only
         export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
+        # Ensure we're in the project directory
+        cd ${{ github.workspace }}
         docker-compose config --quiet
 
     - name: Create Required Directories
@@ -165,6 +167,8 @@ jobs:
       run: |
         # Load environment variables for this step only
         export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
+        # Ensure we're in the project directory
+        cd ${{ github.workspace }}
         echo "Stopping existing core infrastructure containers..."
         docker-compose stop caddy cloudflare-ddns mariadb redis runner-webhook || true
         docker-compose rm -f caddy cloudflare-ddns mariadb redis runner-webhook || true
@@ -188,6 +192,8 @@ jobs:
       run: |
         # Load environment variables for this step only
         export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
+        # Ensure we're in the project directory
+        cd ${{ github.workspace }}
         echo "Stopping existing application services..."
         docker-compose stop plex qbittorrent teamspeak cs2-server || true
         docker-compose rm -f plex qbittorrent teamspeak cs2-server || true
@@ -223,6 +229,8 @@ jobs:
       run: |
         # Load environment variables for this step only
         export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
+        # Ensure we're in the project directory
+        cd ${{ github.workspace }}
         echo "Stopping existing monitoring services..."
         docker-compose stop prometheus grafana loki promtail alertmanager uptime-kuma node-exporter cadvisor redis-exporter mariadb-exporter blackbox-exporter || true
         docker-compose rm -f prometheus grafana loki promtail alertmanager uptime-kuma node-exporter cadvisor redis-exporter mariadb-exporter blackbox-exporter || true
@@ -235,6 +243,8 @@ jobs:
       run: |
         # Load environment variables for this step only
         export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
+        # Ensure we're in the project directory
+        cd ${{ github.workspace }}
         echo "Stopping existing security services..."
         docker-compose stop fail2ban || true
         docker-compose rm -f fail2ban || true
@@ -247,6 +257,8 @@ jobs:
       run: |
         # Load environment variables for this step only
         export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
+        # Ensure we're in the project directory
+        cd ${{ github.workspace }}
         echo "Performing health checks..."
         
         # Check core services

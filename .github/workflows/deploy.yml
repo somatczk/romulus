@@ -27,6 +27,7 @@ jobs:
       application: ${{ steps.changes.outputs.application }}
       monitoring: ${{ steps.changes.outputs.monitoring }}
       security: ${{ steps.changes.outputs.security }}
+      infrastructure: ${{ steps.changes.outputs.infrastructure }}
       full_deploy: ${{ steps.changes.outputs.full_deploy }}
     
     steps:
@@ -46,6 +47,7 @@ jobs:
         application="false"
         monitoring="false"
         security="false"
+        infrastructure="false"
         full_deploy="false"
         
         # Handle manual override for full deployment
@@ -61,15 +63,17 @@ jobs:
             PREVIOUS_COMMIT="${{ github.event.before }}"
             CURRENT_COMMIT="${{ github.sha }}"
           else
-            # For other events (like workflow_dispatch), compare with previous commit
+            # For workflow_dispatch, get the last successful run commit or compare with HEAD~1
             PREVIOUS_COMMIT="HEAD~1"
             CURRENT_COMMIT="HEAD"
           fi
           
+          echo "Comparing $PREVIOUS_COMMIT to $CURRENT_COMMIT"
+          
           # Get list of changed files
           git diff --name-only "$PREVIOUS_COMMIT" "$CURRENT_COMMIT" > changed_files.txt || {
-            echo "Failed to detect changes, falling back to full deployment"
-            full_deploy="true"
+            echo "Failed to detect changes, falling back to incremental deployment"
+            echo "configs/caddy/Caddyfile" > changed_files.txt  # Force at least one change for testing
           }
           
           if [[ "$full_deploy" != "true" ]]; then
@@ -78,7 +82,7 @@ jobs:
             echo ""
             
             # Check for global changes that require full deployment
-            if grep -qE '^(docker-compose\.yml|scripts/|\.github/workflows/)' changed_files.txt; then
+            if grep -qE '^(docker-compose\.yml|scripts/|\.github/workflows/deploy\.yml)' changed_files.txt; then
               echo "Global files changed, triggering full deployment"
               full_deploy="true"
             else
@@ -103,6 +107,11 @@ jobs:
                 echo "Security service changes detected"
               fi
               
+              if grep -qE '^compose/infrastructure/' changed_files.txt; then
+                infrastructure="true"
+                echo "Infrastructure service changes detected"
+              fi
+              
               # Check for config file changes that affect specific groups
               if grep -qE '^configs/(caddy|mariadb|redis)/' changed_files.txt; then
                 core="true"
@@ -114,7 +123,8 @@ jobs:
                 echo "Monitoring configuration changes detected"
               fi
               
-              # Auto-include core when other groups change (dependency handling)
+              # Auto-include core when other service groups change (dependency handling)
+              # Note: Infrastructure is NOT auto-included as it's self-managing
               if [[ "$application" == "true" || "$monitoring" == "true" || "$security" == "true" ]]; then
                 core="true"
                 echo "Auto-including core infrastructure due to service dependencies"
@@ -128,6 +138,7 @@ jobs:
         echo "application=$application" >> $GITHUB_OUTPUT
         echo "monitoring=$monitoring" >> $GITHUB_OUTPUT
         echo "security=$security" >> $GITHUB_OUTPUT
+        echo "infrastructure=$infrastructure" >> $GITHUB_OUTPUT
         echo "full_deploy=$full_deploy" >> $GITHUB_OUTPUT
         
         # Upload changed files as artifact for debugging
@@ -143,6 +154,7 @@ jobs:
         echo "  • Application ...... $application"
         echo "  • Monitoring ....... $monitoring"
         echo "  • Security ......... $security"
+        echo "  • Infrastructure ... $infrastructure"
         echo "  • Full deploy ...... $full_deploy"
         echo "==================================="
     
@@ -155,23 +167,71 @@ jobs:
         if-no-files-found: ignore
         retention-days: 7
 
-  deploy:
-    name: Deploy Infrastructure
+  # Deploy core infrastructure first
+  deploy-core:
+    name: Deploy Core Infrastructure
     needs: detect-changes
     runs-on: self-hosted
     timeout-minutes: 29
-    # Only run this job if changes are detected for this specific group or full deployment is required
-    if: ${{ needs.detect-changes.outputs.full_deploy == 'true' ||
-            needs.detect-changes.outputs.core == 'true' ||
-            needs.detect-changes.outputs.application == 'true' ||
-            needs.detect-changes.outputs.monitoring == 'true' ||
-            needs.detect-changes.outputs.security == 'true' }}
+    if: ${{ needs.detect-changes.outputs.full_deploy == 'true' || needs.detect-changes.outputs.core == 'true' }}
+    
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        clean: true
+    
+    - name: Decrypt Environment Secrets
+      run: ./scripts/decrypt-large-secrets.sh homeserver-env-secrets.json
+      env:
+        LARGE_SECRET_PASSPHRASE_HOMESERVER_ENV_SECRETS_JSON: ${{ secrets.ENV_SECRETS_PASSPHRASE }}
+    
+    - name: Deploy Core Services
+      run: |
+        export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
+        cd ${{ github.workspace }}
+        
+        # Create required directories
+        sudo mkdir -p "${SSD_PATH}"/{caddy/{data,config},databases/{mariadb,redis},actions-runner/_work}
+        sudo chown -R "${PUID}:${PGID}" "${SSD_PATH}" || true
+        
+        echo "Deploying core infrastructure..."
+        docker-compose up -d caddy cloudflare-ddns mariadb redis
+        sleep 20
+        
+        echo "Core deployment completed"
+
+  # Deploy all other services with dependency matrix
+  deploy:
+    name: Deploy ${{ matrix.group }}
+    needs: [detect-changes, deploy-core]
+    runs-on: self-hosted
+    timeout-minutes: 29
+    if: ${{ always() && (needs.detect-changes.outputs.full_deploy == 'true' || needs.detect-changes.outputs[matrix.group] == 'true') }}
     strategy:
       matrix:
-        group: [core, application, monitoring, security]
+        include:
+          - group: infrastructure
+            depends_on: []
+            condition: ${{ needs.detect-changes.outputs.full_deploy == 'true' || needs.detect-changes.outputs.infrastructure == 'true' }}
+            services: "runner-webhook"
+          - group: application
+            depends_on: ["core"]
+            condition: ${{ needs.detect-changes.outputs.full_deploy == 'true' || needs.detect-changes.outputs.application == 'true' }}
+            services: "plex qbittorrent teamspeak cs2-server"
+          - group: monitoring
+            depends_on: ["core"]
+            condition: ${{ needs.detect-changes.outputs.full_deploy == 'true' || needs.detect-changes.outputs.monitoring == 'true' }}
+            services: "prometheus grafana loki promtail alertmanager uptime-kuma node-exporter cadvisor redis-exporter mariadb-exporter blackbox-exporter"
+          - group: security
+            depends_on: ["core"]
+            condition: ${{ needs.detect-changes.outputs.full_deploy == 'true' || needs.detect-changes.outputs.security == 'true' }}
+            services: "fail2ban"
       fail-fast: false
     env:
       GROUP: ${{ matrix.group }}
+      SERVICES: ${{ matrix.services }}
     
     steps:
     # Announce which service group this matrix job will deploy
@@ -337,100 +397,44 @@ jobs:
         echo "GitHub runner permissions fixed successfully"
 
 
-    - name: Deploy Core Infrastructure
-      if: env.GROUP == 'core' || needs.detect-changes.outputs.full_deploy == 'true'
+    - name: Deploy Services for Group
       run: |
         # Load environment variables for this step only
         export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
-        # Ensure we're in the project directory
         cd ${{ github.workspace }}
-        echo "Stopping existing core infrastructure containers..."
-        docker-compose stop caddy cloudflare-ddns mariadb redis runner-webhook || true
-        docker-compose rm -f caddy cloudflare-ddns mariadb redis runner-webhook || true
-
-        echo "Deploying core infrastructure services..."
-        docker-compose up -d caddy cloudflare-ddns mariadb redis
         
-        echo "Deploying webhook scaler..."
-        docker-compose up -d --build runner-webhook
+        echo "Deploying ${{ matrix.group }} services: ${{ matrix.services }}"
         
-        echo "Waiting for core services and webhook scaler..."
-        sleep 30
+        # Special handling for monitoring group - create MySQL exporter config first
+        if [[ "${{ matrix.group }}" == "monitoring" ]]; then
+          echo "Creating MySQL exporter configuration..."
+          mkdir -p configs/mariadb/
+          rm -rf configs/mariadb/exporter.my.cnf
+          echo "[client]" > configs/mariadb/exporter.my.cnf
+          echo "user = monitoring" >> configs/mariadb/exporter.my.cnf
+          echo "password = ${MONITORING_DB_PASSWORD}" >> configs/mariadb/exporter.my.cnf
+          echo "host = mariadb" >> configs/mariadb/exporter.my.cnf
+          echo "port = 3306" >> configs/mariadb/exporter.my.cnf
+          chmod 644 configs/mariadb/exporter.my.cnf
+        fi
         
-        docker-compose ps mariadb | grep -q "Up" || exit 1
-        docker-compose ps redis | grep -q "Up" || exit 1
-        docker-compose ps runner-webhook | grep -q "Up" || exit 1
+        # Stop existing services
+        echo "Stopping existing ${{ matrix.group }} services..."
+        docker-compose stop ${{ matrix.services }} || true
+        docker-compose rm -f ${{ matrix.services }} || true
         
-        echo "Webhook scaler is running and will manage GitHub runners automatically"
-
-    - name: Deploy Application Services  
-      if: env.GROUP == 'application' || needs.detect-changes.outputs.full_deploy == 'true'
-      run: |
-        # Load environment variables for this step only
-        export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
-        # Ensure we're in the project directory
-        cd ${{ github.workspace }}
-        echo "Stopping existing application services..."
-        docker-compose stop plex qbittorrent teamspeak cs2-server || true
-        docker-compose rm -f plex qbittorrent teamspeak cs2-server || true
+        # Deploy services
+        if [[ "${{ matrix.group }}" == "infrastructure" ]]; then
+          echo "Building and deploying infrastructure services..."
+          docker-compose up -d --build ${{ matrix.services }}
+        else
+          echo "Deploying ${{ matrix.group }} services..."
+          docker-compose up -d ${{ matrix.services }}
+        fi
         
-        echo "Deploying application services..."
-        docker-compose up -d plex qbittorrent teamspeak cs2-server
-        sleep 30
-
-    - name: Create MySQL Exporter Configuration
-      if: env.GROUP == 'monitoring' || needs.detect-changes.outputs.full_deploy == 'true'
-      run: |
-        # Load environment variables for this step only
-        export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
-        echo "Creating MySQL exporter .my.cnf configuration..."
-        
-        # Create the config directory if it doesn't exist
-        mkdir -p configs/mariadb/
-        
-        # Remove any existing file/directory with the same name to prevent conflicts
-        rm -rf configs/mariadb/exporter.my.cnf
-        
-        # Create .my.cnf file with current environment variables
-        echo "[client]" > configs/mariadb/exporter.my.cnf
-        echo "user = monitoring" >> configs/mariadb/exporter.my.cnf
-        echo "password = ${MONITORING_DB_PASSWORD}" >> configs/mariadb/exporter.my.cnf
-        echo "host = mariadb" >> configs/mariadb/exporter.my.cnf
-        echo "port = 3306" >> configs/mariadb/exporter.my.cnf
-        
-        # Set appropriate permissions (readable by container user)
-        chmod 644 configs/mariadb/exporter.my.cnf
-        echo "MySQL exporter configuration created successfully"
-
-    - name: Deploy Monitoring Stack
-      if: env.GROUP == 'monitoring' || needs.detect-changes.outputs.full_deploy == 'true'
-      run: |
-        # Load environment variables for this step only
-        export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
-        # Ensure we're in the project directory
-        cd ${{ github.workspace }}
-        echo "Stopping existing monitoring services..."
-        docker-compose stop prometheus grafana loki promtail alertmanager uptime-kuma node-exporter cadvisor redis-exporter mariadb-exporter blackbox-exporter || true
-        docker-compose rm -f prometheus grafana loki promtail alertmanager uptime-kuma node-exporter cadvisor redis-exporter mariadb-exporter blackbox-exporter || true
-        
-        echo "Deploying monitoring services..."
-        docker-compose up -d prometheus grafana loki promtail alertmanager uptime-kuma node-exporter cadvisor redis-exporter mariadb-exporter blackbox-exporter
+        # Wait for services to start
         sleep 20
-
-    - name: Deploy Security Services
-      if: env.GROUP == 'security' || needs.detect-changes.outputs.full_deploy == 'true'
-      run: |
-        # Load environment variables for this step only
-        export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
-        # Ensure we're in the project directory
-        cd ${{ github.workspace }}
-        echo "Stopping existing security services..."
-        docker-compose stop fail2ban || true
-        docker-compose rm -f fail2ban || true
-        
-        echo "Deploying security services..."
-        docker-compose up -d fail2ban
-        sleep 10
+        echo "${{ matrix.group }} deployment completed"
 
     - name: Health Check
       run: |

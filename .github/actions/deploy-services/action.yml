@@ -21,82 +21,36 @@ runs:
       run: |
         export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "${{ inputs.secrets-file }}" | xargs)
         
-        # Log current user context for analysis
-        echo "🔍 PERMISSION ANALYSIS: Running as UID $(id -u), User: $(whoami), Groups: $(groups)"
-        
-        if [ "$(id -u)" = "0" ]; then
-          echo "📍 TAKING ROOT PATH - executing without sudo"
-          rm -rf "${SSD_PATH}/config" || true
-          mkdir -p "${SSD_PATH}"/{caddy/{data,config},databases/{mariadb,redis},monitoring/{prometheus,grafana,loki,alertmanager,uptime-kuma}}
-          mkdir -p "${NVME_PATH}/games/cs2"
-          mkdir -p "${HDD_PATH}"/{media,downloads/complete}
-          mkdir -p "${SSD_PATH}/actions-runner/_work" || true
-          chown -R "${PUID}:${PGID}" "${SSD_PATH}" "${NVME_PATH}" "${HDD_PATH}" || true
-          chmod -R u+rwx,g+rwx "${SSD_PATH}" "${NVME_PATH}" "${HDD_PATH}" || true
-        else
-          echo "📍 TAKING NON-ROOT PATH - using sudo for elevation"
-          sudo rm -rf "${SSD_PATH}/config" || true
-          sudo mkdir -p "${SSD_PATH}"/{caddy/{data,config},databases/{mariadb,redis},monitoring/{prometheus,grafana,loki,alertmanager,uptime-kuma}}
-          sudo mkdir -p "${NVME_PATH}/games/cs2"
-          sudo mkdir -p "${HDD_PATH}"/{media,downloads/complete}
-          sudo mkdir -p "${SSD_PATH}/actions-runner/_work" || true
-          sudo chown -R "${PUID}:${PGID}" "${SSD_PATH}" "${NVME_PATH}" "${HDD_PATH}" || true
-          sudo chmod -R u+rwx,g+rwx "${SSD_PATH}" "${NVME_PATH}" "${HDD_PATH}" || true
-        fi
+        echo "Preparing environment..."
+        rm -rf "${SSD_PATH}/config" || true
+        mkdir -p "${SSD_PATH}"/{caddy/{data,config},databases/{mariadb,redis},monitoring/{prometheus,grafana,loki,alertmanager,uptime-kuma}}
+        mkdir -p "${NVME_PATH}/games/cs2"
+        mkdir -p "${HDD_PATH}"/{media,downloads/complete}
+        mkdir -p "${SSD_PATH}/actions-runner/_work" || true
+        chown -R "${PUID}:${PGID}" "${SSD_PATH}" "${NVME_PATH}" "${HDD_PATH}" || true
+        chmod -R u+rwx,g+rwx "${SSD_PATH}" "${NVME_PATH}" "${HDD_PATH}" || true
 
     - name: Set Container-Specific Permissions
       shell: bash
       run: |
         export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "${{ inputs.secrets-file }}" | xargs)
-        echo "Setting container-specific directory permissions..."
-        echo "🔍 PERMISSION ANALYSIS: Container permissions - UID $(id -u)"
-        if [ "$(id -u)" = "0" ]; then
-          echo "📍 CONTAINER PERMISSIONS: ROOT PATH"
-          chown -R 472:472 "${SSD_PATH}/monitoring/grafana" || true
-          chown -R 65534:65534 "${SSD_PATH}/monitoring/prometheus" || true
-          chown -R 10001:10001 "${SSD_PATH}/monitoring/loki" || true
-          chown -R 65534:65534 "${SSD_PATH}/monitoring/alertmanager" || true
-          chown -R root:root "${SSD_PATH}/monitoring/uptime-kuma" || true
-          chown -R root:root "${SSD_PATH}/monitoring/fail2ban" || true
-        else
-          echo "📍 CONTAINER PERMISSIONS: NON-ROOT PATH"
-          sudo chown -R 472:472 "${SSD_PATH}/monitoring/grafana" || true
-          sudo chown -R 65534:65534 "${SSD_PATH}/monitoring/prometheus" || true
-          sudo chown -R 10001:10001 "${SSD_PATH}/monitoring/loki" || true
-          sudo chown -R 65534:65534 "${SSD_PATH}/monitoring/alertmanager" || true
-          sudo chown -R root:root "${SSD_PATH}/monitoring/uptime-kuma" || true
-          sudo chown -R root:root "${SSD_PATH}/monitoring/fail2ban" || true
-        fi
-        echo "Container permissions set successfully"
+        chown -R 472:472 "${SSD_PATH}/monitoring/grafana" || true
+        chown -R 65534:65534 "${SSD_PATH}/monitoring/prometheus" || true
+        chown -R 10001:10001 "${SSD_PATH}/monitoring/loki" || true
+        chown -R 65534:65534 "${SSD_PATH}/monitoring/alertmanager" || true
+        chown -R root:root "${SSD_PATH}/monitoring/uptime-kuma" || true
+        chown -R root:root "${SSD_PATH}/monitoring/fail2ban" || true
 
     - name: Fix GitHub Runner Permissions
       shell: bash
       run: |
         export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "${{ inputs.secrets-file }}" | xargs)
-        echo "Fixing GitHub runner directory permissions..."
-        echo "🔍 PERMISSION ANALYSIS: GitHub runner permissions - UID $(id -u)"
-        
-        if [ "$(id -u)" = "0" ]; then
-          echo "📍 RUNNER PERMISSIONS: ROOT PATH"
-          mkdir -p "${SSD_PATH}/actions-runner/_work" || true
-          chown -R "${PUID}:${PGID}" "${SSD_PATH}/actions-runner" || true
-          chmod -R 755 "${SSD_PATH}/actions-runner" || true
-          if [ -d "${SSD_PATH}/runner" ]; then
-            echo "Cleaning up old runner directory..."
-            rm -rf "${SSD_PATH}/runner" || true
-          fi
-        else
-          echo "📍 RUNNER PERMISSIONS: NON-ROOT PATH"
-          sudo mkdir -p "${SSD_PATH}/actions-runner/_work" || true
-          sudo chown -R "${PUID}:${PGID}" "${SSD_PATH}/actions-runner" || true
-          sudo chmod -R 755 "${SSD_PATH}/actions-runner" || true
-          if [ -d "${SSD_PATH}/runner" ]; then
-            echo "Cleaning up old runner directory..."
-            sudo rm -rf "${SSD_PATH}/runner" || true
-          fi
+        mkdir -p "${SSD_PATH}/actions-runner/_work" || true
+        chown -R "${PUID}:${PGID}" "${SSD_PATH}/actions-runner" || true
+        chmod -R 755 "${SSD_PATH}/actions-runner" || true
+        if [ -d "${SSD_PATH}/runner" ]; then
+          rm -rf "${SSD_PATH}/runner" || true
         fi
-        
-        echo "GitHub runner permissions fixed successfully"
 
     - name: Deploy Services
       shell: bash

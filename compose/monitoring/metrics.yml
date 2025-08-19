@@ -1,6 +1,6 @@
 services:
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v3.1.0
     container_name: prometheus
     restart: unless-stopped
     user: "65534:65534"
@@ -42,7 +42,7 @@ services:
       retries: 3
 
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:12.2.0
     container_name: grafana
     restart: unless-stopped
     user: "472:472"

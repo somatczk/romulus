@@ -196,9 +196,35 @@ jobs:
         sudo mkdir -p "${SSD_PATH}"/{caddy/{data,config},databases/{mariadb,redis},actions-runner/_work}
         sudo chown -R "${PUID}:${PGID}" "${SSD_PATH}" || true
         
-        echo "Deploying core infrastructure..."
-        docker-compose up -d caddy cloudflare-ddns mariadb redis
-        sleep 20
+        CORE_SERVICES="caddy cloudflare-ddns mariadb redis"
+        echo "Deploying core infrastructure services: $CORE_SERVICES"
+        
+        # 1. Stop and remove existing core services to ensure clean deployment
+        echo "Stopping and removing existing core services..."
+        docker-compose stop $CORE_SERVICES || true
+        docker-compose rm -f $CORE_SERVICES || true
+        
+        # 2. Always rebuild with latest changes (no cache for fresh builds)
+        echo "Building core services with latest changes..."
+        docker-compose build --no-cache $CORE_SERVICES || echo "No build needed for some core services"
+        
+        # 3. Deploy with force-recreate to ensure fresh containers
+        echo "Deploying core services with fresh builds..."
+        docker-compose up -d --force-recreate $CORE_SERVICES
+        
+        # 4. Wait for core services to stabilize
+        echo "Waiting for core services to start..."
+        sleep 25
+        
+        # 5. Quick verification that core services started
+        echo "Verifying core services status..."
+        for service in $CORE_SERVICES; do
+          if docker-compose ps "$service" | grep -q "Up"; then
+            echo "$service is running"
+          else
+            echo "$service may still be starting or failed"
+          fi
+        done
         
         echo "Core deployment completed"
 

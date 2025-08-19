@@ -11,9 +11,9 @@ services:
     ports:
       - "${PROMETHEUS_PORT}:9090"
     volumes:
-      - ../../configs/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ../../configs/prometheus/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
-      - ../../configs/prometheus/recording_rules.yml:/etc/prometheus/recording_rules.yml:ro
+      - ${PWD}/configs/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ${PWD}/configs/prometheus/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
+      - ${PWD}/configs/prometheus/recording_rules.yml:/etc/prometheus/recording_rules.yml:ro
       - ${SSD_PATH}/monitoring/prometheus:/prometheus
     environment:
       - DOMAIN=${DOMAIN}
@@ -53,8 +53,8 @@ services:
       - "${GRAFANA_PORT}:3000"
     volumes:
       - ${SSD_PATH}/monitoring/grafana:/var/lib/grafana
-      - ../../configs/grafana/provisioning:/etc/grafana/provisioning:ro
-      - ../../configs/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - ${PWD}/configs/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ${PWD}/configs/grafana/dashboards:/var/lib/grafana/dashboards:ro
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=${GF_SECURITY_ADMIN_PASSWORD}

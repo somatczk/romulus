@@ -14,7 +14,7 @@ services:
       - MYSQL_COLLATION=utf8mb4_unicode_ci
     volumes:
       - ${SSD_PATH}/databases/mariadb:/var/lib/mysql
-      - ../../configs/mariadb/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ${PWD}/configs/mariadb/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     command: >
       --innodb-buffer-pool-size=1G
       --innodb-log-file-size=256M

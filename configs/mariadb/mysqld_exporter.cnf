@@ -1,5 +1,0 @@
-[client]
-user=monitoring
-password=${MONITORING_DB_PASSWORD}
-host=mariadb
-port=3306

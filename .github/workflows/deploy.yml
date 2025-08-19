@@ -135,12 +135,7 @@ jobs:
         echo "Stopping existing core infrastructure containers..."
         docker-compose stop caddy cloudflare-ddns mariadb redis || true
         docker-compose rm -f caddy cloudflare-ddns mariadb redis || true
-        
-        # Stop all existing GitHub runner containers
-        echo "Stopping existing GitHub runner containers..."
-        docker ps --filter "name=github-runner" --format "{{.Names}}" | xargs -r docker stop
-        docker ps -a --filter "name=github-runner" --format "{{.Names}}" | xargs -r docker rm
-        
+
         echo "Deploying core infrastructure services..."
         docker-compose up -d caddy cloudflare-ddns mariadb redis
         

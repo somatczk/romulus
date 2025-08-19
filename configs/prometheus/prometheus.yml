@@ -1,6 +1,7 @@
 global:
   scrape_interval: 15s          # Balance between data granularity and resource usage
   evaluation_interval: 15s      # How frequently to evaluate alert rules
+  # Global scrape timeout for all jobs
   external_labels:              # Labels added to all metrics for identification
     environment: 'homeserver'
     instance: 'primary'

@@ -128,6 +128,31 @@ jobs:
         
         echo "GitHub runner permissions fixed successfully"
 
+    # Ensure all required configuration files exist BEFORE deployment
+    - name: Setup Configuration Files
+      run: |
+        echo "Setting up configuration files..."
+        
+        # Ensure config directories exist
+        mkdir -p configs/caddy/
+        
+        # Check if Caddyfile exists in the expected location
+        if [ ! -f "configs/caddy/Caddyfile" ]; then
+          echo "Warning: Caddyfile not found at configs/caddy/Caddyfile"
+          # Fix if possible by copying from a known location
+          if [ -f "/tmp/Caddyfile" ]; then
+            echo "Copying Caddyfile from /tmp/Caddyfile"
+            cp /tmp/Caddyfile configs/caddy/Caddyfile
+          else
+            echo "::error::Cannot find Caddyfile to copy"
+            exit 1
+          fi
+        fi
+        
+        # Verify file permissions
+        chmod 644 configs/caddy/Caddyfile
+        echo "Caddy configuration setup successfully"
+
     - name: Deploy Core Infrastructure
       run: |
         # Load environment variables for this step only
@@ -164,30 +189,6 @@ jobs:
         sleep 30
 
     # Create MySQL exporter configuration file
-    # Ensure all required configuration files exist
-    - name: Setup Configuration Files
-      run: |
-        echo "Setting up configuration files..."
-        
-        # Ensure config directories exist
-        mkdir -p configs/caddy/
-        
-        # Check if Caddyfile exists in the expected location
-        if [ ! -f "configs/caddy/Caddyfile" ]; then
-          echo "Warning: Caddyfile not found at configs/caddy/Caddyfile"
-          # Fix if possible by copying from a known location
-          if [ -f "/tmp/Caddyfile" ]; then
-            echo "Copying Caddyfile from /tmp/Caddyfile"
-            cp /tmp/Caddyfile configs/caddy/Caddyfile
-          else
-            echo "::error::Cannot find Caddyfile to copy"
-            exit 1
-          fi
-        fi
-        
-        # Verify file permissions
-        chmod 644 configs/caddy/Caddyfile
-        echo "Caddy configuration setup successfully"
         
     - name: Create MySQL Exporter Configuration
       run: |

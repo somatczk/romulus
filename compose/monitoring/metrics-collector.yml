@@ -16,7 +16,7 @@ services:
       - DOMAIN=${DOMAIN}
     command: >
       sh -c "
-        apk add --no-cache gcc musl-dev libffi-dev &&
+        apk update && apk add --no-cache gcc musl-dev libffi-dev wget &&
         pip install --no-cache-dir prometheus-client docker psutil requests &&
         cat > /app/metrics_collector.py << 'EOF'
         #!/usr/bin/env python3

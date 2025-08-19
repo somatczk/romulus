@@ -14,7 +14,7 @@ services:
       - CS2_RCON_PORT=${CS2_RCON_PORT:-27025}
     command: >
       sh -c "
-        apk add --no-cache python3 py3-pip docker-cli socat &&
+        apk update && apk add --no-cache python3 py3-pip docker-cli socat wget &&
         pip3 install --no-cache-dir prometheus-client requests &&
         cat > /app/cs2_exporter.py << 'EOF'
         #!/usr/bin/env python3

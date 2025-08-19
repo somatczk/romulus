@@ -14,6 +14,7 @@ services:
     ports:
       - "80:80"
       - "443:443"
+      - "2019:2019"
     volumes:
       - ${SSD_PATH}/actions-runner/_work/romulus/romulus/configs/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - ${SSD_PATH}/caddy/data:/data

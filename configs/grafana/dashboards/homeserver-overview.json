@@ -497,40 +497,28 @@
       },
       "targets": [
         {
-          "expr": "up{job=\"caddy\"}",
-          "interval": "",
-          "legendFormat": "Caddy (Reverse Proxy)",
-          "refId": "A"
-        },
-        {
           "expr": "up{job=\"mariadb\"}",
           "interval": "",
           "legendFormat": "MariaDB (Database)",
-          "refId": "B"
+          "refId": "A"
         },
         {
           "expr": "up{job=\"redis\"}",
           "interval": "",
           "legendFormat": "Redis (Cache)",
-          "refId": "C"
+          "refId": "B"
         },
         {
           "expr": "up{job=\"prometheus\"}",
           "interval": "",
           "legendFormat": "Prometheus (Metrics)",
-          "refId": "D"
-        },
-        {
-          "expr": "up{job=\"grafana\"}",
-          "interval": "",
-          "legendFormat": "Grafana (Dashboards)",
-          "refId": "E"
+          "refId": "C"
         },
         {
           "expr": "up{job=\"loki\"}",
           "interval": "",
           "legendFormat": "Loki (Logs)",
-          "refId": "F"
+          "refId": "D"
         }
       ],
       "title": "Core Infrastructure Services",
@@ -603,37 +591,113 @@
       },
       "targets": [
         {
-          "expr": "up{job=\"plex\"}",
-          "interval": "",
-          "legendFormat": "Plex Media Server",
-          "refId": "A"
-        },
-        {
           "expr": "up{job=\"qbittorrent\"}",
           "interval": "",
           "legendFormat": "qBittorrent",
+          "refId": "A"
+        }
+      ],
+      "title": "Working Application Services",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus-uid"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "color": "red",
+                  "index": 0,
+                  "text": "DOWN"
+                },
+                "1": {
+                  "color": "yellow",
+                  "index": 1,
+                  "text": "ERROR"
+                }
+              },
+              "type": "value"
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 0.5
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 24,
+        "x": 0,
+        "y": 16
+      },
+      "id": 18,
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "value_and_name"
+      },
+      "targets": [
+        {
+          "expr": "up{job=\"caddy\"}",
+          "interval": "",
+          "legendFormat": "Caddy (Reverse Proxy)",
+          "refId": "A"
+        },
+        {
+          "expr": "up{job=\"docker\"}",
+          "interval": "",
+          "legendFormat": "Docker Proxy",
           "refId": "B"
+        },
+        {
+          "expr": "up{job=\"homeserver-custom\"}",
+          "interval": "",
+          "legendFormat": "Custom Metrics Collector",
+          "refId": "C"
         },
         {
           "expr": "up{job=\"teamspeak\"}",
           "interval": "",
-          "legendFormat": "TeamSpeak 3",
-          "refId": "C"
+          "legendFormat": "TeamSpeak Exporter",
+          "refId": "D"
         },
         {
           "expr": "up{job=\"cs2-server\"}",
           "interval": "",
-          "legendFormat": "CS2 Server",
-          "refId": "D"
-        },
-        {
-          "expr": "up{job=\"uptime-kuma\"}",
-          "interval": "",
-          "legendFormat": "Uptime Kuma",
-          "refId": "F"
+          "legendFormat": "CS2 Server Exporter",
+          "refId": "E"
         }
       ],
-      "title": "Application Services",
+      "title": "Non-Working Services (Troubleshooting)",
       "type": "stat"
     },
     {
@@ -642,7 +706,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 16
+        "y": 22
       },
       "id": 10,
       "panels": [],
@@ -697,7 +761,7 @@
         "h": 4,
         "w": 12,
         "x": 0,
-        "y": 17
+        "y": 23
       },
       "id": 11,
       "options": {
@@ -785,7 +849,7 @@
         "h": 4,
         "w": 12,
         "x": 12,
-        "y": 17
+        "y": 23
       },
       "id": 12,
       "options": {
@@ -819,7 +883,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 21
+        "y": 27
       },
       "id": 13,
       "panels": [],
@@ -886,7 +950,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 22
+        "y": 28
       },
       "id": 14,
       "options": {
@@ -974,7 +1038,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 22
+        "y": 28
       },
       "id": 15,
       "options": {
@@ -1008,7 +1072,7 @@
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 30
+        "y": 36
       },
       "id": 16,
       "panels": [],
@@ -1099,7 +1163,7 @@
         "h": 6,
         "w": 24,
         "x": 0,
-        "y": 31
+        "y": 37
       },
       "id": 17,
       "options": {

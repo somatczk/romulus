@@ -100,7 +100,7 @@ monitoring.{$DOMAIN} {
 metrics.{$DOMAIN} {
 	# Basic auth protection for Prometheus
 	basic_auth {
-		admin $2a$14$Zkx19XLiW6VYouLHR5NbfOeNhNAf6.j5wy8xjJJAk8M5w.9.qmL6u  # Change this hash
+		{$PROMETHEUS_AUTH_USER} {$PROMETHEUS_AUTH_HASH}
 	}
 	
 	reverse_proxy prometheus:9090 {

@@ -179,8 +179,12 @@ runs:
         if [[ -n "$COMPOSE_FILES" ]]; then
           echo "Validating Docker Compose configuration..."
           
-          # Create minimal test environment
-          cat > .env.test << 'EOF'
+          # Create minimal test environment with secure random values
+          MYSQL_TEST_PASS=$(openssl rand -base64 24 | tr -d "=+/" | cut -c1-16)
+          REDIS_TEST_PASS=$(openssl rand -base64 24 | tr -d "=+/" | cut -c1-16)
+          GRAFANA_TEST_PASS=$(openssl rand -base64 24 | tr -d "=+/" | cut -c1-16)
+          
+          cat > .env.test << EOF
         TZ=UTC
         PUID=1000
         PGID=1000
@@ -188,10 +192,10 @@ runs:
         NVME_PATH=/tmp/nvme
         SSD_PATH=/tmp/ssd
         HDD_PATH=/tmp/hdd
-        MYSQL_ROOT_PASSWORD=test_password
-        REDIS_PASSWORD=test_password
-        GF_SECURITY_ADMIN_PASSWORD=test_password
-        DISCORD_WEBHOOK_URL=https://test.webhook
+        MYSQL_ROOT_PASSWORD=${MYSQL_TEST_PASS}
+        REDIS_PASSWORD=${REDIS_TEST_PASS}
+        GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_TEST_PASS}
+        DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/test/placeholder
         EOF
           
           if docker-compose --env-file .env.test $COMPOSE_FILES config --quiet; then

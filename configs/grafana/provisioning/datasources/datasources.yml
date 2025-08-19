@@ -48,10 +48,9 @@ datasources:
     basicAuthUser: ''
     withCredentials: false
     
-    # TLS settings
+    # TLS settings (not applicable for HTTP endpoints)
     tlsAuth: false
     tlsAuthWithCACert: false
-    tlsSkipVerify: true
     
     # Additional settings
     orgId: 1
@@ -89,7 +88,6 @@ datasources:
     # Security settings
     basicAuth: false
     withCredentials: false
-    tlsSkipVerify: true
     orgId: 1
     secureJsonData: {}
 
@@ -120,7 +118,6 @@ datasources:
     
     basicAuth: false
     withCredentials: false
-    tlsSkipVerify: true
     orgId: 1
     secureJsonData: {}
 
@@ -143,7 +140,6 @@ datasources:
       customQueryParameters: 'job=node-exporter'
     basicAuth: false
     withCredentials: false
-    tlsSkipVerify: true
     orgId: 1
     secureJsonData: {}
 
@@ -163,7 +159,6 @@ datasources:
       customQueryParameters: 'job=cadvisor'
     basicAuth: false
     withCredentials: false
-    tlsSkipVerify: true
     orgId: 1
     secureJsonData: {}
 
@@ -184,7 +179,6 @@ datasources:
       customQueryParameters: 'job=~"plex|qbittorrent|teamspeak|cs2-server"'
     basicAuth: false
     withCredentials: false
-    tlsSkipVerify: true
     orgId: 1
     secureJsonData: {}
 
@@ -204,7 +198,6 @@ datasources:
       customQueryParameters: 'job=blackbox-http'
     basicAuth: false
     withCredentials: false
-    tlsSkipVerify: true
     orgId: 1
     secureJsonData: {}
 

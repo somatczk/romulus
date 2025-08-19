@@ -1,6 +1,6 @@
 services:
   alertmanager:
-    image: prom/alertmanager:latest
+    image: prom/alertmanager:v0.28.1
     container_name: alertmanager
     restart: unless-stopped
     user: "65534:65534"

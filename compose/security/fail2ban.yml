@@ -1,6 +1,6 @@
 services:
   fail2ban:
-    image: crazymax/fail2ban:latest
+    image: crazymax/fail2ban:1.1.0
     container_name: fail2ban
     restart: unless-stopped
     network_mode: "host"

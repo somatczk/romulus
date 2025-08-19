@@ -1,6 +1,6 @@
 services:
   qbittorrent:
-    image: lscr.io/linuxserver/qbittorrent:latest
+    image: lscr.io/linuxserver/qbittorrent:5.1.2-r0-ls350
     container_name: qbittorrent
     restart: unless-stopped
     networks:

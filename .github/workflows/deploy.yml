@@ -155,18 +155,10 @@ jobs:
     
     - name: Clean Previous Run Files
       run: |
-        echo "🔍 PERMISSION ANALYSIS: Clean Previous Run Files - UID $(id -u), User: $(whoami)"
-        if [ "$(id -u)" = "0" ]; then
-          echo "📍 CLEANUP: ROOT PATH"
-          chown -R $USER:$USER . || true
-          chmod -R u+w . || true
-          rm -rf compose/core/configs/ || true
-        else
-          echo "📍 CLEANUP: NON-ROOT PATH"
-          sudo chown -R $USER:$USER . || true
-          sudo chmod -R u+w . || true
-          sudo rm -rf compose/core/configs/ || true
-        fi
+        echo "Cleaning up previous run files..."
+        chown -R $USER:$USER . || true
+        chmod -R u+w . || true
+        rm -rf compose/core/configs/ || true
 
     - name: Checkout Repository
       uses: actions/checkout@v4
@@ -223,16 +215,8 @@ jobs:
       if: always()
       run: |
         echo "Fixing permissions for next run..."
-        echo "🔍 PERMISSION ANALYSIS: Final cleanup - UID $(id -u), User: $(whoami)"
-        if [ "$(id -u)" = "0" ]; then
-          echo "📍 FINAL CLEANUP: ROOT PATH"
-          chown -R $USER:$USER . || true
-          chmod -R u+w . || true
-        else
-          echo "📍 FINAL CLEANUP: NON-ROOT PATH"
-          sudo chown -R $USER:$USER . || true
-          sudo chmod -R u+w . || true
-        fi
+        chown -R $USER:$USER . || true
+        chmod -R u+w . || true
         echo "Permissions fixed"
 
     - name: Deployment Summary

@@ -23,7 +23,6 @@ services:
       - ${SSD_PATH}/runner/work:/tmp/runner/work
       - /var/run/docker.sock:/var/run/docker.sock:rw
       - ${PROJECT_PATH}:/workspace:ro
-      - /usr/bin/docker:/usr/bin/docker:ro
     mem_limit: ${RUNNER_MEMORY_LIMIT}
     cpus: ${RUNNER_CPU_LIMIT}
     security_opt:

@@ -17,9 +17,9 @@ const config = {
 };
 
 // State tracking
-let currentRunners = config.minRunners;
 let activeJobs = new Set();
 let scaleDownTimeout = null;
+let maintenanceInterval = null;
 
 // Middleware
 app.use(express.json());
@@ -58,40 +58,82 @@ function verifySignature(payload, signature) {
   );
 }
 
-// Docker Compose scaling functions
-function scaleRunners(count) {
+// Helper function to get current runner count
+function getCurrentRunnerCount() {
   try {
-    const clampedCount = Math.max(config.minRunners, Math.min(config.maxRunners, count));
-    
-    if (clampedCount === currentRunners) {
-      log('debug', `Runners already at target count: ${clampedCount}`);
-      return;
-    }
-
-    log('info', `Scaling runners from ${currentRunners} to ${clampedCount}`);
-    
-    // Change to project directory and scale
-    process.chdir('/workspace');
-    execSync(`docker-compose up --scale github-runner=${clampedCount} -d`, {
+    const output = execSync('docker ps --filter "name=github-runner" --format "{{.Names}}"', {
       stdio: 'pipe',
-      timeout: 60000
+      timeout: 10000,
+      encoding: 'utf8'
     });
-    
-    currentRunners = clampedCount;
-    log('info', `Successfully scaled to ${clampedCount} runners`);
-    
+    const runnerNames = output.trim().split('\n').filter(name => name.length > 0);
+    return runnerNames.length;
   } catch (error) {
-    log('error', 'Failed to scale runners', { 
-      error: error.message,
-      targetCount: count 
-    });
-    throw error;
+    log('error', 'Failed to get current runner count', { error: error.message });
+    return 0;
   }
 }
 
+// Function to start a single runner instance
+function startSingleRunner() {
+  try {
+    process.chdir('/workspace');
+    execSync('docker-compose up -d --no-deps github-runner', {
+      stdio: 'pipe',
+      timeout: 60000
+    });
+    log('info', 'Successfully started a new runner instance');
+    return true;
+  } catch (error) {
+    log('error', 'Failed to start runner instance', { error: error.message });
+    return false;
+  }
+}
+
+// Function to ensure minimum runners are running
+function ensureMinimumRunners() {
+  try {
+    const currentCount = getCurrentRunnerCount();
+    const needed = config.minRunners - currentCount;
+    
+    log('info', `Current runners: ${currentCount}, Minimum required: ${config.minRunners}, Need to start: ${Math.max(0, needed)}`);
+    
+    if (needed > 0) {
+      let started = 0;
+      for (let i = 0; i < needed; i++) {
+        if (startSingleRunner()) {
+          started++;
+          // Small delay between starts to avoid conflicts
+          execSync('sleep 2', { stdio: 'pipe' });
+        }
+      }
+      log('info', `Started ${started} new runners to meet minimum requirement`);
+    } else {
+      log('debug', 'Minimum runner count already satisfied');
+    }
+    
+    return getCurrentRunnerCount();
+  } catch (error) {
+    log('error', 'Failed to ensure minimum runners', { error: error.message });
+    return getCurrentRunnerCount();
+  }
+}
+
+// Legacy scaling function for webhook scaling
 function scaleUp() {
-  const newCount = Math.min(config.maxRunners, currentRunners + config.scaleUpFactor);
-  scaleRunners(newCount);
+  const currentCount = getCurrentRunnerCount();
+  const newCount = Math.min(config.maxRunners, currentCount + config.scaleUpFactor);
+  const needed = newCount - currentCount;
+  
+  if (needed > 0) {
+    log('info', `Scaling up: adding ${needed} runners (${currentCount} -> ${newCount})`);
+    for (let i = 0; i < needed; i++) {
+      startSingleRunner();
+      if (i < needed - 1) {
+        execSync('sleep 1', { stdio: 'pipe' });
+      }
+    }
+  }
   
   // Cancel any pending scale down
   if (scaleDownTimeout) {
@@ -100,31 +142,16 @@ function scaleUp() {
   }
 }
 
-function scheduleScaleDown() {
-  // Cancel existing timeout
-  if (scaleDownTimeout) {
-    clearTimeout(scaleDownTimeout);
-  }
-  
-  // Only schedule scale down if we have active jobs being tracked
-  if (activeJobs.size === 0) {
-    scaleDownTimeout = setTimeout(() => {
-      log('info', 'No active jobs detected, scaling down');
-      scaleRunners(config.minRunners);
-      scaleDownTimeout = null;
-    }, config.scaleDownDelay);
-    
-    log('debug', `Scheduled scale down in ${config.scaleDownDelay / 1000} seconds`);
-  }
-}
+
 
 // Health check endpoint
 app.get('/health', (req, res) => {
+  const currentCount = getCurrentRunnerCount();
   res.json({
     status: 'healthy',
     timestamp: new Date().toISOString(),
     runners: {
-      current: currentRunners,
+      current: currentCount,
       min: config.minRunners,
       max: config.maxRunners
     },
@@ -210,10 +237,8 @@ app.post('/webhook', (req, res) => {
           activeJobs: activeJobs.size
         });
         
-        // Schedule scale down if no active jobs
-        if (activeJobs.size === 0) {
-          scheduleScaleDown();
-        }
+        // For ephemeral runners, the runner will self-destruct
+        // Periodic maintenance will ensure minimum count is maintained
         break;
         
       default:
@@ -225,7 +250,7 @@ app.post('/webhook', (req, res) => {
       action,
       jobId,
       activeJobs: activeJobs.size,
-      currentRunners
+      currentRunners: getCurrentRunnerCount()
     });
     
   } catch (error) {
@@ -240,6 +265,7 @@ app.post('/webhook', (req, res) => {
 
 // Stats endpoint
 app.get('/stats', (req, res) => {
+  const currentCount = getCurrentRunnerCount();
   res.json({
     config: {
       minRunners: config.minRunners,
@@ -249,13 +275,23 @@ app.get('/stats', (req, res) => {
       repository: config.repository
     },
     state: {
-      currentRunners,
+      currentRunners: currentCount,
       activeJobs: activeJobs.size,
       jobIds: Array.from(activeJobs),
-      hasScaleDownScheduled: scaleDownTimeout !== null
+      hasMaintenanceInterval: maintenanceInterval !== null
     }
   });
 });
+
+// Periodic maintenance to ensure minimum runners (every 3 minutes)
+function startMaintenanceInterval() {
+  maintenanceInterval = setInterval(() => {
+    log('info', 'Running periodic maintenance check');
+    ensureMinimumRunners();
+  }, 3 * 60 * 1000); // 3 minutes in milliseconds
+  
+  log('info', 'Started periodic maintenance (every 3 minutes)');
+}
 
 // Graceful shutdown
 process.on('SIGTERM', () => {
@@ -263,6 +299,10 @@ process.on('SIGTERM', () => {
   
   if (scaleDownTimeout) {
     clearTimeout(scaleDownTimeout);
+  }
+  
+  if (maintenanceInterval) {
+    clearInterval(maintenanceInterval);
   }
   
   process.exit(0);
@@ -273,6 +313,10 @@ process.on('SIGINT', () => {
   
   if (scaleDownTimeout) {
     clearTimeout(scaleDownTimeout);
+  }
+  
+  if (maintenanceInterval) {
+    clearInterval(maintenanceInterval);
   }
   
   process.exit(0);
@@ -291,10 +335,15 @@ app.listen(PORT, () => {
     }
   });
   
-  // Initialize with minimum runners
+  // Initialize with minimum runners on startup
+  log('info', 'Initializing minimum runner count...');
   try {
-    scaleRunners(config.minRunners);
+    ensureMinimumRunners();
+    log('info', 'Initial runner setup completed');
   } catch (error) {
     log('error', 'Failed to initialize runners', { error: error.message });
   }
+  
+  // Start periodic maintenance
+  startMaintenanceInterval();
 });

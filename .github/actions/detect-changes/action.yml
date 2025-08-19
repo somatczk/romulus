@@ -166,7 +166,7 @@ runs:
         if [[ ${#changed_groups_array[@]} -eq 0 ]]; then
           changed_groups_json="[]"
         else
-          changed_groups_json=$(printf '%s\n' "${changed_groups_array[@]}" | jq -R . | jq -s .)
+          changed_groups_json=$(printf '%s\n' "${changed_groups_array[@]}" | jq -R . | jq -s -c .)
         fi
         
         echo "changed_groups=$changed_groups_json" >> $GITHUB_OUTPUT

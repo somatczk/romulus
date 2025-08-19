@@ -42,7 +42,6 @@ include:
   - compose/monitoring/logging.yml
   - compose/monitoring/exporters.yml
   - compose/monitoring/alerting.yml
-  - compose/monitoring/alertmanager.yml
   - compose/monitoring/backup-monitor.yml
   - compose/monitoring/metrics-collector.yml
   - compose/monitoring/nvidia-exporter.yml

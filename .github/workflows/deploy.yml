@@ -120,7 +120,7 @@ jobs:
           - group: application
             services: "plex plex-exporter qbittorrent qbittorrent-exporter teamspeak teamspeak-exporter cs2-server cs2-exporter"
           - group: monitoring
-            services: "prometheus grafana loki promtail alertmanager backup-monitor backup-script metrics-collector nvidia-exporter uptime-kuma node-exporter cadvisor redis-exporter mariadb-exporter blackbox-exporter"
+            services: "prometheus grafana loki promtail alertmanager backup-monitor backup-script metrics-collector uptime-kuma node-exporter cadvisor redis-exporter mariadb-exporter blackbox-exporter"
           - group: security
             services: "fail2ban"
       fail-fast: false

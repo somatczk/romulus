@@ -146,7 +146,7 @@ jobs:
     needs: [detect-changes, deploy-core]
     runs-on: self-hosted
     timeout-minutes: 29
-    if: ${{ needs.deploy-core.result != 'failure' && (needs.detect-changes.outputs.full_deploy == 'true' || (matrix.group == 'application' && needs.detect-changes.outputs.application == 'true') || (matrix.group == 'monitoring' && needs.detect-changes.outputs.monitoring == 'true') || (matrix.group == 'security' && needs.detect-changes.outputs.security == 'true') || (matrix.group == 'infrastructure' && needs.detect-changes.outputs.infrastructure == 'true')) }}
+    if: ${{ needs.deploy-core.result != 'failure' && (needs.detect-changes.outputs.full_deploy == 'true' || needs.detect-changes.outputs.application == 'true' || needs.detect-changes.outputs.monitoring == 'true' || needs.detect-changes.outputs.security == 'true' || needs.detect-changes.outputs.infrastructure == 'true') }}
     strategy:
       matrix:
         include:

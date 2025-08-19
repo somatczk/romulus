@@ -19,6 +19,14 @@ jobs:
     timeout-minutes: 29
     
     steps:
+    - name: Clean Previous Run Files
+      run: |
+        # Fix permissions on any files from previous runs that might block checkout
+        sudo chown -R $USER:$USER . || true
+        sudo chmod -R u+w . || true
+        # Remove any problematic directories
+        sudo rm -rf compose/core/configs/ || true
+
     - name: Checkout Repository
       uses: actions/checkout@v4
       with:
@@ -71,55 +79,107 @@ jobs:
       run: |
         # Load environment variables for this step only
         export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
-        mkdir -p "${SSD_PATH}"/{caddy/{data,config},databases/{mariadb,redis},config/{plex,qbittorrent,teamspeak,fail2ban},monitoring/{prometheus,grafana,loki,alertmanager,uptime-kuma}}
-        mkdir -p "${NVME_PATH}/games/cs2"
-        mkdir -p "${HDD_PATH}"/{media,downloads/complete}
+        # Clean up any incorrectly created directories first
+        sudo rm -rf "${SSD_PATH}/config" || true
+        
+        # Create application directories (removed config/{...} that was conflicting with Caddy)
+        sudo mkdir -p "${SSD_PATH}"/{caddy/{data,config},databases/{mariadb,redis},monitoring/{prometheus,grafana,loki,alertmanager,uptime-kuma}}
+        sudo mkdir -p "${NVME_PATH}/games/cs2"
+        sudo mkdir -p "${HDD_PATH}"/{media,downloads/complete}
+        
+        # Set proper ownership from the start
         sudo chown -R "${PUID}:${PGID}" "${SSD_PATH}" "${NVME_PATH}" "${HDD_PATH}" || true
+        # Ensure the runner user can also access these directories
+        sudo chmod -R u+rwx,g+rwx "${SSD_PATH}" "${NVME_PATH}" "${HDD_PATH}" || true
+
+    - name: Set Container-Specific Permissions
+      run: |
+        # Load environment variables for this step only
+        export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
+        echo "Setting container-specific directory permissions..."
+        # Set permissions for monitoring services with their specific user IDs
+        sudo chown -R 472:472 "${SSD_PATH}/monitoring/grafana" || true
+        sudo chown -R 65534:65534 "${SSD_PATH}/monitoring/prometheus" || true
+        sudo chown -R 10001:10001 "${SSD_PATH}/monitoring/loki" || true
+        sudo chown -R 65534:65534 "${SSD_PATH}/monitoring/alertmanager" || true
+        sudo chown -R root:root "${SSD_PATH}/monitoring/uptime-kuma" || true
+        sudo chown -R root:root "${SSD_PATH}/monitoring/fail2ban" || true
+        echo "Container permissions set successfully"
 
     - name: Deploy Core Infrastructure
       run: |
         # Load environment variables for this step only
         export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
+        echo "Stopping existing core infrastructure containers..."
+        docker-compose stop caddy cloudflare-ddns mariadb redis || true
+        docker-compose rm -f caddy cloudflare-ddns mariadb redis || true
+        
         echo "Deploying core infrastructure services..."
-        docker-compose -f compose/core/proxy.yml up -d
-        docker-compose -f compose/core/database.yml up -d
-        docker-compose -f compose/core/cache.yml up -d
+        docker-compose up -d caddy cloudflare-ddns mariadb redis
         
         echo "Waiting for core services..."
         sleep 30
         
-        docker-compose -f compose/core/database.yml ps mariadb | grep -q "Up" || exit 1
-        docker-compose -f compose/core/cache.yml ps redis | grep -q "Up" || exit 1
+        docker-compose ps mariadb | grep -q "Up" || exit 1
+        docker-compose ps redis | grep -q "Up" || exit 1
 
     - name: Deploy Application Services  
       run: |
         # Load environment variables for this step only
         export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
+        echo "Stopping existing application services..."
+        docker-compose stop plex qbittorrent teamspeak cs2-server || true
+        docker-compose rm -f plex qbittorrent teamspeak cs2-server || true
+        
         echo "Deploying application services..."
-        docker-compose -f compose/media/plex.yml up -d
-        docker-compose -f compose/media/torrent.yml up -d
-        docker-compose -f compose/gaming/teamspeak.yml up -d
-        docker-compose -f compose/gaming/cs2.yml up -d
+        docker-compose up -d plex qbittorrent teamspeak cs2-server
         sleep 30
+
+    # Create MySQL exporter configuration file
+    - name: Create MySQL Exporter Configuration
+      run: |
+        # Load environment variables for this step only
+        export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
+        echo "Creating MySQL exporter .my.cnf configuration..."
+        
+        # Create the config directory if it doesn't exist
+        mkdir -p configs/mariadb/
+        
+        # Create .my.cnf file with current environment variables
+        cat > configs/mariadb/exporter.my.cnf <<EOF
+[client]
+user = monitoring
+password = ${MONITORING_DB_PASSWORD}
+host = mariadb
+port = 3306
+EOF
+        
+        # Set appropriate permissions
+        chmod 600 configs/mariadb/exporter.my.cnf
+        echo "MySQL exporter configuration created successfully"
 
     - name: Deploy Monitoring Stack
       run: |
         # Load environment variables for this step only
         export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
+        echo "Stopping existing monitoring services..."
+        docker-compose stop prometheus grafana loki promtail alertmanager uptime-kuma node-exporter cadvisor redis-exporter mariadb-exporter blackbox-exporter || true
+        docker-compose rm -f prometheus grafana loki promtail alertmanager uptime-kuma node-exporter cadvisor redis-exporter mariadb-exporter blackbox-exporter || true
+        
         echo "Deploying monitoring services..."
-        docker-compose -f compose/monitoring/metrics.yml up -d
-        docker-compose -f compose/monitoring/logging.yml up -d
-        docker-compose -f compose/monitoring/exporters.yml up -d
-        docker-compose -f compose/monitoring/alerting.yml up -d
-        docker-compose -f compose/monitoring/uptime.yml up -d
+        docker-compose up -d prometheus grafana loki promtail alertmanager uptime-kuma node-exporter cadvisor redis-exporter mariadb-exporter blackbox-exporter
         sleep 20
 
     - name: Deploy Security Services
       run: |
         # Load environment variables for this step only
         export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
+        echo "Stopping existing security services..."
+        docker-compose stop fail2ban || true
+        docker-compose rm -f fail2ban || true
+        
         echo "Deploying security services..."
-        docker-compose -f compose/security/fail2ban.yml up -d
+        docker-compose up -d fail2ban
         sleep 10
 
     - name: Health Check
@@ -137,19 +197,19 @@ jobs:
           while [[ $elapsed -lt $timeout ]]; do
             case $service in
               caddy)
-                if docker-compose -f compose/core/proxy.yml ps "$service" | grep -q "Up"; then
+                if docker-compose ps "$service" | grep -q "Up"; then
                   echo "$service is running"
                   break
                 fi
                 ;;
               mariadb)
-                if docker-compose -f compose/core/database.yml ps "$service" | grep -q "Up"; then
+                if docker-compose ps "$service" | grep -q "Up"; then
                   echo "$service is running"
                   break
                 fi
                 ;;
               redis)
-                if docker-compose -f compose/core/cache.yml ps "$service" | grep -q "Up"; then
+                if docker-compose ps "$service" | grep -q "Up"; then
                   echo "$service is running"
                   break
                 fi
@@ -168,7 +228,7 @@ jobs:
         # Check monitoring services
         for service in prometheus grafana; do
           echo "Checking $service..."
-          if docker-compose -f compose/monitoring/metrics.yml ps "$service" | grep -q "Up"; then
+          if docker-compose ps "$service" | grep -q "Up"; then
             echo "$service is running"
           else
             echo "$service not running (non-critical)"
@@ -198,17 +258,16 @@ jobs:
           fi
         done
 
-    # Clean up decrypted secrets (security best practice)
-    - name: Cleanup Decrypted Secrets
+
+    # Fix permissions for next run
+    - name: Fix Permissions for Next Run
       if: always()
       run: |
-        echo "Cleaning up decrypted secrets..."
-        if [ -d "$HOME/secrets" ]; then
-          # Securely overwrite files before deletion
-          find $HOME/secrets -type f -exec shred -vfz -n 3 {} \; 2>/dev/null || true
-          rm -rf $HOME/secrets
-          echo "Decrypted secrets cleaned up"
-        fi
+        echo "Fixing permissions for next run..."
+        # Fix ownership of any created files/directories
+        sudo chown -R $USER:$USER . || true
+        sudo chmod -R u+w . || true
+        echo "Permissions fixed"
 
     - name: Deployment Summary
       run: |

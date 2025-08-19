@@ -1,16 +1,3 @@
-# Loki Configuration - Log Aggregation and Storage
-# 
-# Purpose: Centralized log collection and storage for homeserver infrastructure
-# Integration: Works with Promtail for log collection and Grafana for visualization
-# Storage: Optimized for SSD storage with 7-day retention
-# Performance: Configured for moderate log volume from 15+ services
-#
-# Log Sources:
-# - All Docker containers via Promtail
-# - System logs from host
-# - Application-specific logs
-# - Security events and alerts
-
 auth_enabled: false
 
 # Server configuration
@@ -71,6 +58,9 @@ analytics:
 
 # Limits configuration to prevent resource exhaustion
 limits_config:
+  # Disable structured metadata to avoid schema v13 requirement
+  allow_structured_metadata: false
+  
   # Retention period for logs
   retention_period: 168h  # 7 days
   
@@ -90,14 +80,14 @@ limits_config:
   # Split queries by time range for better performance
   split_queries_by_interval: 15m
   
-  # Compaction settings
-  compactor:
-    working_directory: /loki/compactor
-    shared_store: filesystem
-    compaction_interval: 10m
-    retention_enabled: true
-    retention_delete_delay: 2h
-    retention_delete_worker_count: 150
+# Compaction settings (moved to separate section)
+compactor:
+  working_directory: /loki/compactor
+  compaction_interval: 10m
+  retention_enabled: true
+  retention_delete_delay: 2h
+  retention_delete_worker_count: 150
+  delete_request_store: filesystem
 
 # Storage configuration optimized for SSD
 storage_config:
@@ -105,33 +95,20 @@ storage_config:
     active_index_directory: /loki/boltdb-shipper-active
     cache_location: /loki/boltdb-shipper-cache
     cache_ttl: 24h
-    shared_store: filesystem
   
   filesystem:
     directory: /loki/chunks
 
-# Frontend configuration for query distribution
-frontend:
-  max_outstanding_per_tenant: 100
-  compress_responses: true
-
-# Frontend worker configuration
-frontend_worker:
-  frontend_address: 127.0.0.1:9095
-  parallelism: 10
-  match_max_concurrent: true
-
-# Query scheduler for better resource management
-query_scheduler:
-  max_outstanding_requests_per_tenant: 100
+# Single process mode - no separate frontend components needed
+# Frontend components disabled for single-process deployment
 
 # Index gateway for better query performance
 index_gateway:
   mode: ring
 
-# Chunk store configuration
-chunk_store_config:
-  max_look_back_period: 0s
+# Chunk store configuration (deprecated in newer versions)
+# chunk_store_config:
+#   max_look_back_period: 0s
 
 # Table manager for index management
 table_manager:

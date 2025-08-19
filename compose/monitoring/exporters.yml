@@ -1,6 +1,6 @@
 services:
   node-exporter:
-    image: prom/node-exporter:v1.7.0
+    image: prom/node-exporter:latest
     container_name: node-exporter
     restart: unless-stopped
     networks:
@@ -29,7 +29,7 @@ services:
       retries: 3
 
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.48.1
+    image: gcr.io/cadvisor/cadvisor:latest
     container_name: cadvisor
     restart: unless-stopped
     networks:
@@ -50,8 +50,6 @@ services:
       - '--max_housekeeping_interval=35s'
       - '--event_storage_event_limit=default=0'
       - '--event_storage_age_limit=default=0'
-      - '--disable_metrics=percpu,sched,tcp,udp,disk,diskIO,accelerator,hugetlb,referenced_memory,cpu_topology,resctrl'
-      - '--docker_only'
     mem_limit: 512m
     cpus: 1
     healthcheck:
@@ -61,7 +59,7 @@ services:
       retries: 3
 
   mariadb-exporter:
-    image: prom/mysqld-exporter:v0.15.1
+    image: prom/mysqld-exporter:latest
     container_name: mariadb-exporter
     restart: unless-stopped
     networks:
@@ -70,7 +68,9 @@ services:
     ports:
       - "9104:9104"
     environment:
-      - DATA_SOURCE_NAME=monitoring:${MONITORING_DB_PASSWORD}@(mariadb:3306)/
+      - DATA_SOURCE_NAME=monitoring:${MONITORING_DB_PASSWORD}@tcp(mariadb:3306)/
+    volumes:
+      - ../../configs/mariadb/exporter.my.cnf:/.my.cnf:ro
     depends_on:
       - mariadb
     mem_limit: 128m
@@ -78,7 +78,7 @@ services:
       - no-new-privileges:true
 
   redis-exporter:
-    image: oliver006/redis_exporter:v1.55.0
+    image: oliver006/redis_exporter:latest
     container_name: redis-exporter
     restart: unless-stopped
     networks:
@@ -96,7 +96,7 @@ services:
       - no-new-privileges:true
 
   blackbox-exporter:
-    image: prom/blackbox-exporter:v0.24.0
+    image: prom/blackbox-exporter:latest
     container_name: blackbox-exporter
     restart: unless-stopped
     networks:
@@ -105,7 +105,7 @@ services:
     ports:
       - "9115:9115"
     volumes:
-      - ./configs/blackbox/blackbox.yml:/etc/blackbox_exporter/config.yml:ro
+      - ../../configs/blackbox/blackbox.yml:/etc/blackbox_exporter/config.yml:ro
     mem_limit: 256m
     security_opt:
       - no-new-privileges:true

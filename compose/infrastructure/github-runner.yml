@@ -1,6 +1,6 @@
 services:
   github-runner:
-    image: myoung34/github-runner:2.311.0-ubuntu-22.04
+    image: myoung34/github-runner:latest
     container_name: github-runner
     restart: unless-stopped
     networks:

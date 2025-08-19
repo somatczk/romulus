@@ -1,17 +1,3 @@
-# Grafana Datasource Provisioning Configuration
-# 
-# Purpose: Automatically configure data sources when Grafana starts
-# Benefits: Eliminates manual data source setup, ensures consistency
-# Integration: Works with Prometheus, Loki, and other monitoring components
-# 
-# Data Sources Configured:
-# - Prometheus: Primary metrics data source
-# - Loki: Log aggregation data source
-# - Alertmanager: Alert status data source
-# 
-# Configuration is applied automatically on Grafana startup
-# Changes require Grafana restart to take effect
-
 apiVersion: 1
 
 datasources:

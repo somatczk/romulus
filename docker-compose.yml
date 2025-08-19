@@ -27,17 +27,25 @@ include:
   
   # Media Services
   - compose/media/plex.yml
+  - compose/media/plex-exporter.yml
   - compose/media/torrent.yml
+  - compose/media/qbittorrent-exporter.yml
   
   # Gaming Services
   - compose/gaming/teamspeak.yml
+  - compose/gaming/teamspeak-exporter.yml
   - compose/gaming/cs2.yml
+  - compose/gaming/cs2-exporter.yml
   
   # Monitoring Stack
   - compose/monitoring/metrics.yml
   - compose/monitoring/logging.yml
   - compose/monitoring/exporters.yml
   - compose/monitoring/alerting.yml
+  - compose/monitoring/alertmanager.yml
+  - compose/monitoring/backup-monitor.yml
+  - compose/monitoring/metrics-collector.yml
+  - compose/monitoring/nvidia-exporter.yml
   - compose/monitoring/uptime.yml
   
   # Security Services
@@ -46,3 +54,4 @@ include:
   # Infrastructure
   - compose/infrastructure/github-runner.yml
   - compose/infrastructure/runner-webhook.yml
+  - compose/infrastructure/docker-metrics.yml

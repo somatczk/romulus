@@ -28,6 +28,7 @@ jobs:
       security: ${{ steps.changes.outputs.security }}
       infrastructure: ${{ steps.changes.outputs.infrastructure }}
       full_deploy: ${{ steps.changes.outputs.full_deploy }}
+      changed_groups: ${{ steps.changes.outputs.changed_groups }}
     
     steps:
     - name: Checkout Repository
@@ -110,25 +111,17 @@ jobs:
     needs: [detect-changes, deploy-core]
     runs-on: self-hosted
     timeout-minutes: 29
-    if: ${{ always() && (needs.detect-changes.outputs.full_deploy == 'true' || needs.detect-changes.outputs.application == 'true' || needs.detect-changes.outputs.monitoring == 'true' || needs.detect-changes.outputs.security == 'true' || needs.detect-changes.outputs.infrastructure == 'true') }}
+    if: ${{ always() && (needs.detect-changes.outputs.full_deploy == 'true' || contains(fromJson(needs.detect-changes.outputs.changed_groups), matrix.group)) }}
     strategy:
       matrix:
         include:
           - group: infrastructure
-            depends_on: []
-            condition: ${{ needs.detect-changes.outputs.full_deploy == 'true' || needs.detect-changes.outputs.infrastructure == 'true' }}
-            services: "runner-webhook"
+            services: "runner-webhook docker-proxy"
           - group: application
-            depends_on: ["core"]
-            condition: ${{ needs.detect-changes.outputs.full_deploy == 'true' || needs.detect-changes.outputs.application == 'true' }}
-            services: "plex qbittorrent teamspeak cs2-server"
+            services: "plex plex-exporter qbittorrent qbittorrent-exporter teamspeak teamspeak-exporter cs2-server cs2-exporter"
           - group: monitoring
-            depends_on: ["core"]
-            condition: ${{ needs.detect-changes.outputs.full_deploy == 'true' || needs.detect-changes.outputs.monitoring == 'true' }}
-            services: "prometheus grafana loki promtail alertmanager uptime-kuma node-exporter cadvisor redis-exporter mariadb-exporter blackbox-exporter"
+            services: "prometheus grafana loki promtail alertmanager backup-monitor backup-script metrics-collector nvidia-exporter uptime-kuma node-exporter cadvisor redis-exporter mariadb-exporter blackbox-exporter"
           - group: security
-            depends_on: ["core"]
-            condition: ${{ needs.detect-changes.outputs.full_deploy == 'true' || needs.detect-changes.outputs.security == 'true' }}
             services: "fail2ban"
       fail-fast: false
     env:
@@ -141,17 +134,6 @@ jobs:
         echo "🚀 Deploying service group: ${{ matrix.group }}"
         echo "Full deployment mode: ${{ needs.detect-changes.outputs.full_deploy }}"
         echo "Group-specific deployment: ${{ needs.detect-changes.outputs[matrix.group] }}"
-    
-    - name: Check Deployment Requirement
-      run: |
-        if [[ "${{ needs.detect-changes.outputs.full_deploy }}" == "true" ]]; then
-          echo "Full deployment requested - proceeding with ${{ matrix.group }}"
-        elif [[ "${{ needs.detect-changes.outputs[matrix.group] }}" == "true" ]]; then
-          echo "Changes detected for ${{ matrix.group }} - proceeding"
-        else
-          echo "⏭No changes detected for ${{ matrix.group }} - skipping"
-          exit 0
-        fi
     
     - name: Clean Previous Run Files
       run: |

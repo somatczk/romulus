@@ -74,89 +74,47 @@ function getCurrentRunnerCount() {
   }
 }
 
-// Function to start a single runner instance with unique name
-function startSingleRunner() {
+// Function to scale runners to a specific count
+function scaleRunners(targetCount) {
   try {
-    process.chdir('/workspace');
-    
-    // Generate unique identifier for this runner
-    const timestamp = Date.now();
-    const random = Math.random().toString(36).substring(2, 8);
-    const runnerSuffix = `${timestamp}-${random}`;
-    
-    // Set unique container name via environment variable
-    const env = {
-      ...process.env,
-      COMPOSE_PROJECT_NAME: 'romulus',
-      RUNNER_SUFFIX: runnerSuffix
-    };
-    
-    // Use docker-compose run to create a new detached runner instance
-    // This creates a new container with a unique name each time
-    execSync(`docker-compose run -d --name github-runner-${runnerSuffix} github-runner`, {
+    // Use docker-compose to scale the github-runner service
+    const output = execSync(`docker-compose up -d --scale github-runner=${targetCount}`, {
       stdio: 'pipe',
-      timeout: 60000,
-      env: env
+      timeout: 30000,
+      encoding: 'utf8'
     });
-    
-    log('info', `Successfully started runner instance: github-runner-${runnerSuffix}`);
+    log('info', `Scaled github-runner service to ${targetCount} containers`);
     return true;
   } catch (error) {
-    log('error', 'Failed to start runner instance', { error: error.message });
+    log('error', 'Failed to scale runner containers', { 
+      error: error.message,
+      targetCount 
+    });
     return false;
   }
 }
 
-// Function to ensure minimum runners are running
+// Function to ensure minimum number of runners
 function ensureMinimumRunners() {
-  try {
-    const currentCount = getCurrentRunnerCount();
-    const needed = config.minRunners - currentCount;
-    
-    log('info', `Current runners: ${currentCount}, Minimum required: ${config.minRunners}, Need to start: ${Math.max(0, needed)}`);
-    
-    if (needed > 0) {
-      let started = 0;
-      for (let i = 0; i < needed; i++) {
-        if (startSingleRunner()) {
-          started++;
-          // Small delay between starts to avoid conflicts
-          execSync('sleep 2', { stdio: 'pipe' });
-        }
-      }
-      log('info', `Started ${started} new runners to meet minimum requirement`);
-    } else {
-      log('debug', 'Minimum runner count already satisfied');
-    }
-    
-    return getCurrentRunnerCount();
-  } catch (error) {
-    log('error', 'Failed to ensure minimum runners', { error: error.message });
-    return getCurrentRunnerCount();
-  }
-}
-
-// Legacy scaling function for webhook scaling
-function scaleUp() {
   const currentCount = getCurrentRunnerCount();
-  const newCount = Math.min(config.maxRunners, currentCount + config.scaleUpFactor);
-  const needed = newCount - currentCount;
   
-  if (needed > 0) {
-    log('info', `Scaling up: adding ${needed} runners (${currentCount} -> ${newCount})`);
-    for (let i = 0; i < needed; i++) {
-      startSingleRunner();
-      if (i < needed - 1) {
-        execSync('sleep 1', { stdio: 'pipe' });
-      }
+  log('info', `Current runner count: ${currentCount}, Target minimum: ${config.minRunners}`);
+  
+  if (currentCount < config.minRunners) {
+    log('info', `Need to scale up from ${currentCount} to ${config.minRunners} runners`);
+    
+    if (scaleRunners(config.minRunners)) {
+      // Wait a moment for containers to start, then check final count
+      setTimeout(() => {
+        const finalCount = getCurrentRunnerCount();
+        log('info', `Scaling completed. Final runner count: ${finalCount}`);
+      }, 5000);
     }
+  } else {
+    log('info', 'Minimum runner count already met');
   }
   
-  // Cancel any pending scale down
-  if (scaleDownTimeout) {
-    clearTimeout(scaleDownTimeout);
-    scaleDownTimeout = null;
-  }
+  return currentCount;
 }
 
 
@@ -234,10 +192,9 @@ app.post('/webhook', (req, res) => {
     switch (action) {
       case 'queued':
         activeJobs.add(jobId);
-        log('info', `Job ${jobId} queued, scaling up`, {
+        log('info', `Job ${jobId} queued`, {
           activeJobs: activeJobs.size
         });
-        scaleUp();
         break;
         
       case 'in_progress':
@@ -305,7 +262,7 @@ function startMaintenanceInterval() {
   maintenanceInterval = setInterval(() => {
     log('info', 'Running periodic maintenance check');
     ensureMinimumRunners();
-  }, 3 * 60 * 1000); // 3 minutes in milliseconds
+  }, 5 * 1000);
   
   log('info', 'Started periodic maintenance (every 3 minutes)');
 }
@@ -352,13 +309,13 @@ app.listen(PORT, () => {
     }
   });
   
-  // Initialize with minimum runners on startup
-  log('info', 'Initializing minimum runner count...');
+  // Ensure minimum runners on startup
+  log('info', 'Ensuring minimum runners on startup...');
   try {
     ensureMinimumRunners();
-    log('info', 'Initial runner setup completed');
+    log('info', 'Initial scaling check completed');
   } catch (error) {
-    log('error', 'Failed to initialize runners', { error: error.message });
+    log('error', 'Failed to ensure minimum runners on startup', { error: error.message });
   }
   
   // Start periodic maintenance

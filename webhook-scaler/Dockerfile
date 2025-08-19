@@ -1,9 +1,17 @@
-FROM node:18-alpine
+FROM node:18-slim
 
 WORKDIR /app
 
-# Install docker CLI
-RUN apk add --no-cache docker-cli docker-compose curl
+# Install docker CLI and docker-compose
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        docker.io \
+        docker-compose-plugin \
+        curl \
+        ca-certificates && \
+    rm -rf /var/lib/apt/lists/* && \
+    # Create docker-compose symlink for compatibility
+    ln -s /usr/libexec/docker/cli-plugins/docker-compose /usr/local/bin/docker-compose
 
 # Copy package files
 COPY package*.json ./
@@ -15,9 +23,9 @@ RUN npm install --omit=dev && npm cache clean --force
 COPY . .
 
 # Create non-root user and add to docker group
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001 && \
-    addgroup nodejs docker
+RUN groupadd -g 1001 nodejs && \
+    useradd -r -u 1001 -g nodejs nodejs && \
+    usermod -aG docker nodejs
 
 # Change ownership of app directory
 RUN chown -R nodejs:nodejs /app

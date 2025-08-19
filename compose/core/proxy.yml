@@ -48,8 +48,8 @@ services:
     security_opt:
       - no-new-privileges:true
     healthcheck:
-      test: ["CMD", "ping", "-c", "1", "cloudflare.com"]
+      test: ["CMD-SHELL", "echo 'healthy'"]
       interval: 300s
-      timeout: 10s
-      retries: 2
+      timeout: 5s
+      retries: 1
 

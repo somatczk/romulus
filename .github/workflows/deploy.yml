@@ -87,8 +87,8 @@ jobs:
         sudo mkdir -p "${NVME_PATH}/games/cs2"
         sudo mkdir -p "${HDD_PATH}"/{media,downloads/complete}
         
-        # Create GitHub runner directories
-        sudo mkdir -p "${SSD_PATH}/runner/work" || true
+        # Create GitHub runner directories with new structure
+        sudo mkdir -p "${SSD_PATH}/actions-runner/_work" || true
         
         # Set proper ownership from the start
         sudo chown -R "${PUID}:${PGID}" "${SSD_PATH}" "${NVME_PATH}" "${HDD_PATH}" || true
@@ -115,43 +115,19 @@ jobs:
         export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
         echo "Fixing GitHub runner directory permissions..."
         
-        # Ensure runner directories exist and have correct permissions
-        sudo mkdir -p "${SSD_PATH}/runner/work" || true
-        sudo chown -R "${PUID}:${PGID}" "${SSD_PATH}/runner" || true
-        sudo chmod -R 755 "${SSD_PATH}/runner" || true
+        # Ensure new runner directories exist and have correct permissions
+        sudo mkdir -p "${SSD_PATH}/actions-runner/_work" || true
+        sudo chown -R "${PUID}:${PGID}" "${SSD_PATH}/actions-runner" || true
+        sudo chmod -R 755 "${SSD_PATH}/actions-runner" || true
         
-        # Fix any existing runner work directory permissions
-        if [ -d "${SSD_PATH}/runner/work" ]; then
-          sudo chown -R "${PUID}:${PGID}" "${SSD_PATH}/runner/work" || true
-          sudo chmod -R 755 "${SSD_PATH}/runner/work" || true
+        # Clean up old runner directory if it exists
+        if [ -d "${SSD_PATH}/runner" ]; then
+          echo "Cleaning up old runner directory..."
+          sudo rm -rf "${SSD_PATH}/runner" || true
         fi
         
         echo "GitHub runner permissions fixed successfully"
 
-    # Ensure all required configuration files exist BEFORE deployment
-    - name: Setup Configuration Files
-      run: |
-        echo "Setting up configuration files..."
-        
-        # Ensure config directories exist
-        mkdir -p configs/caddy/
-        
-        # Check if Caddyfile exists in the expected location
-        if [ ! -f "configs/caddy/Caddyfile" ]; then
-          echo "Warning: Caddyfile not found at configs/caddy/Caddyfile"
-          # Fix if possible by copying from a known location
-          if [ -f "/tmp/Caddyfile" ]; then
-            echo "Copying Caddyfile from /tmp/Caddyfile"
-            cp /tmp/Caddyfile configs/caddy/Caddyfile
-          else
-            echo "::error::Cannot find Caddyfile to copy"
-            exit 1
-          fi
-        fi
-        
-        # Verify file permissions
-        chmod 644 configs/caddy/Caddyfile
-        echo "Caddy configuration setup successfully"
 
     - name: Deploy Core Infrastructure
       run: |
@@ -188,31 +164,6 @@ jobs:
         docker-compose up -d plex qbittorrent teamspeak cs2-server
         sleep 30
 
-    # Ensure all required configuration files exist
-    - name: Setup Configuration Files
-      run: |
-        echo "Setting up configuration files..."
-        
-        # Ensure config directories exist
-        mkdir -p configs/caddy/
-        
-        # Check if Caddyfile exists in the expected location
-        if [ ! -f "configs/caddy/Caddyfile" ]; then
-          echo "Warning: Caddyfile not found at configs/caddy/Caddyfile"
-          # Fix if possible by copying from a known location
-          if [ -f "/tmp/Caddyfile" ]; then
-            echo "Copying Caddyfile from /tmp/Caddyfile"
-            cp /tmp/Caddyfile configs/caddy/Caddyfile
-          else
-            echo "::error::Cannot find Caddyfile to copy"
-            exit 1
-          fi
-        fi
-        
-        # Verify file permissions
-        chmod 644 configs/caddy/Caddyfile
-        echo "Caddy configuration setup successfully"
-        
     - name: Create MySQL Exporter Configuration
       run: |
         # Load environment variables for this step only

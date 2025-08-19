@@ -8,7 +8,7 @@ services:
       - NET_ADMIN
       - NET_RAW
     volumes:
-      - ../../configs/fail2ban:/etc/fail2ban
+      - ${PWD}/configs/fail2ban:/etc/fail2ban
       - ${SSD_PATH}/monitoring/fail2ban:/var/lib/fail2ban
       - /var/log:/var/log:ro
       - /var/lib/docker/containers:/var/lib/docker/containers:ro

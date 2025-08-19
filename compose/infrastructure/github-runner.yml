@@ -6,7 +6,7 @@ services:
       - frontend
     environment:
       # Let the container auto-generate unique names (RUNNER_NAME not set)
-      - RUNNER_WORKDIR=/tmp/runner/work
+      - RUNNER_WORKDIR=/actions-runner/_work
       - RUNNER_GROUP=${RUNNER_GROUP}
       - RUNNER_SCOPE=repo
       - LABELS=self-hosted,Linux,X64,homeserver,docker
@@ -17,10 +17,10 @@ services:
       - EPHEMERAL=true
       - DOCKER_HOST=unix:///var/run/docker.sock
       - START_DOCKER_SERVICE=false
-      - RUN_AS_ROOT=true
+      - RUN_AS_ROOT=false
       - TZ=${TZ}
     volumes:
-      - ${SSD_PATH}/runner/work:/tmp/runner/work
+      - ${SSD_PATH}/actions-runner/_work:/actions-runner/_work
       - /var/run/docker.sock:/var/run/docker.sock:rw
     mem_limit: ${RUNNER_MEMORY_LIMIT}
     cpus: ${RUNNER_CPU_LIMIT}

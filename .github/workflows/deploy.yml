@@ -1,4 +1,4 @@
-name: deploy-homeserver
+name: deploy-homeserver-v2
 
 on:
   push:
@@ -22,96 +22,131 @@ jobs:
     name: Detect Changes
     runs-on: self-hosted
     outputs:
-      core: ${{ steps.changes.outputs.core }}
-      application: ${{ steps.changes.outputs.application }}
-      monitoring: ${{ steps.changes.outputs.monitoring }}
-      security: ${{ steps.changes.outputs.security }}
-      infrastructure: ${{ steps.changes.outputs.infrastructure }}
-      full_deploy: ${{ steps.changes.outputs.full_deploy }}
-      changed_groups: ${{ steps.changes.outputs.changed_groups }}
+      core: ${{ steps.filter.outputs.core }}
+      application: ${{ steps.filter.outputs.application }}
+      monitoring: ${{ steps.filter.outputs.monitoring }}
+      security: ${{ steps.filter.outputs.security }}
+      infrastructure: ${{ steps.filter.outputs.infrastructure }}
+      full_deploy: ${{ steps.full-deploy.outputs.result }}
     
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
       with:
-        fetch-depth: 0
         clean: true
     
-    - name: Detect Changes
-      id: changes
-      uses: ./.github/actions/detect-changes
+    - name: Detect Path Changes
+      uses: dorny/paths-filter@v3
+      id: filter
       with:
-        force-full: ${{ inputs.force_full }}
+        filters: |
+          core:
+            - 'compose/core/**'
+            - 'configs/caddy/**'
+            - 'configs/mariadb/**'
+            - 'configs/redis/**'
+          application:
+            - 'compose/media/**'
+            - 'compose/gaming/**'
+          monitoring:
+            - 'compose/monitoring/**'
+            - 'configs/prometheus/**'
+            - 'configs/grafana/**'
+            - 'configs/loki/**'
+            - 'configs/alertmanager/**'
+          security:
+            - 'compose/security/**'
+            - 'configs/fail2ban/**'
+          infrastructure:
+            - 'compose/infrastructure/**'
+          global:
+            - 'docker-compose.yml'
+            - '.github/workflows/deploy.yml'
+            - '.github/workflows/deploy-new.yml'
+            - 'scripts/**'
     
-    - name: Upload Changed Files List
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: changed-files
-        path: changed_files.txt
-        if-no-files-found: ignore
-        retention-days: 7
+    - name: Determine Full Deploy
+      id: full-deploy
+      run: |
+        if [[ "${{ github.event.inputs.force_full }}" == "true" ]]; then
+          echo "Manual full deployment requested"
+          echo "result=true" >> $GITHUB_OUTPUT
+        elif [[ "${{ steps.filter.outputs.global }}" == "true" ]]; then
+          echo "Global files changed - triggering full deployment"
+          echo "result=true" >> $GITHUB_OUTPUT
+        else
+          echo "Selective deployment based on changed paths"
+          echo "result=false" >> $GITHUB_OUTPUT
+        fi
+        
+        echo ""
+        echo "=== DEPLOYMENT DECISION SUMMARY ==="
+        echo "Path-based change detection results:"
+        echo "  • Core ............. ${{ steps.filter.outputs.core }}"
+        echo "  • Application ...... ${{ steps.filter.outputs.application }}"
+        echo "  • Monitoring ....... ${{ steps.filter.outputs.monitoring }}"
+        echo "  • Security ......... ${{ steps.filter.outputs.security }}"
+        echo "  • Infrastructure ... ${{ steps.filter.outputs.infrastructure }}"
+        echo "  • Global files ..... ${{ steps.filter.outputs.global }}"
+        echo "  • Full deploy ...... ${{ steps.full-deploy.outputs.result }}"
+        echo "===================================="
 
   deploy-core:
     name: Deploy Core Infrastructure
     needs: detect-changes
     runs-on: self-hosted
     timeout-minutes: 29
-    if: ${{ needs.detect-changes.outputs.full_deploy == 'true' || needs.detect-changes.outputs.core == 'true' }}
+    if: ${{ needs.detect-changes.outputs.full_deploy == 'true' || needs.detect-changes.outputs.core == 'true' || needs.detect-changes.outputs.application == 'true' || needs.detect-changes.outputs.monitoring == 'true' || needs.detect-changes.outputs.security == 'true' }}
+    env:
+      DEPLOY_GROUP: core
     
     steps:
+    - name: Announce Core Deployment
+      run: |
+        echo "🚀 Deploying core infrastructure services"
+        echo "Reason: Core=${{ needs.detect-changes.outputs.core }}, Full=${{ needs.detect-changes.outputs.full_deploy }}"
+    
+    - name: Clean Previous Run Files
+      run: |
+        echo "Cleaning up previous run files..."
+        chown -R $USER:$USER . || true
+        chmod -R u+w . || true
+        rm -rf compose/core/configs/ || true
+        
+        sleep $((RANDOM % 10 + 1))
+
     - name: Checkout Repository
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
         clean: true
-    
+
     - name: Decrypt Environment Secrets
       run: ./scripts/decrypt-large-secrets.sh homeserver-env-secrets.json
       env:
         LARGE_SECRET_PASSPHRASE_HOMESERVER_ENV_SECRETS_JSON: ${{ secrets.ENV_SECRETS_PASSPHRASE }}
-    
+
     - name: Deploy Core Services
+      uses: ./.github/actions/deploy-services
+      with:
+        group: core
+        services: "caddy cloudflare-ddns mariadb redis"
+        secrets-file: $HOME/secrets/homeserver-env-secrets.json
+
+    - name: Fix Permissions for Next Run
+      if: always()
       run: |
-        export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
-        cd ${{ github.workspace }}
-        
-        sudo mkdir -p "${SSD_PATH}"/{caddy/{data,config},databases/{mariadb,redis},actions-runner/_work}
-        sudo chown -R "${PUID}:${PGID}" "${SSD_PATH}" || true
-        
-        CORE_SERVICES="caddy cloudflare-ddns mariadb redis"
-        echo "Deploying core infrastructure services: $CORE_SERVICES"
-        
-        echo "Stopping and removing existing core services..."
-        docker-compose stop $CORE_SERVICES || true
-        docker-compose rm -f $CORE_SERVICES || true
-        
-        echo "Building core services with latest changes..."
-        docker-compose build --no-cache $CORE_SERVICES || echo "No build needed for some core services"
-        
-        echo "Deploying core services with fresh builds..."
-        docker-compose up -d --force-recreate $CORE_SERVICES
-        
-        echo "Waiting for core services to start..."
-        sleep 25
-        
-        echo "Verifying core services status..."
-        for service in $CORE_SERVICES; do
-          if docker-compose ps "$service" | grep -q "Up"; then
-            echo "$service is running"
-          else
-            echo "$service may still be starting or failed"
-          fi
-        done
-        
-        echo "Core deployment completed"
+        echo "Fixing permissions for next run..."
+        chown -R $USER:$USER . || true
+        chmod -R u+w . || true
+        echo "Permissions fixed"
 
   deploy:
     name: Deploy ${{ matrix.group }}
     needs: [detect-changes, deploy-core]
     runs-on: self-hosted
     timeout-minutes: 29
-    if: ${{ always() && (needs.detect-changes.outputs.full_deploy == 'true' || needs.detect-changes.outputs.changed_groups != '[]') }}
+    if: ${{ needs.deploy-core.result != 'failure' && (needs.detect-changes.outputs.full_deploy == 'true' || (matrix.group == 'application' && needs.detect-changes.outputs.application == 'true') || (matrix.group == 'monitoring' && needs.detect-changes.outputs.monitoring == 'true') || (matrix.group == 'security' && needs.detect-changes.outputs.security == 'true') || (matrix.group == 'infrastructure' && needs.detect-changes.outputs.infrastructure == 'true')) }}
     strategy:
       matrix:
         include:
@@ -131,23 +166,32 @@ jobs:
     steps:
     - name: Check if Group Should Deploy
       run: |
+        should_deploy="false"
         if [[ "${{ needs.detect-changes.outputs.full_deploy }}" == "true" ]]; then
           echo "Full deployment requested - proceeding with ${{ matrix.group }}"
+          should_deploy="true"
+        elif [[ "${{ matrix.group }}" == "application" && "${{ needs.detect-changes.outputs.application }}" == "true" ]]; then
+          echo "Application changes detected - proceeding"
+          should_deploy="true"
+        elif [[ "${{ matrix.group }}" == "monitoring" && "${{ needs.detect-changes.outputs.monitoring }}" == "true" ]]; then
+          echo "Monitoring changes detected - proceeding"
+          should_deploy="true"
+        elif [[ "${{ matrix.group }}" == "security" && "${{ needs.detect-changes.outputs.security }}" == "true" ]]; then
+          echo "Security changes detected - proceeding"
+          should_deploy="true"
+        elif [[ "${{ matrix.group }}" == "infrastructure" && "${{ needs.detect-changes.outputs.infrastructure }}" == "true" ]]; then
+          echo "Infrastructure changes detected - proceeding"
+          should_deploy="true"
         else
-          changed_groups='${{ needs.detect-changes.outputs.changed_groups }}'
-          if echo "$changed_groups" | jq -e --arg group "${{ matrix.group }}" 'contains([$group])' > /dev/null; then
-            echo "Changes detected for ${{ matrix.group }} - proceeding"
-          else
-            echo "No changes detected for ${{ matrix.group }} - skipping"
-            exit 0
-          fi
+          echo "No changes detected for ${{ matrix.group }} - skipping"
+          exit 0
         fi
     
     - name: Announce Deployment Scope
       run: |
         echo "🚀 Deploying service group: ${{ matrix.group }}"
         echo "Full deployment mode: ${{ needs.detect-changes.outputs.full_deploy }}"
-        echo "Group-specific deployment: ${{ needs.detect-changes.outputs[matrix.group] }}"
+        echo "Services: ${{ matrix.services }}"
     
     - name: Clean Previous Run Files
       run: |
@@ -156,6 +200,7 @@ jobs:
         chmod -R u+w . || true
         rm -rf compose/core/configs/ || true
         
+        # Random delay to avoid concurrent git operations
         sleep $((RANDOM % 10 + 1))
 
     - name: Checkout Repository
@@ -197,7 +242,7 @@ jobs:
     - name: Validate Configuration
       run: |
         export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
-        cd ${{ github.workspace }}
+        cd /actions-runner/_work/romulus/romulus
         docker-compose config --quiet
 
     - name: Deploy Services
@@ -205,9 +250,7 @@ jobs:
       with:
         group: ${{ matrix.group }}
         services: ${{ matrix.services }}
-
-    - name: Health Check
-      uses: ./.github/actions/health-check
+        secrets-file: $HOME/secrets/homeserver-env-secrets.json
 
     - name: Fix Permissions for Next Run
       if: always()

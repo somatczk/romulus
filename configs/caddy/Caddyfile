@@ -151,6 +151,80 @@ runners.{$DOMAIN} {
 	redir https://monitoring.{$DOMAIN}{uri} permanent
 }
 
+# Counter-Strike 2 Server - Layer 4 Proxy
+# Game server (UDP 27015) and RCON (TCP 27025)
+cs2.{$DOMAIN}:27015 {
+	layer4 {
+		match {
+			udp
+		}
+		proxy cs2-server:27015
+	}
+	
+	log {
+		output file /var/log/caddy/cs2-game.log
+		format json
+	}
+}
+
+cs2.{$DOMAIN}:27025 {
+	layer4 {
+		match {
+			tcp
+		}
+		proxy cs2-server:27025
+	}
+	
+	log {
+		output file /var/log/caddy/cs2-rcon.log
+		format json
+	}
+}
+
+# TeamSpeak 3 Server - Layer 4 Proxy
+# Voice (UDP 9987), Query (TCP 10011), File Transfer (TCP 30033)
+ts.{$DOMAIN}:9987 {
+	layer4 {
+		match {
+			udp
+		}
+		proxy teamspeak:9987
+	}
+	
+	log {
+		output file /var/log/caddy/ts-voice.log
+		format json
+	}
+}
+
+ts.{$DOMAIN}:10011 {
+	layer4 {
+		match {
+			tcp
+		}
+		proxy teamspeak:10011
+	}
+	
+	log {
+		output file /var/log/caddy/ts-query.log
+		format json
+	}
+}
+
+ts.{$DOMAIN}:30033 {
+	layer4 {
+		match {
+			tcp
+		}
+		proxy teamspeak:30033
+	}
+	
+	log {
+		output file /var/log/caddy/ts-files.log
+		format json
+	}
+}
+
 # Main domain redirect
 # Redirect root domain to monitoring dashboard
 {$DOMAIN} {

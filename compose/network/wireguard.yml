@@ -1,0 +1,40 @@
+services:
+  wireguard:
+    image: linuxserver/wireguard:1.0.20210914
+    container_name: wireguard
+    restart: unless-stopped
+    networks:
+      - frontend
+    ports:
+      - "${WIREGUARD_PORT:-51820}:51820/udp"
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - SERVERURL=${WIREGUARD_SERVERURL:-auto}
+      - SERVERPORT=${WIREGUARD_PORT:-51820}
+      - PEERS=${WIREGUARD_PEERS:-10}
+      - PEERDNS=${WIREGUARD_PEERDNS:-auto}
+      - INTERNAL_SUBNET=${WIREGUARD_INTERNAL_SUBNET:-10.13.13.0}
+      - ALLOWEDIPS=${WIREGUARD_ALLOWEDIPS:-0.0.0.0/0,::/0}
+      - LOG_CONFS=${WIREGUARD_LOG_CONFS:-true}
+    volumes:
+      - ${SSD_PATH}/config/wireguard:/config
+      - /lib/modules:/lib/modules:ro
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv4.ip_forward=1
+    mem_limit: 256m
+    cpus: 1
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "wg", "show"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"

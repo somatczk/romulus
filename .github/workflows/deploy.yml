@@ -163,7 +163,7 @@ jobs:
           - group: security
             services: "fail2ban"
           - group: network
-            services: "adguard adguard-exporter wireguard wireguard-exporter"
+            services: "adguard wireguard"
       fail-fast: false
     env:
       GROUP: ${{ matrix.group }}

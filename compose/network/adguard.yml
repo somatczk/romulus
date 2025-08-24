@@ -8,8 +8,8 @@ services:
       - backend
     ports:
       # DNS ports
-      - "${ADGUARD_DNS_PORT:-53}:53/tcp"
-      - "${ADGUARD_DNS_PORT:-53}:53/udp"
+      - "${ADGUARD_DNS_PORT:-5353}:53/tcp"
+      - "${ADGUARD_DNS_PORT:-5353}:53/udp"
       # DHCP ports (optional)
       - "67:67/udp"
       - "68:68/udp"

@@ -158,7 +158,7 @@ cs2.{$DOMAIN}:27015 {
 		match {
 			udp
 		}
-		proxy cs2-server:27015
+		proxy cs2-server:{$CS2_PORT}
 	}
 	
 	log {
@@ -172,7 +172,7 @@ cs2.{$DOMAIN}:27025 {
 		match {
 			tcp
 		}
-		proxy cs2-server:27025
+		proxy cs2-server:{$CS2_RCON_PORT}
 	}
 	
 	log {
@@ -188,7 +188,7 @@ ts.{$DOMAIN}:9987 {
 		match {
 			udp
 		}
-		proxy teamspeak:9987
+		proxy teamspeak:{$TEAMSPEAK_VOICE_PORT}
 	}
 	
 	log {
@@ -202,7 +202,7 @@ ts.{$DOMAIN}:10011 {
 		match {
 			tcp
 		}
-		proxy teamspeak:10011
+		proxy teamspeak:{$TEAMSPEAK_QUERY_PORT}
 	}
 	
 	log {
@@ -216,7 +216,7 @@ ts.{$DOMAIN}:30033 {
 		match {
 			tcp
 		}
-		proxy teamspeak:30033
+		proxy teamspeak:{$TEAMSPEAK_FILES_PORT}
 	}
 	
 	log {

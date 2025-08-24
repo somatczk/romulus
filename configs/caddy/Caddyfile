@@ -192,43 +192,18 @@ vpn.{$DOMAIN} {
 	redir https://monitoring.{$DOMAIN}{uri} permanent
 }
 
-# Counter-Strike 2 Server - Layer 4 Proxy
-# Game server (UDP 27015) and RCON (TCP 27025)
-cs2.{$DOMAIN}:27015 {
-	route {
-		match udp
-		proxy cs2-server:{$CS2_PORT}
-	}
+# Counter-Strike 2 Server Information
+cs2.{$DOMAIN} {
+	respond "Counter-Strike 2 Server - Connect to: {$DOMAIN}:27015 (Game) or {$DOMAIN}:27025 (RCON)"
+	
+	header Content-Type "text/plain"
 }
 
-cs2.{$DOMAIN}:27025 {
-	route {
-		match tcp
-		proxy cs2-server:{$CS2_RCON_PORT}
-	}
-}
-
-# TeamSpeak 3 Server - Layer 4 Proxy
-# Voice (UDP 9987), Query (TCP 10011), File Transfer (TCP 30033)
-ts.{$DOMAIN}:9987 {
-	route {
-		match udp
-		proxy teamspeak:{$TEAMSPEAK_VOICE_PORT}
-	}
-}
-
-ts.{$DOMAIN}:10011 {
-	route {
-		match tcp
-		proxy teamspeak:{$TEAMSPEAK_QUERY_PORT}
-	}
-}
-
-ts.{$DOMAIN}:30033 {
-	route {
-		match tcp
-		proxy teamspeak:{$TEAMSPEAK_FILES_PORT}
-	}
+# TeamSpeak 3 Server Information
+ts.{$DOMAIN} {
+	respond "TeamSpeak 3 Server - Connect to: {$DOMAIN}:9987 (Voice), {$DOMAIN}:10011 (Query), {$DOMAIN}:30033 (Files)"
+	
+	header Content-Type "text/plain"
 }
 
 # Main domain redirect

@@ -143,6 +143,47 @@ runners.{$DOMAIN} {
 	# respond * "Forbidden" 403
 }
 
+# AdGuard Home DNS Management
+# Network-wide ad blocking and DNS management
+dns.{$DOMAIN} {
+	reverse_proxy adguard:3000 {
+		header_up X-Real-IP {remote_host}
+		
+		# WebSocket support for real-time updates
+		header_up Connection {>Connection}
+		header_up Upgrade {>Upgrade}
+	}
+	
+	# Security headers
+	header {
+		X-Frame-Options DENY
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+}
+
+# WireGuard VPN Management
+# VPN server configuration and client management
+vpn.{$DOMAIN} {
+	# File server for WireGuard configs
+	file_server browse {
+		root /var/log/wireguard-configs
+		hide .* 
+	}
+	
+	# Basic auth protection for VPN configs
+	basic_auth {
+		{$PROMETHEUS_AUTH_USER} {$PROMETHEUS_AUTH_HASH}
+	}
+	
+	# Security headers
+	header {
+		X-Frame-Options DENY
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+}
+
 
 # Default catch-all for undefined subdomains
 # Redirect to main domain or show maintenance page

@@ -49,6 +49,12 @@ include:
   # Security Services
   - compose/security/fail2ban.yml
   
+  # Network Services
+  - compose/network/adguard.yml
+  - compose/network/adguard-exporter.yml
+  - compose/network/wireguard.yml
+  - compose/network/wireguard-exporter.yml
+  
   # Infrastructure
   - compose/infrastructure/github-runner.yml
   - compose/infrastructure/runner-webhook.yml

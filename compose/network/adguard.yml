@@ -1,0 +1,31 @@
+services:
+  adguard:
+    image: adguard/adguardhome:v0.107.52
+    container_name: adguard
+    restart: unless-stopped
+    networks:
+      - frontend
+      - backend
+    ports:
+      # DNS ports
+      - "${ADGUARD_DNS_PORT:-53}:53/tcp"
+      - "${ADGUARD_DNS_PORT:-53}:53/udp"
+      # DHCP ports (optional)
+      - "67:67/udp"
+      - "68:68/udp"
+    volumes:
+      - ${SSD_PATH}/config/adguard/work:/opt/adguardhome/work
+      - ${SSD_PATH}/config/adguard/conf:/opt/adguardhome/conf
+    environment:
+      - TZ=${TZ}
+    mem_limit: 512m
+    cpus: 1
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"

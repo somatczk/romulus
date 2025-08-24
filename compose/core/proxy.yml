@@ -17,11 +17,6 @@ services:
       - "80:80"
       - "443:443"
       - "2019:2019"
-      - "${CS2_PORT}:27015/udp"
-      - "${CS2_RCON_PORT}:27025/tcp"
-      - "${TEAMSPEAK_VOICE_PORT}:9987/udp"
-      - "${TEAMSPEAK_QUERY_PORT}:10011/tcp"
-      - "${TEAMSPEAK_FILES_PORT}:30033/tcp"
     volumes:
       - ${SSD_PATH}/actions-runner/_work/romulus/romulus/configs/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - ${SSD_PATH}/caddy/data:/data

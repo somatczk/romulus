@@ -4,7 +4,9 @@ services:
       context: .
       dockerfile_inline: |
         FROM caddy:2-builder-alpine AS builder
-        RUN xcaddy build --with github.com/caddy-dns/cloudflare
+        RUN xcaddy build \
+            --with github.com/caddy-dns/cloudflare \
+            --with github.com/mholt/caddy-l4
         FROM caddy:2-alpine
         COPY --from=builder /usr/bin/caddy /usr/bin/caddy
     container_name: caddy
@@ -15,6 +17,11 @@ services:
       - "80:80"
       - "443:443"
       - "2019:2019"
+      - "${CS2_PORT}:27015/udp"
+      - "${CS2_RCON_PORT}:27025/tcp"
+      - "${TEAMSPEAK_VOICE_PORT}:9987/udp"
+      - "${TEAMSPEAK_QUERY_PORT}:10011/tcp"
+      - "${TEAMSPEAK_FILES_PORT}:30033/tcp"
     volumes:
       - ${SSD_PATH}/actions-runner/_work/romulus/romulus/configs/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
       - ${SSD_PATH}/caddy/data:/data
@@ -55,4 +62,5 @@ services:
       interval: 300s
       timeout: 5s
       retries: 1
+
 

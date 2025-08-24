@@ -27,6 +27,7 @@ jobs:
       monitoring: ${{ steps.filter.outputs.monitoring }}
       security: ${{ steps.filter.outputs.security }}
       infrastructure: ${{ steps.filter.outputs.infrastructure }}
+      network: ${{ steps.filter.outputs.network }}
       full_deploy: ${{ steps.full-deploy.outputs.result }}
     
     steps:
@@ -59,6 +60,8 @@ jobs:
             - 'configs/fail2ban/**'
           infrastructure:
             - 'compose/infrastructure/**'
+          network:
+            - 'compose/network/**'
           global:
             - 'docker-compose.yml'
             - '.github/workflows/deploy.yml'
@@ -87,6 +90,7 @@ jobs:
         echo "  • Monitoring ....... ${{ steps.filter.outputs.monitoring }}"
         echo "  • Security ......... ${{ steps.filter.outputs.security }}"
         echo "  • Infrastructure ... ${{ steps.filter.outputs.infrastructure }}"
+        echo "  • Network .......... ${{ steps.filter.outputs.network }}"
         echo "  • Global files ..... ${{ steps.filter.outputs.global }}"
         echo "  • Full deploy ...... ${{ steps.full-deploy.outputs.result }}"
         echo "===================================="
@@ -158,6 +162,8 @@ jobs:
             services: "prometheus grafana loki promtail alertmanager backup-monitor backup-script metrics-collector uptime-kuma node-exporter cadvisor redis-exporter mariadb-exporter blackbox-exporter"
           - group: security
             services: "fail2ban"
+          - group: network
+            services: "adguard adguard-exporter wireguard wireguard-exporter"
       fail-fast: false
     env:
       GROUP: ${{ matrix.group }}
@@ -181,6 +187,9 @@ jobs:
           should_deploy="true"
         elif [[ "${{ matrix.group }}" == "infrastructure" && "${{ needs.detect-changes.outputs.infrastructure }}" == "true" ]]; then
           echo "Infrastructure changes detected - proceeding"
+          should_deploy="true"
+        elif [[ "${{ matrix.group }}" == "network" && "${{ needs.detect-changes.outputs.network }}" == "true" ]]; then
+          echo "Network changes detected - proceeding"
           should_deploy="true"
         else
           echo "No changes detected for ${{ matrix.group }} - skipping"
@@ -270,6 +279,7 @@ jobs:
         echo "  • Gaming Services (TeamSpeak, CS2)"
         echo "  • Monitoring Stack (Prometheus, Grafana, Loki, Alerting, Uptime)"
         echo "  • Security Services (Fail2Ban)"
+        echo "  • Network Services (AdGuard Home, WireGuard VPN)"
         echo ""
         echo "Configuration:"
         echo "  • All environment variables loaded from encrypted secrets"

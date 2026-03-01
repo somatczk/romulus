@@ -7,7 +7,6 @@ networks:
 services:
   socket-proxy:
     build: ./socket-proxy
-    image: tecnativa/docker-socket-proxy:0.3
     container_name: socket-proxy
     restart: unless-stopped
     env_file: ../.env
@@ -37,7 +36,6 @@ services:
 
   traefik:
     build: ./traefik
-    image: traefik:v3.3
     container_name: traefik
     restart: unless-stopped
     env_file: ../.env
@@ -78,7 +76,6 @@ services:
 
   cloudflare-ddns:
     build: ./cloudflare-ddns
-    image: favonia/cloudflare-ddns:1.15.1
     container_name: cloudflare-ddns
     restart: unless-stopped
     environment:
@@ -96,7 +93,6 @@ services:
 
   adguard:
     build: ./adguard
-    image: adguard/adguardhome:v0.107.72
     container_name: adguard
     restart: unless-stopped
     env_file: ../.env

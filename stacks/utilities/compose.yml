@@ -106,7 +106,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 256M
+          memory: 512M
     security_opt:
       - no-new-privileges:true
     restart: unless-stopped

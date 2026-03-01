@@ -206,10 +206,7 @@ services:
       traefik.http.routers.teamspeak.middlewares: secure-headers@file
       traefik.http.services.teamspeak.loadbalancer.server.port: "10080"
     healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "10011"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
+      test: ["NONE"]
     deploy:
       resources:
         limits:

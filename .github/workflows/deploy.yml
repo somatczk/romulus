@@ -289,17 +289,32 @@ jobs:
 
       - name: Send Notification
         if: always()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           if [[ "${{ needs.deploy-apps.result }}" == "failure" ]]; then
             STATUS="FAILED"
             EMOJI="x"
+            TG_EMOJI="&#10060;"
           else
             STATUS="SUCCESS"
             EMOJI="white_check_mark"
+            TG_EMOJI="&#9989;"
           fi
 
+          MSG="Deployment ${STATUS} for commit ${GITHUB_SHA:0:7} on $(date -u '+%Y-%m-%d %H:%M UTC')"
+
+          # ntfy (internal)
           curl -s --max-time 10 \
             -H "Title: Romulus Deploy: ${STATUS}" \
             -H "Tags: ${EMOJI}" \
-            -d "Deployment ${STATUS} for commit ${GITHUB_SHA:0:7} on $(date -u '+%Y-%m-%d %H:%M UTC')" \
+            -d "$MSG" \
             "http://ntfy:80/deployments" || true
+
+          # Telegram
+          curl -s --max-time 10 \
+            -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d chat_id="${TELEGRAM_CHAT_ID}" \
+            -d parse_mode=HTML \
+            -d text="${TG_EMOJI} <b>Romulus Deploy: ${STATUS}</b>%0A${MSG}" || true

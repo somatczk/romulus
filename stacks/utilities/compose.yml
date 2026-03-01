@@ -10,7 +10,7 @@ networks:
 
 services:
   watchtower:
-    image: containrrr/watchtower:1.7
+    image: containrrr/watchtower:1.7.1
     container_name: watchtower
     env_file: ../.env
     networks:

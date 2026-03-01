@@ -394,7 +394,7 @@ services:
   # ---------------------------------------------------------------------------
   homebox:
     build: ./homebox
-    image: ghcr.io/sysadminsmedia/homebox:v0.23.1
+    image: ghcr.io/sysadminsmedia/homebox:0.23.1
     container_name: homebox
     restart: unless-stopped
     env_file: ../.env

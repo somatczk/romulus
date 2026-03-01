@@ -99,6 +99,15 @@ groups:
           summary: "Host memory usage above 85%"
           description: "Memory usage on {{ $labels.instance }} is {{ printf \"%.1f\" $value }}%."
 
+      - alert: HostHighSwap
+        expr: (1 - node_memory_SwapFree_bytes / node_memory_SwapTotal_bytes) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Swap usage above 80%"
+          description: "Swap usage on {{ $labels.instance }} is {{ printf \"%.1f\" $value }}%. High swap usually means physical memory is exhausted."
+
       - alert: HostHighCPU
         expr: 100 - avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100 > 85
         for: 5m

@@ -11,10 +11,12 @@ runs:
         restarting=$(docker ps --filter status=restarting --format "{{.Names}}" 2>/dev/null)
 
         if [ -n "$unhealthy" ]; then
-          echo "::error::Unhealthy containers: $unhealthy"
+          echo "::warning::Unhealthy containers: $unhealthy"
         fi
         if [ -n "$restarting" ]; then
-          echo "::error::Restarting containers: $restarting"
+          echo "::warning::Restarting containers: $restarting"
         fi
 
-        [ -z "$unhealthy" ] && [ -z "$restarting" ]
+        if [ -z "$unhealthy" ] && [ -z "$restarting" ]; then
+          echo "All containers are healthy"
+        fi

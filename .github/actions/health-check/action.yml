@@ -1,73 +1,20 @@
 name: 'Health Check'
-description: 'Performs health checks on deployed services'
-
-inputs:
-  secrets-file:
-    description: 'Path to decrypted secrets file'
-    required: true
-    default: '$HOME/secrets/homeserver-env-secrets.json'
+description: 'Checks for unhealthy or restarting containers across all stacks'
 
 runs:
   using: 'composite'
   steps:
-    - name: Service Health Check
+    - name: Check Container Health
       shell: bash
       run: |
-        export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "${{ inputs.secrets-file }}" | xargs)
-        cd ${{ github.workspace }}
-        echo "Performing health checks..."
-        
-        for service in caddy mariadb redis runner-webhook; do
-          timeout=60
-          elapsed=0
-          
-          while [[ $elapsed -lt $timeout ]]; do
-            case $service in
-              caddy|mariadb|redis|runner-webhook)
-                if docker-compose ps "$service" | grep -q "Up"; then
-                  echo "$service is running"
-                  break
-                fi
-                ;;
-            esac
-            sleep 5
-            elapsed=$((elapsed + 5))
-          done
-          
-          if [[ $elapsed -ge $timeout ]]; then
-            echo "$service failed to start"
-            exit 1
-          fi
-        done
-        
-        for service in prometheus grafana; do
-          if docker-compose ps "$service" | grep -q "Up"; then
-            echo "$service is running"
-          else
-            echo "$service not running (non-critical)"
-          fi
-        done
-        
-        echo "All critical services are running"
+        unhealthy=$(docker ps --filter health=unhealthy --format "{{.Names}}" 2>/dev/null)
+        restarting=$(docker ps --filter status=restarting --format "{{.Names}}" 2>/dev/null)
 
-    - name: Test External Access
-      shell: bash
-      run: |
-        export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "${{ inputs.secrets-file }}" | xargs)
-        echo "Testing external access..."
-        sleep 30
-        
-        endpoints=(
-          "https://monitoring.${DOMAIN}/api/health"
-          "https://status.${DOMAIN}"
-          "https://runners.${DOMAIN}/health"
-        )
-        
-        for endpoint in "${endpoints[@]}"; do
-          # Using secure SSL verification - endpoints must have valid certificates
-          if curl -f -s --max-time 30 "$endpoint" >/dev/null 2>&1; then
-            echo "External endpoint accessible: $endpoint"
-          else
-            echo "External endpoint not accessible: $endpoint"
-          fi
-        done
+        if [ -n "$unhealthy" ]; then
+          echo "::error::Unhealthy containers: $unhealthy"
+        fi
+        if [ -n "$restarting" ]; then
+          echo "::error::Restarting containers: $restarting"
+        fi
+
+        [ -z "$unhealthy" ] && [ -z "$restarting" ]

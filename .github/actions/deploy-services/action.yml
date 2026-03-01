@@ -1,97 +1,41 @@
 name: 'Deploy Services'
-description: 'Deploys services for a specific service group'
+description: 'Deploys a stack by name from /DATA/stacks/stacks/'
 
 inputs:
-  group:
-    description: 'Service group to deploy'
+  stack:
+    description: 'Stack name (directory under stacks/)'
     required: true
-  services:
-    description: 'Space-separated list of services to deploy'
-    required: true
-  secrets-file:
-    description: 'Path to decrypted secrets file'
-    required: true
-    default: '$HOME/secrets/homeserver-env-secrets.json'
+  force_recreate_services:
+    description: 'Space-separated service names to force-recreate before the main up'
+    required: false
+    default: ''
 
 runs:
   using: 'composite'
   steps:
-    - name: Prepare Environment
+    - name: Deploy Stack
       shell: bash
       run: |
-        export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "${{ inputs.secrets-file }}" | xargs)
-        
-        echo "Preparing environment..."
-        rm -rf "${SSD_PATH}/config" || true
-        mkdir -p "${SSD_PATH}"/{caddy/{data,config},databases/{mariadb,redis},monitoring/{prometheus,grafana,loki,alertmanager,uptime-kuma}}
-        mkdir -p "${NVME_PATH}/games/cs2"
-        mkdir -p "${HDD_PATH}"/{media,downloads/complete}
-        mkdir -p "${SSD_PATH}/actions-runner/_work" || true
-        chown -R "${PUID}:${PGID}" "${SSD_PATH}" "${NVME_PATH}" "${HDD_PATH}" || true
-        chmod -R u+rwx,g+rwx "${SSD_PATH}" "${NVME_PATH}" "${HDD_PATH}" || true
+        cd /DATA/stacks/stacks
 
-    - name: Set Container-Specific Permissions
-      shell: bash
-      run: |
-        export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "${{ inputs.secrets-file }}" | xargs)
-        chown -R 472:472 "${SSD_PATH}/monitoring/grafana" || true
-        chown -R 65534:65534 "${SSD_PATH}/monitoring/prometheus" || true
-        chown -R 10001:10001 "${SSD_PATH}/monitoring/loki" || true
-        chown -R 65534:65534 "${SSD_PATH}/monitoring/alertmanager" || true
-        chown -R root:root "${SSD_PATH}/monitoring/uptime-kuma" || true
-        chown -R root:root "${SSD_PATH}/monitoring/fail2ban" || true
-
-    - name: Fix GitHub Runner Permissions
-      shell: bash
-      run: |
-        export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "${{ inputs.secrets-file }}" | xargs)
-        mkdir -p "${SSD_PATH}/actions-runner/_work" || true
-        chown -R "${PUID}:${PGID}" "${SSD_PATH}/actions-runner" || true
-        chmod -R 755 "${SSD_PATH}/actions-runner" || true
-        if [ -d "${SSD_PATH}/runner" ]; then
-          rm -rf "${SSD_PATH}/runner" || true
+        if [ -n "${{ inputs.force_recreate_services }}" ]; then
+          echo "Force-recreating: ${{ inputs.force_recreate_services }}"
+          docker compose --env-file .env -f ${{ inputs.stack }}/compose.yml \
+            up -d --force-recreate ${{ inputs.force_recreate_services }}
         fi
 
-    - name: Deploy Services
+        echo "Deploying stack: ${{ inputs.stack }}"
+        docker compose --env-file .env -f ${{ inputs.stack }}/compose.yml \
+          up -d --remove-orphans
+
+    - name: Check Stack Health
       shell: bash
       run: |
-        export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "${{ inputs.secrets-file }}" | xargs)
-        cd ${{ github.workspace }}
-        
-        echo "Deploying ${{ inputs.group }} services: ${{ inputs.services }}"
-        
-        if [[ "${{ inputs.group }}" == "monitoring" ]]; then
-          echo "Creating MySQL exporter configuration..."
-          mkdir -p configs/mariadb/
-          rm -rf configs/mariadb/exporter.my.cnf
-          echo "[client]" > configs/mariadb/exporter.my.cnf
-          echo "user = monitoring" >> configs/mariadb/exporter.my.cnf
-          echo "password = ${MONITORING_DB_PASSWORD}" >> configs/mariadb/exporter.my.cnf
-          echo "host = mariadb" >> configs/mariadb/exporter.my.cnf
-          echo "port = 3306" >> configs/mariadb/exporter.my.cnf
-          chmod 644 configs/mariadb/exporter.my.cnf
-        fi
-        
-        echo "Stopping and removing existing ${{ inputs.group }} services..."
-        docker-compose stop ${{ inputs.services }} || true
-        docker-compose rm -f ${{ inputs.services }} || true
-        
-        echo "Building ${{ inputs.group }} services with latest changes..."
-        docker-compose build --no-cache ${{ inputs.services }} || echo "No build needed for some services"
-        
-        echo "Deploying ${{ inputs.group }} services with fresh builds..."
-        docker-compose up -d --force-recreate ${{ inputs.services }}
-        
-        echo "Waiting for ${{ inputs.group }} services to start..."
-        sleep 25
-        
-        echo "Verifying ${{ inputs.group }} services status..."
-        for service in ${{ inputs.services }}; do
-          if docker-compose ps "$service" | grep -q "Up"; then
-            echo " $service is running"
-          else
-            echo "$service may still be starting or failed"
-          fi
-        done
-        
-        echo "${{ inputs.group }} deployment completed"
+        sleep 15
+        cd /DATA/stacks/stacks
+        docker compose -f ${{ inputs.stack }}/compose.yml ps --format json | \
+          jq -r '.[] | select(.Health == "unhealthy") | .Name' 2>/dev/null | while read -r name; do
+            if [ -n "$name" ]; then
+              echo "::warning::Unhealthy: $name"
+            fi
+          done

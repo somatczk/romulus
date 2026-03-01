@@ -1,18 +1,18 @@
-name: deploy-homeserver-v2
+name: deploy-romulus
 
 on:
   push:
-    branches: [ master ]
+    branches: [master]
   workflow_dispatch:
     inputs:
       force_full:
-        description: 'Force full deployment (true/false)'
-        required: false
-        default: 'false'
+        description: 'Force full deployment'
+        type: boolean
+        default: false
 
 concurrency:
-  group: deploy
-  cancel-in-progress: true
+  group: deploy-romulus
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -20,268 +20,288 @@ permissions:
 jobs:
   detect-changes:
     name: Detect Changes
-    runs-on: self-hosted
+    runs-on: [self-hosted, romulus]
     outputs:
+      global: ${{ steps.filter.outputs.global }}
       core: ${{ steps.filter.outputs.core }}
-      application: ${{ steps.filter.outputs.application }}
-      monitoring: ${{ steps.filter.outputs.monitoring }}
       security: ${{ steps.filter.outputs.security }}
-      infrastructure: ${{ steps.filter.outputs.infrastructure }}
-      network: ${{ steps.filter.outputs.network }}
+      media: ${{ steps.filter.outputs.media }}
+      productivity: ${{ steps.filter.outputs.productivity }}
+      monitoring: ${{ steps.filter.outputs.monitoring }}
+      notifications: ${{ steps.filter.outputs.notifications }}
+      utilities: ${{ steps.filter.outputs.utilities }}
+      dashboard: ${{ steps.filter.outputs.dashboard }}
       full_deploy: ${{ steps.full-deploy.outputs.result }}
-    
+
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
-      with:
-        clean: true
-    
-    - name: Detect Path Changes
-      uses: dorny/paths-filter@v3
-      id: filter
-      with:
-        filters: |
-          core:
-            - 'compose/core/**'
-            - 'configs/caddy/**'
-            - 'configs/mariadb/**'
-            - 'configs/redis/**'
-          application:
-            - 'compose/media/**'
-            - 'compose/gaming/**'
-          monitoring:
-            - 'compose/monitoring/**'
-            - 'configs/prometheus/**'
-            - 'configs/grafana/**'
-            - 'configs/loki/**'
-            - 'configs/alertmanager/**'
-          security:
-            - 'compose/security/**'
-            - 'configs/fail2ban/**'
-          infrastructure:
-            - 'compose/infrastructure/**'
-          network:
-            - 'compose/network/**'
-          global:
-            - 'docker-compose.yml'
-            - '.github/workflows/deploy.yml'
-            - '.github/workflows/deploy-new.yml'
-            - 'scripts/**'
-    
-    - name: Determine Full Deploy
-      id: full-deploy
-      run: |
-        if [[ "${{ github.event.inputs.force_full }}" == "true" ]]; then
-          echo "Manual full deployment requested"
-          echo "result=true" >> $GITHUB_OUTPUT
-        elif [[ "${{ steps.filter.outputs.global }}" == "true" ]]; then
-          echo "Global files changed - triggering full deployment"
-          echo "result=true" >> $GITHUB_OUTPUT
-        else
-          echo "Selective deployment based on changed paths"
-          echo "result=false" >> $GITHUB_OUTPUT
-        fi
-        
-        echo ""
-        echo "=== DEPLOYMENT DECISION SUMMARY ==="
-        echo "Path-based change detection results:"
-        echo "  • Core ............. ${{ steps.filter.outputs.core }}"
-        echo "  • Application ...... ${{ steps.filter.outputs.application }}"
-        echo "  • Monitoring ....... ${{ steps.filter.outputs.monitoring }}"
-        echo "  • Security ......... ${{ steps.filter.outputs.security }}"
-        echo "  • Infrastructure ... ${{ steps.filter.outputs.infrastructure }}"
-        echo "  • Network .......... ${{ steps.filter.outputs.network }}"
-        echo "  • Global files ..... ${{ steps.filter.outputs.global }}"
-        echo "  • Full deploy ...... ${{ steps.full-deploy.outputs.result }}"
-        echo "===================================="
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Detect Path Changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            global:
+              - 'scripts/**'
+              - 'docker/**'
+              - '.github/workflows/**'
+            core:
+              - 'stacks/core/**'
+              - 'configs/traefik/**'
+            security:
+              - 'stacks/security/**'
+              - 'configs/authelia/**'
+              - 'configs/crowdsec/**'
+            media:
+              - 'stacks/media/**'
+            productivity:
+              - 'stacks/productivity/**'
+            monitoring:
+              - 'stacks/monitoring/**'
+              - 'configs/prometheus/**'
+              - 'configs/grafana/**'
+              - 'configs/loki/**'
+              - 'configs/promtail/**'
+            notifications:
+              - 'stacks/notifications/**'
+            utilities:
+              - 'stacks/utilities/**'
+            dashboard:
+              - 'stacks/dashboard/**'
+              - 'configs/homepage/**'
+
+      - name: Determine Full Deploy
+        id: full-deploy
+        run: |
+          if [[ "${{ inputs.force_full }}" == "true" ]]; then
+            echo "Manual full deployment requested"
+            echo "result=true" >> $GITHUB_OUTPUT
+          elif [[ "${{ steps.filter.outputs.global }}" == "true" ]]; then
+            echo "Global files changed - triggering full deployment"
+            echo "result=true" >> $GITHUB_OUTPUT
+          else
+            echo "Selective deployment based on changed paths"
+            echo "result=false" >> $GITHUB_OUTPUT
+          fi
+
+          echo ""
+          echo "=== DEPLOYMENT DECISION SUMMARY ==="
+          echo "  Global ........... ${{ steps.filter.outputs.global }}"
+          echo "  Core ............. ${{ steps.filter.outputs.core }}"
+          echo "  Security ......... ${{ steps.filter.outputs.security }}"
+          echo "  Media ............ ${{ steps.filter.outputs.media }}"
+          echo "  Productivity ..... ${{ steps.filter.outputs.productivity }}"
+          echo "  Monitoring ....... ${{ steps.filter.outputs.monitoring }}"
+          echo "  Notifications .... ${{ steps.filter.outputs.notifications }}"
+          echo "  Utilities ........ ${{ steps.filter.outputs.utilities }}"
+          echo "  Dashboard ........ ${{ steps.filter.outputs.dashboard }}"
+          echo "===================================="
+
+  prepare:
+    name: Prepare Environment
+    needs: detect-changes
+    runs-on: [self-hosted, romulus]
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Generate .env
+        run: |
+          cat > stacks/.env <<'EOF'
+          # --- System ---
+          PUID=999
+          PGID=1000
+          TZ=Europe/Budapest
+          # --- Storage Paths ---
+          SSD=/media/SSD-Storage
+          HDD=/media/HDD-Storage
+          APPDATA=/media/SSD-Storage/appdata
+          # --- Domain ---
+          DOMAIN=${{ secrets.DOMAIN }}
+          # --- Cloudflare ---
+          CF_API_TOKEN=${{ secrets.CF_API_TOKEN }}
+          # --- Database Passwords ---
+          NEXTCLOUD_DB_PASSWORD=${{ secrets.NEXTCLOUD_DB_PASSWORD }}
+          IMMICH_DB_PASSWORD=${{ secrets.IMMICH_DB_PASSWORD }}
+          # --- GitHub (CI/CD) ---
+          GITHUB_PAT=${{ secrets.G_PAT }}
+          GITHUB_ORG=${{ secrets.G_ORG }}
+          # --- Redis ---
+          NEXTCLOUD_REDIS_PASSWORD=${{ secrets.NEXTCLOUD_REDIS_PASSWORD }}
+          # --- Backup ---
+          RESTIC_PASSWORD=${{ secrets.RESTIC_PASSWORD }}
+          # --- Notifications ---
+          NTFY_BASE_URL=${{ secrets.NTFY_BASE_URL }}
+          TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID=${{ secrets.TELEGRAM_CHAT_ID }}
+          # --- Grafana ---
+          GRAFANA_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD }}
+          # --- CrowdSec ---
+          CROWDSEC_BOUNCER_API_KEY=${{ secrets.CROWDSEC_BOUNCER_API_KEY }}
+          # --- qBittorrent ---
+          QBIT_WEBUI_PASSWORD=${{ secrets.QBIT_WEBUI_PASSWORD }}
+          # --- Speedtest Tracker ---
+          SPEEDTEST_APP_KEY=${{ secrets.SPEEDTEST_APP_KEY }}
+          # --- TeamSpeak ---
+          TEAMSPEAK_DB_PASSWORD=${{ secrets.TEAMSPEAK_DB_PASSWORD }}
+          # --- Authelia ---
+          AUTHELIA_SESSION_SECRET=${{ secrets.AUTHELIA_SESSION_SECRET }}
+          AUTHELIA_STORAGE_ENCRYPTION_KEY=${{ secrets.AUTHELIA_STORAGE_ENCRYPTION_KEY }}
+          AUTHELIA_JWT_SECRET=${{ secrets.AUTHELIA_JWT_SECRET }}
+          # --- Paperless-ngx ---
+          PAPERLESS_DB_PASSWORD=${{ secrets.PAPERLESS_DB_PASSWORD }}
+          PAPERLESS_SECRET_KEY=${{ secrets.PAPERLESS_SECRET_KEY }}
+          PAPERLESS_ADMIN_PASSWORD=${{ secrets.PAPERLESS_ADMIN_PASSWORD }}
+          EOF
+
+      - name: Rsync to /DATA/stacks/
+        run: |
+          rsync -a --delete \
+            --exclude '.git' \
+            --exclude '.github' \
+            --exclude 'deploy.sh' \
+            ./ /DATA/stacks/
+
+      - name: Ensure Docker Networks
+        run: |
+          for net in proxy socket media db-nextcloud db-immich monitoring ci db-paperless; do
+            docker network create "$net" 2>/dev/null || true
+          done
 
   deploy-core:
-    name: Deploy Core Infrastructure
-    needs: detect-changes
-    runs-on: self-hosted
-    timeout-minutes: 29
-    if: ${{ needs.detect-changes.outputs.full_deploy == 'true' || needs.detect-changes.outputs.core == 'true' }}
-    env:
-      DEPLOY_GROUP: core
-    
+    name: Deploy Core
+    needs: [detect-changes, prepare]
+    runs-on: [self-hosted, romulus]
+    if: >-
+      needs.detect-changes.outputs.full_deploy == 'true' ||
+      needs.detect-changes.outputs.core == 'true'
+
     steps:
-    - name: Announce Core Deployment
-      run: |
-        echo "🚀 Deploying core infrastructure services"
-        echo "Reason: Core=${{ needs.detect-changes.outputs.core }}, Full=${{ needs.detect-changes.outputs.full_deploy }}"
-    
-    - name: Clean Previous Run Files
-      run: |
-        echo "Cleaning up previous run files..."
-        chown -R $USER:$USER . || true
-        chmod -R u+w . || true
-        rm -rf compose/core/configs/ || true
-        
-        sleep $((RANDOM % 10 + 1))
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-    - name: Checkout Repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-        clean: true
+      - name: Deploy Core Stack
+        uses: ./.github/actions/deploy-services
+        with:
+          stack: core
 
-    - name: Decrypt Environment Secrets
-      run: ./scripts/decrypt-large-secrets.sh homeserver-env-secrets.json
-      env:
-        LARGE_SECRET_PASSPHRASE_HOMESERVER_ENV_SECRETS_JSON: ${{ secrets.ENV_SECRETS_PASSPHRASE }}
-
-    - name: Deploy Core Services
-      uses: ./.github/actions/deploy-services
-      with:
-        group: core
-        services: "caddy cloudflare-ddns mariadb redis"
-        secrets-file: $HOME/secrets/homeserver-env-secrets.json
-
-    - name: Fix Permissions for Next Run
-      if: always()
-      run: |
-        echo "Fixing permissions for next run..."
-        chown -R $USER:$USER . || true
-        chmod -R u+w . || true
-        echo "Permissions fixed"
-
-  deploy:
-    name: Deploy ${{ matrix.group }}
-    needs: [detect-changes, deploy-core]
-    runs-on: self-hosted
-    timeout-minutes: 29
-    if: ${{ needs.deploy-core.result != 'failure' }}
-    strategy:
-      matrix:
-        include:
-          - group: infrastructure
-            services: "runner-webhook docker-proxy"
-          - group: application
-            services: "plex plex-exporter qbittorrent qbittorrent-exporter teamspeak teamspeak-exporter cs2-server cs2-exporter"
-          - group: monitoring
-            services: "prometheus grafana loki promtail alertmanager backup-monitor backup-script metrics-collector uptime-kuma node-exporter cadvisor redis-exporter mariadb-exporter blackbox-exporter"
-          - group: security
-            services: "fail2ban"
-          - group: network
-            services: "adguard wireguard"
-      fail-fast: false
-    env:
-      GROUP: ${{ matrix.group }}
-      SERVICES: ${{ matrix.services }}
-    
-    steps:
-    - name: Check if Group Should Deploy
-      run: |
-        should_deploy="false"
-        if [[ "${{ needs.detect-changes.outputs.full_deploy }}" == "true" ]]; then
-          echo "Full deployment requested - proceeding with ${{ matrix.group }}"
-          should_deploy="true"
-        elif [[ "${{ matrix.group }}" == "application" && "${{ needs.detect-changes.outputs.application }}" == "true" ]]; then
-          echo "Application changes detected - proceeding"
-          should_deploy="true"
-        elif [[ "${{ matrix.group }}" == "monitoring" && "${{ needs.detect-changes.outputs.monitoring }}" == "true" ]]; then
-          echo "Monitoring changes detected - proceeding"
-          should_deploy="true"
-        elif [[ "${{ matrix.group }}" == "security" && "${{ needs.detect-changes.outputs.security }}" == "true" ]]; then
-          echo "Security changes detected - proceeding"
-          should_deploy="true"
-        elif [[ "${{ matrix.group }}" == "infrastructure" && "${{ needs.detect-changes.outputs.infrastructure }}" == "true" ]]; then
-          echo "Infrastructure changes detected - proceeding"
-          should_deploy="true"
-        elif [[ "${{ matrix.group }}" == "network" && "${{ needs.detect-changes.outputs.network }}" == "true" ]]; then
-          echo "Network changes detected - proceeding"
-          should_deploy="true"
-        else
-          echo "No changes detected for ${{ matrix.group }} - skipping"
-          exit 0
-        fi
-    
-    - name: Announce Deployment Scope
-      run: |
-        echo "🚀 Deploying service group: ${{ matrix.group }}"
-        echo "Full deployment mode: ${{ needs.detect-changes.outputs.full_deploy }}"
-        echo "Services: ${{ matrix.services }}"
-    
-    - name: Clean Previous Run Files
-      run: |
-        echo "Cleaning up previous run files..."
-        chown -R $USER:$USER . || true
-        chmod -R u+w . || true
-        rm -rf compose/core/configs/ || true
-        
-        # Random delay to avoid concurrent git operations
-        sleep $((RANDOM % 10 + 1))
-
-    - name: Checkout Repository
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-        clean: true
-
-    - name: Decrypt Environment Secrets
-      run: ./scripts/decrypt-large-secrets.sh homeserver-env-secrets.json
-      env:
-        LARGE_SECRET_PASSPHRASE_HOMESERVER_ENV_SECRETS_JSON: ${{ secrets.ENV_SECRETS_PASSPHRASE }}
-
-    - name: Prepare Environment Variables
-      run: |
-        if [ ! -f "$HOME/secrets/homeserver-env-secrets.json" ]; then
-          echo "::error::Environment secrets file not found"
-          exit 1
-        fi
-        
-        if ! jq empty "$HOME/secrets/homeserver-env-secrets.json" 2>/dev/null; then
-          echo "::error::Invalid JSON format in environment secrets"
-          exit 1
-        fi
-        
-        VARIABLE_COUNT=$(jq 'keys | length' "$HOME/secrets/homeserver-env-secrets.json")
-        echo "::notice::Environment file contains $VARIABLE_COUNT variables"
-        
-        CRITICAL_VARS=("DOMAIN" "CLOUDFLARE_API_TOKEN" "MYSQL_ROOT_PASSWORD" "REDIS_PASSWORD")
-        for var in "${CRITICAL_VARS[@]}"; do
-          if jq -e "has(\"$var\")" "$HOME/secrets/homeserver-env-secrets.json" >/dev/null; then
-            echo "::notice::Critical variable $var verified"
+      - name: Wait for Traefik
+        run: |
+          echo "Waiting 15s for Traefik certificate resolution..."
+          sleep 15
+          cd /DATA/stacks/stacks
+          if docker compose -f core/compose.yml ps --format json | jq -e '.[] | select(.Name | contains("traefik")) | select(.Health == "healthy")' > /dev/null 2>&1; then
+            echo "Traefik is healthy"
           else
-            echo "::error::Critical variable $var is missing"
-            exit 1
+            echo "::warning::Traefik may not be healthy yet"
           fi
-        done
 
-    - name: Validate Configuration
-      run: |
-        export $(jq -r 'to_entries[] | "\(.key)=\(.value)"' "$HOME/secrets/homeserver-env-secrets.json" | xargs)
-        cd /actions-runner/_work/romulus/romulus
-        docker-compose config --quiet
+  deploy-security:
+    name: Deploy Security
+    needs: [detect-changes, deploy-core]
+    runs-on: [self-hosted, romulus]
+    if: >-
+      always() &&
+      needs.deploy-core.result != 'failure' &&
+      (needs.detect-changes.outputs.full_deploy == 'true' ||
+       needs.detect-changes.outputs.security == 'true')
 
-    - name: Deploy Services
-      uses: ./.github/actions/deploy-services
-      with:
-        group: ${{ matrix.group }}
-        services: ${{ matrix.services }}
-        secrets-file: $HOME/secrets/homeserver-env-secrets.json
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
-    - name: Fix Permissions for Next Run
-      if: always()
-      run: |
-        echo "Fixing permissions for next run..."
-        chown -R $USER:$USER . || true
-        chmod -R u+w . || true
-        echo "Permissions fixed"
+      - name: Deploy Security Stack
+        uses: ./.github/actions/deploy-services
+        with:
+          stack: security
 
-    - name: Deployment Summary
-      run: |
-        echo "Deployment completed successfully!"
-        echo ""
-        echo "Service Categories Deployed:"
-        echo "  • Core Infrastructure (Proxy, Database, Cache, GitHub Runners)"
-        echo "  • Media Services (Plex, qBittorrent)"
-        echo "  • Gaming Services (TeamSpeak, CS2)"
-        echo "  • Monitoring Stack (Prometheus, Grafana, Loki, Alerting, Uptime)"
-        echo "  • Security Services (Fail2Ban)"
-        echo "  • Network Services (AdGuard Home, WireGuard VPN)"
-        echo ""
-        echo "Configuration:"
-        echo "  • All environment variables loaded from encrypted secrets"
-        echo "  • Single passphrase authentication used"
-        echo "  • Secure cleanup completed"
+  deploy-apps:
+    name: Deploy ${{ matrix.stack }}
+    needs: [detect-changes, deploy-security]
+    runs-on: [self-hosted, romulus]
+    if: always() && needs.deploy-security.result != 'failure'
+    strategy:
+      fail-fast: false
+      matrix:
+        stack:
+          - media
+          - productivity
+          - monitoring
+          - notifications
+          - utilities
+          - dashboard
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Check if Stack Should Deploy
+        id: should-deploy
+        env:
+          FULL_DEPLOY: ${{ needs.detect-changes.outputs.full_deploy }}
+          CHANGED_MEDIA: ${{ needs.detect-changes.outputs.media }}
+          CHANGED_PRODUCTIVITY: ${{ needs.detect-changes.outputs.productivity }}
+          CHANGED_MONITORING: ${{ needs.detect-changes.outputs.monitoring }}
+          CHANGED_NOTIFICATIONS: ${{ needs.detect-changes.outputs.notifications }}
+          CHANGED_UTILITIES: ${{ needs.detect-changes.outputs.utilities }}
+          CHANGED_DASHBOARD: ${{ needs.detect-changes.outputs.dashboard }}
+          STACK: ${{ matrix.stack }}
+        run: |
+          if [[ "$FULL_DEPLOY" == "true" ]]; then
+            echo "Full deploy requested - deploying $STACK"
+            echo "skip=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Map stack name to its change detection output
+          CHANGED_VAR="CHANGED_$(echo "$STACK" | tr '[:lower:]' '[:upper:]')"
+          CHANGED="${!CHANGED_VAR}"
+
+          if [[ "$CHANGED" == "true" ]]; then
+            echo "Changes detected for $STACK - deploying"
+            echo "skip=false" >> $GITHUB_OUTPUT
+          else
+            echo "No changes for $STACK - skipping"
+            echo "skip=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Deploy ${{ matrix.stack }}
+        if: steps.should-deploy.outputs.skip != 'true'
+        uses: ./.github/actions/deploy-services
+        with:
+          stack: ${{ matrix.stack }}
+          force_recreate_services: ${{ matrix.stack == 'monitoring' && 'grafana' || '' }}
+
+  verify:
+    name: Verify Deployment
+    needs: [detect-changes, deploy-apps]
+    runs-on: [self-hosted, romulus]
+    if: always()
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Health Check
+        uses: ./.github/actions/health-check
+
+      - name: Send Notification
+        if: always()
+        env:
+          NTFY_BASE_URL: ${{ secrets.NTFY_BASE_URL }}
+        run: |
+          if [[ "${{ needs.deploy-apps.result }}" == "failure" ]]; then
+            STATUS="FAILED"
+            EMOJI="x"
+          else
+            STATUS="SUCCESS"
+            EMOJI="white_check_mark"
+          fi
+
+          curl -s \
+            -H "Title: Romulus Deploy: ${STATUS}" \
+            -H "Tags: ${EMOJI}" \
+            -d "Deployment ${STATUS} for commit ${GITHUB_SHA:0:7} on $(date -u '+%Y-%m-%d %H:%M UTC')" \
+            "${NTFY_BASE_URL}/deployments" || true

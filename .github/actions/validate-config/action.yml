@@ -69,7 +69,7 @@ runs:
           YAML_FILES_FOUND=true
           find "${{ inputs.config-path }}" -name "*.yml" -o -name "*.yaml" | while read -r file; do
             echo "Validating: $file"
-            if python3 -c "import yaml; yaml.safe_load(open('$file'))" 2>/dev/null; then
+            if python3 -c "import yaml; list(yaml.safe_load_all(open('$file')))" 2>/dev/null; then
               echo "  Valid YAML"
             else
               echo "  Invalid YAML"
@@ -83,7 +83,7 @@ runs:
           if [[ -f "$compose_file" ]]; then
             YAML_FILES_FOUND=true
             echo "Validating: $compose_file"
-            if python3 -c "import yaml; yaml.safe_load(open('$compose_file'))" 2>/dev/null; then
+            if python3 -c "import yaml; list(yaml.safe_load_all(open('$compose_file')))" 2>/dev/null; then
               echo "  Valid YAML"
             else
               echo "  Invalid YAML"

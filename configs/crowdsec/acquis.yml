@@ -1,0 +1,32 @@
+filenames:
+  - /var/log/syslog
+labels:
+  type: syslog
+---
+filenames:
+  - /var/log/auth.log
+labels:
+  type: syslog
+---
+# Traefik logs via Docker (Traefik logs to stdout, captured by Docker)
+source: docker
+container_name:
+  - traefik
+labels:
+  type: traefik
+---
+# Nextcloud logs via Docker
+source: docker
+container_name:
+  - nextcloud
+labels:
+  type: nextcloud
+---
+# Additional service logs via Docker
+source: docker
+container_name:
+  - jellyfin
+  - immich-server
+  - adguard
+labels:
+  type: syslog

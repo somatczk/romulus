@@ -1,0 +1,205 @@
+{
+  "version": "1.23.17",
+  "monitors": [
+    {
+      "type": "http",
+      "name": "Jellyfin",
+      "url": "https://jellyfin.romulus.hu",
+      "interval": 60,
+      "maxretries": 3,
+      "retryInterval": 60,
+      "active": true,
+      "accepted_statuscodes": ["200-299"]
+    },
+    {
+      "type": "http",
+      "name": "Sonarr",
+      "url": "https://sonarr.romulus.hu",
+      "interval": 60,
+      "maxretries": 3,
+      "retryInterval": 60,
+      "active": true,
+      "accepted_statuscodes": ["200-299"]
+    },
+    {
+      "type": "http",
+      "name": "Radarr",
+      "url": "https://radarr.romulus.hu",
+      "interval": 60,
+      "maxretries": 3,
+      "retryInterval": 60,
+      "active": true,
+      "accepted_statuscodes": ["200-299"]
+    },
+    {
+      "type": "http",
+      "name": "Prowlarr",
+      "url": "https://prowlarr.romulus.hu",
+      "interval": 60,
+      "maxretries": 3,
+      "retryInterval": 60,
+      "active": true,
+      "accepted_statuscodes": ["200-299"]
+    },
+    {
+      "type": "http",
+      "name": "Bazarr",
+      "url": "https://bazarr.romulus.hu",
+      "interval": 60,
+      "maxretries": 3,
+      "retryInterval": 60,
+      "active": true,
+      "accepted_statuscodes": ["200-299"]
+    },
+    {
+      "type": "http",
+      "name": "Lidarr",
+      "url": "https://lidarr.romulus.hu",
+      "interval": 60,
+      "maxretries": 3,
+      "retryInterval": 60,
+      "active": true,
+      "accepted_statuscodes": ["200-299"]
+    },
+    {
+      "type": "http",
+      "name": "qBittorrent",
+      "url": "https://qbit.romulus.hu",
+      "interval": 60,
+      "maxretries": 3,
+      "retryInterval": 60,
+      "active": true,
+      "accepted_statuscodes": ["200-299"]
+    },
+    {
+      "type": "http",
+      "name": "Jellyseerr",
+      "url": "https://requests.romulus.hu",
+      "interval": 60,
+      "maxretries": 3,
+      "retryInterval": 60,
+      "active": true,
+      "accepted_statuscodes": ["200-299"]
+    },
+    {
+      "type": "http",
+      "name": "Nextcloud",
+      "url": "https://cloud.romulus.hu",
+      "interval": 60,
+      "maxretries": 3,
+      "retryInterval": 60,
+      "active": true,
+      "accepted_statuscodes": ["200-299"]
+    },
+    {
+      "type": "http",
+      "name": "Immich",
+      "url": "https://photos.romulus.hu",
+      "interval": 60,
+      "maxretries": 3,
+      "retryInterval": 60,
+      "active": true,
+      "accepted_statuscodes": ["200-299"]
+    },
+    {
+      "type": "http",
+      "name": "Traefik",
+      "url": "https://traefik.romulus.hu",
+      "interval": 60,
+      "maxretries": 3,
+      "retryInterval": 60,
+      "active": true,
+      "accepted_statuscodes": ["200-299"]
+    },
+    {
+      "type": "http",
+      "name": "AdGuard",
+      "url": "https://dns.romulus.hu",
+      "interval": 60,
+      "maxretries": 3,
+      "retryInterval": 60,
+      "active": true,
+      "accepted_statuscodes": ["200-299"]
+    },
+    {
+      "type": "http",
+      "name": "Portainer",
+      "url": "https://portainer.romulus.hu",
+      "interval": 60,
+      "maxretries": 3,
+      "retryInterval": 60,
+      "active": true,
+      "accepted_statuscodes": ["200-299"]
+    },
+    {
+      "type": "http",
+      "name": "Grafana",
+      "url": "https://grafana.romulus.hu",
+      "interval": 60,
+      "maxretries": 3,
+      "retryInterval": 60,
+      "active": true,
+      "accepted_statuscodes": ["200-299"]
+    },
+    {
+      "type": "http",
+      "name": "Prometheus",
+      "url": "https://prometheus.romulus.hu",
+      "interval": 60,
+      "maxretries": 3,
+      "retryInterval": 60,
+      "active": true,
+      "accepted_statuscodes": ["200-299"]
+    },
+    {
+      "type": "http",
+      "name": "Dozzle",
+      "url": "https://logs.romulus.hu",
+      "interval": 60,
+      "maxretries": 3,
+      "retryInterval": 60,
+      "active": true,
+      "accepted_statuscodes": ["200-299"]
+    },
+    {
+      "type": "http",
+      "name": "Speedtest Tracker",
+      "url": "https://speed.romulus.hu",
+      "interval": 60,
+      "maxretries": 3,
+      "retryInterval": 60,
+      "active": true,
+      "accepted_statuscodes": ["200-299"]
+    },
+    {
+      "type": "http",
+      "name": "ntfy",
+      "url": "https://notify.romulus.hu",
+      "interval": 60,
+      "maxretries": 3,
+      "retryInterval": 60,
+      "active": true,
+      "accepted_statuscodes": ["200-299"]
+    },
+    {
+      "type": "http",
+      "name": "Homepage",
+      "url": "https://romulus.hu",
+      "interval": 60,
+      "maxretries": 3,
+      "retryInterval": 60,
+      "active": true,
+      "accepted_statuscodes": ["200-299"]
+    },
+    {
+      "type": "http",
+      "name": "Home Assistant",
+      "url": "https://home.romulus.hu",
+      "interval": 60,
+      "maxretries": 3,
+      "retryInterval": 60,
+      "active": true,
+      "accepted_statuscodes": ["200-299"]
+    }
+  ]
+}

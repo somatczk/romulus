@@ -1,24 +1,13 @@
 apiVersion: 1
 
 providers:
-  # Homeserver custom dashboards - only provision if directory exists
-  - name: 'homeserver-dashboards'
-    type: file
+  - name: default
     orgId: 1
-    folder: 'Homeserver'
-    folderUid: 'homeserver-folder'
-    
-    # Dashboard loading options
+    folder: ""
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
     options:
-      path: '/var/lib/grafana/dashboards'
-      foldersFromFilesStructure: false
-      disableDeletion: false
-      updateIntervalSeconds: 60
-      allowUiUpdates: true
-      
-    # Dashboard search tags
-    searchTags:
-      - 'homeserver'
-      - 'infrastructure'
-      - 'monitoring'
-
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: true

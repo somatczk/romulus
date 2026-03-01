@@ -1,0 +1,48 @@
+networks:
+  proxy:
+    external: true
+  socket:
+    external: true
+
+services:
+  homepage:
+    image: ghcr.io/gethomepage/homepage:v1.10.1
+    container_name: homepage
+    networks:
+      - proxy
+      - socket
+    environment:
+      PUID: ${PUID}
+      PGID: ${PGID}
+      HOMEPAGE_ALLOWED_HOSTS: "romulus.hu,www.romulus.hu,192.168.0.3"
+      DOCKER_HOST: tcp://socket-proxy:2375
+    volumes:
+      - ${APPDATA}/dashboard/homepage:/app/config
+      - ../../configs/homepage/settings.yaml:/app/config/settings.yaml:ro
+      - ../../configs/homepage/services.yaml:/app/config/services.yaml:ro
+      - ../../configs/homepage/widgets.yaml:/app/config/widgets.yaml:ro
+      - ../../configs/homepage/bookmarks.yaml:/app/config/bookmarks.yaml:ro
+      - /:/host/root:ro
+      - /media/SSD-Storage:/host/ssd:ro
+      - /media/HDD-Storage:/host/hdd:ro
+      - /proc/diskstats:/host/proc/diskstats:ro
+      - /proc/mounts:/host/proc/mounts:ro
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.homepage.rule: Host(`romulus.hu`) || Host(`www.romulus.hu`)
+      traefik.http.routers.homepage.entrypoints: websecure
+      traefik.http.routers.homepage.tls.certresolver: cloudflare
+      traefik.http.routers.homepage.middlewares: secure@file
+      traefik.http.services.homepage.loadbalancer.server.port: "3000"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped

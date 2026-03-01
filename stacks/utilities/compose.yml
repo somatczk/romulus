@@ -1,0 +1,236 @@
+networks:
+  proxy:
+    external: true
+  socket:
+    external: true
+  monitoring:
+    external: true
+  ts-db:
+    driver: bridge
+
+services:
+  watchtower:
+    image: containrrr/watchtower:1.7
+    container_name: watchtower
+    env_file: ../.env
+    networks:
+      - proxy
+      - socket
+    environment:
+      DOCKER_HOST: tcp://socket-proxy:2375
+      WATCHTOWER_NOTIFICATION_URL: "generic+http://ntfy/updates"
+      WATCHTOWER_MONITOR_ONLY: "true"
+      WATCHTOWER_SCHEDULE: "0 0 4 * * *"
+      WATCHTOWER_CLEANUP: "true"
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+  dozzle:
+    image: amir20/dozzle:v8
+    container_name: dozzle
+    env_file: ../.env
+    networks:
+      - proxy
+      - socket
+    environment:
+      DOCKER_HOST: tcp://socket-proxy:2375
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.logs.rule: Host(`logs.${DOMAIN}`)
+      traefik.http.routers.logs.entrypoints: websecure
+      traefik.http.routers.logs.tls.certresolver: cloudflare
+      traefik.http.routers.logs.middlewares: secure-admin@file
+      traefik.http.services.logs.loadbalancer.server.port: "8080"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+  speedtest-exporter:
+    image: ghcr.io/danopstech/speedtest_exporter:latest
+    container_name: speedtest-exporter
+    networks:
+      - monitoring
+    ports:
+      - "9798:9798"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9798"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+  speedtest:
+    image: lscr.io/linuxserver/speedtest-tracker:latest
+    container_name: speedtest
+    env_file: ../.env
+    networks:
+      - proxy
+    environment:
+      PUID: ${PUID}
+      PGID: ${PGID}
+      TZ: ${TZ}
+      APP_KEY: "${SPEEDTEST_APP_KEY}"
+      SPEEDTEST_SCHEDULE: "0 */6 * * *"
+      DB_CONNECTION: sqlite
+    volumes:
+      - ${APPDATA}/utilities/speedtest:/config
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.speed.rule: Host(`speed.${DOMAIN}`)
+      traefik.http.routers.speed.entrypoints: websecure
+      traefik.http.routers.speed.tls.certresolver: cloudflare
+      traefik.http.routers.speed.middlewares: secure-admin@file
+      traefik.http.services.speed.loadbalancer.server.port: "80"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+  # SECURITY NOTE: Portainer requires direct RW Docker socket access.
+  # Accepted risk — admin-only, behind Authelia 2FA (secure-admin@file).
+  portainer:
+    image: portainer/portainer-ce:2.21
+    container_name: portainer
+    env_file: ../.env
+    networks:
+      - proxy
+      - socket
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${APPDATA}/utilities/portainer:/data
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.portainer.rule: Host(`portainer.${DOMAIN}`)
+      traefik.http.routers.portainer.entrypoints: websecure
+      traefik.http.routers.portainer.tls.certresolver: cloudflare
+      traefik.http.routers.portainer.middlewares: secure-admin@file
+      traefik.http.services.portainer.loadbalancer.server.port: "9000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/api/system/status"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+  teamspeak-db:
+    image: mariadb:11
+    container_name: teamspeak-db
+    env_file: ../.env
+    networks:
+      - ts-db
+    environment:
+      MYSQL_ROOT_PASSWORD: ${TEAMSPEAK_DB_PASSWORD}
+      MYSQL_DATABASE: teamspeak
+      MYSQL_USER: teamspeak
+      MYSQL_PASSWORD: ${TEAMSPEAK_DB_PASSWORD}
+    volumes:
+      - ${APPDATA}/utilities/teamspeak-db:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+  teamspeak:
+    image: teamspeak:3.13
+    container_name: teamspeak
+    env_file: ../.env
+    depends_on:
+      teamspeak-db:
+        condition: service_healthy
+    networks:
+      - proxy
+      - ts-db
+    ports:
+      - "9987:9987/udp"
+      - "30033:30033/tcp"
+    environment:
+      TS3SERVER_DB_PLUGIN: ts3db_mariadb
+      TS3SERVER_DB_SQLCREATEPATH: create_mariadb
+      TS3SERVER_DB_HOST: teamspeak-db
+      TS3SERVER_DB_USER: teamspeak
+      TS3SERVER_DB_PASSWORD: ${TEAMSPEAK_DB_PASSWORD}
+      TS3SERVER_DB_NAME: teamspeak
+      TS3SERVER_DB_WAITUNTILREADY: "30"
+      TS3SERVER_LICENSE: accept
+    volumes:
+      - ${APPDATA}/utilities/teamspeak:/var/ts3server
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.teamspeak.rule: Host(`teamspeak.${DOMAIN}`)
+      traefik.http.routers.teamspeak.entrypoints: websecure
+      traefik.http.routers.teamspeak.tls.certresolver: cloudflare
+      traefik.http.routers.teamspeak.middlewares: secure-headers@file
+      traefik.http.services.teamspeak.loadbalancer.server.port: "10080"
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "10011"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+  autoheal:
+    image: willfarrell/autoheal:latest
+    container_name: autoheal
+    restart: unless-stopped
+    networks:
+      - socket
+    environment:
+      AUTOHEAL_CONTAINER_LABEL: all
+      DOCKER_HOST: tcp://socket-proxy:2375
+      AUTOHEAL_INTERVAL: 60
+      AUTOHEAL_START_PERIOD: 300
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+    security_opt:
+      - no-new-privileges:true

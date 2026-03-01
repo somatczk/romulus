@@ -1,0 +1,10 @@
+- Infrastructure:
+    - Cloudflare:
+        - href: https://dash.cloudflare.com
+          icon: cloudflare
+    - GitHub:
+        - href: https://github.com
+          icon: github
+    - ZeroTier:
+        - href: https://my.zerotier.com
+          icon: zerotier

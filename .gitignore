@@ -1,28 +1,24 @@
-# Local .terraform directories
-**/.terraform/*
+# Secrets and environment variables
+stacks/.env
 
-# .tfstate files
-*.tfstate
-*.tfstate.*
+# Secret files
+*.secret
 
-# Crash log files
-crash.log
-crash.*.log
+# Traefik ACME certificates
+acme.json
 
+# Authelia runtime files
+configs/authelia/users_database.yml
+configs/authelia/notification.txt
+configs/authelia/db.sqlite3
 
-# Ignore override files as they are usually used for local dev overrides
-override.tf
-override.tf.json
-*_override.tf
-*_override.tf.json
+# Local env overrides
+**/.env.local
 
-# Ignore CLI configuration files
-.terraformrc
-terraform.rc
+# TLS keys and certificates
+*.key
+*.pem
 
-# Ignore lock files
-.terraform.lock.hcl
-
-# Ignore environment files with sensitive data
-.env
-.env.template
+# OS files
+.DS_Store
+Thumbs.db

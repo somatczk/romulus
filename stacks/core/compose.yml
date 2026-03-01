@@ -1,0 +1,125 @@
+networks:
+  proxy:
+    external: true
+  socket:
+    external: true
+
+services:
+  socket-proxy:
+    image: tecnativa/docker-socket-proxy:0.3
+    container_name: socket-proxy
+    restart: unless-stopped
+    env_file: ../.env
+    networks:
+      - socket
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      CONTAINERS: 1
+      IMAGES: 1
+      NETWORKS: 1
+      SERVICES: 1
+      TASKS: 1
+      VOLUMES: 1
+      INFO: 1
+      EVENTS: 1
+      POST: 0
+      BUILD: 0
+      COMMIT: 0
+      EXEC: 0
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+    security_opt:
+      - no-new-privileges:true
+
+  traefik:
+    image: traefik:v3.3
+    container_name: traefik
+    restart: unless-stopped
+    env_file: ../.env
+    networks:
+      - proxy
+      - socket
+    ports:
+      # NOTE: Port 80 not published — ZimaOS gateway uses it.
+      # HTTP→HTTPS redirect is configured in traefik.yml but only works
+      # if port 80 becomes available in the future.
+      - "443:443"
+    environment:
+      CLOUDFLARE_DNS_API_TOKEN: ${CF_API_TOKEN}
+    volumes:
+      - ${APPDATA}/core/traefik/acme.json:/acme.json
+      - ../../configs/traefik/traefik.yml:/traefik.yml:ro
+      - ../../configs/traefik/dynamic:/dynamic:ro
+    depends_on:
+      - socket-proxy
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.traefik.rule: "Host(`traefik.${DOMAIN}`)"
+      traefik.http.routers.traefik.entrypoints: "websecure"
+      traefik.http.routers.traefik.tls.certresolver: "cloudflare"
+      traefik.http.routers.traefik.service: "api@internal"
+      traefik.http.routers.traefik.middlewares: "traefik-dashboard-redirect@file,secure@file"
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+    security_opt:
+      - no-new-privileges:true
+
+  cloudflare-ddns:
+    image: favonia/cloudflare-ddns:latest
+    container_name: cloudflare-ddns
+    restart: unless-stopped
+    environment:
+      CF_API_TOKEN: ${CF_API_TOKEN}
+      DOMAINS: "${DOMAIN},*.${DOMAIN}"
+      PROXIED: "false"
+      IP6_PROVIDER: none
+      UPDATE_CRON: "*/5 * * * *"
+    deploy:
+      resources:
+        limits:
+          memory: 64m
+    security_opt:
+      - no-new-privileges:true
+
+  adguard:
+    image: adguard/adguardhome:v0.107.72
+    container_name: adguard
+    restart: unless-stopped
+    env_file: ../.env
+    networks:
+      - proxy
+    ports:
+      - "192.168.0.3:53:53/tcp"
+      - "192.168.0.3:53:53/udp"
+    volumes:
+      - ${APPDATA}/core/adguard/work:/opt/adguardhome/work
+      - ${APPDATA}/core/adguard/conf:/opt/adguardhome/conf
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.adguard.rule: "Host(`dns.${DOMAIN}`)"
+      traefik.http.routers.adguard.entrypoints: "websecure"
+      traefik.http.routers.adguard.tls.certresolver: "cloudflare"
+      traefik.http.routers.adguard.service: "adguard"
+      traefik.http.routers.adguard.middlewares: "secure-admin@file"
+      traefik.http.services.adguard.loadbalancer.server.port: "80"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:80"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+    security_opt:
+      - no-new-privileges:true

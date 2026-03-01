@@ -1,0 +1,42 @@
+networks:
+  proxy:
+    external: true
+  monitoring:
+    external: true
+
+services:
+  ntfy:
+    image: binwiederhier/ntfy:latest
+    container_name: ntfy
+    command: serve
+    networks:
+      - proxy
+      - monitoring
+    environment:
+      TZ: ${TZ}
+      NTFY_BASE_URL: https://notify.${DOMAIN}
+      NTFY_UPSTREAM_BASE_URL: https://ntfy.sh
+      NTFY_BEHIND_PROXY: "true"
+      NTFY_ENABLE_METRICS: "true"
+    volumes:
+      - ${APPDATA}/notifications/ntfy/cache:/var/cache/ntfy
+      - ${APPDATA}/notifications/ntfy/etc:/etc/ntfy
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.notify.rule: Host(`notify.${DOMAIN}`)
+      traefik.http.routers.notify.entrypoints: websecure
+      traefik.http.routers.notify.tls.certresolver: cloudflare
+      traefik.http.routers.notify.middlewares: secure@file
+      traefik.http.services.notify.loadbalancer.server.port: "80"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:80/v1/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped

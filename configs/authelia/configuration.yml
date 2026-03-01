@@ -1,0 +1,94 @@
+# =============================================================================
+# Authelia Configuration
+# =============================================================================
+# Docs: https://www.authelia.com/configuration/
+# =============================================================================
+
+server:
+  address: 'tcp://:9091'
+
+log:
+  level: info
+
+totp:
+  issuer: romulus.hu
+
+authentication_backend:
+  file:
+    path: /config/users_database.yml
+    password:
+      algorithm: argon2id
+      iterations: 3
+      memory: 65536
+      parallelism: 4
+      salt_length: 16
+      key_length: 32
+
+access_control:
+  default_policy: deny
+  rules:
+    # Admin services — require two_factor
+    - domain:
+        - prometheus.romulus.hu
+        - portainer.romulus.hu
+        - logs.romulus.hu
+        - traefik.romulus.hu
+        - sonarr.romulus.hu
+        - radarr.romulus.hu
+        - prowlarr.romulus.hu
+        - bazarr.romulus.hu
+        - lidarr.romulus.hu
+        - qbit.romulus.hu
+        - speed.romulus.hu
+        - dns.romulus.hu
+        - glances.romulus.hu
+      policy: two_factor
+
+    # Services with native auth — bypass (mobile apps handle their own auth)
+    - domain:
+        - jellyfin.romulus.hu
+        - requests.romulus.hu
+        - cloud.romulus.hu
+        - photos.romulus.hu
+        - home.romulus.hu
+        - grafana.romulus.hu
+        - status.romulus.hu
+        - notify.romulus.hu
+        - romulus.hu
+        - www.romulus.hu
+        - auth.romulus.hu
+        - teamspeak.romulus.hu
+        - paperless.romulus.hu
+        - budget.romulus.hu
+        - homebox.romulus.hu
+      policy: bypass
+
+session:
+  name: authelia_session
+  # CHANGEME: Generate with: docker run authelia/authelia:latest authelia crypto rand --length 64 --charset alphanumeric
+  secret: '${AUTHELIA_SESSION_SECRET}'
+  cookies:
+    - domain: romulus.hu
+      authelia_url: https://auth.romulus.hu
+
+storage:
+  local:
+    path: /data/db.sqlite3
+  # CHANGEME: Generate with: docker run authelia/authelia:latest authelia crypto rand --length 64 --charset alphanumeric
+  encryption_key: '${AUTHELIA_STORAGE_ENCRYPTION_KEY}'
+
+identity_validation:
+  reset_password:
+    jwt_secret: '${AUTHELIA_JWT_SECRET}'
+
+notifier:
+  # File-based notifier for development / single-user setups.
+  # For password resets via email, replace with SMTP config:
+  # smtp:
+  #   host: smtp.example.com
+  #   port: 587
+  #   username: changeme@example.com
+  #   password: changeme_smtp_password
+  #   sender: "Authelia <auth@romulus.hu>"
+  filesystem:
+    filename: /data/notification.txt

@@ -117,7 +117,7 @@ services:
   # SECURITY NOTE: Portainer requires direct RW Docker socket access.
   # Accepted risk — admin-only, behind Authelia 2FA (secure-admin@file).
   portainer:
-    image: portainer/portainer-ce:2.21
+    image: portainer/portainer-ce:lts
     container_name: portainer
     env_file: ../.env
     networks:

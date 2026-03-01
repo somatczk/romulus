@@ -192,7 +192,7 @@ jobs:
           echo "Waiting 15s for Traefik certificate resolution..."
           sleep 15
           cd /DATA/stacks/stacks
-          if docker compose -f core/compose.yml ps --format json | jq -e '.[] | select(.Name | contains("traefik")) | select(.Health == "healthy")' > /dev/null 2>&1; then
+          if docker compose -f core/compose.yml ps --format json 2>/dev/null | jq -e 'select(.Name | contains("traefik")) | select(.Health == "healthy")' > /dev/null 2>&1; then
             echo "Traefik is healthy"
           else
             echo "::warning::Traefik may not be healthy yet"

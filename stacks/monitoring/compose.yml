@@ -1,7 +1,6 @@
 services:
   prometheus:
     build: ./prometheus
-    image: prom/prometheus:v3.10.0
     container_name: prometheus
     restart: unless-stopped
     env_file: ../.env
@@ -41,7 +40,6 @@ services:
 
   grafana:
     build: ./grafana
-    image: grafana/grafana:12.4.0
     container_name: grafana
     restart: unless-stopped
     env_file: ../.env
@@ -87,7 +85,6 @@ services:
 
   loki:
     build: ./loki
-    image: grafana/loki:3.6.7
     container_name: loki
     restart: unless-stopped
     env_file: ../.env
@@ -106,7 +103,6 @@ services:
 
   promtail:
     build: ./promtail
-    image: grafana/promtail:3.6.7
     container_name: promtail
     restart: unless-stopped
     networks:
@@ -128,7 +124,6 @@ services:
 
   node-exporter:
     build: ./node-exporter
-    image: prom/node-exporter:v1.10.2
     container_name: node-exporter
     restart: unless-stopped
     pid: host
@@ -152,7 +147,6 @@ services:
 
   cadvisor:
     build: ./cadvisor
-    image: gcr.io/cadvisor/cadvisor:v0.51.0
     container_name: cadvisor
     restart: unless-stopped
     privileged: true
@@ -176,7 +170,6 @@ services:
 
   nvidia-gpu-exporter:
     build: ./nvidia-gpu-exporter
-    image: utkuozdemir/nvidia_gpu_exporter:1.4.1
     container_name: nvidia-gpu-exporter
     restart: unless-stopped
     runtime: nvidia
@@ -191,7 +184,6 @@ services:
 
   restic-exporter:
     build: ./restic-exporter
-    image: ngosang/restic-exporter:2.0.2
     container_name: restic-exporter
     restart: unless-stopped
     env_file: ../.env
@@ -212,7 +204,6 @@ services:
 
   uptime-kuma:
     build: ./uptime-kuma
-    image: louislam/uptime-kuma:1.23.14
     container_name: uptime-kuma
     restart: unless-stopped
     env_file: ../.env
@@ -240,7 +231,6 @@ services:
 
   glances:
     build: ./glances
-    image: nicolargo/glances:4.5.0.5-full
     container_name: glances
     restart: unless-stopped
     pid: host
@@ -266,7 +256,6 @@ services:
 
   smartctl-exporter:
     build: ./smartctl-exporter
-    image: prometheuscommunity/smartctl-exporter:v0.14.0
     container_name: smartctl-exporter
     restart: unless-stopped
     privileged: true

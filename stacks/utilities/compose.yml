@@ -11,7 +11,6 @@ networks:
 services:
   watchtower:
     build: ./watchtower
-    image: containrrr/watchtower:1.7.1
     container_name: watchtower
     env_file: ../.env
     networks:
@@ -33,7 +32,6 @@ services:
 
   dozzle:
     build: ./dozzle
-    image: amir20/dozzle:v8.14.3
     container_name: dozzle
     env_file: ../.env
     networks:
@@ -63,7 +61,6 @@ services:
 
   speedtest-exporter:
     build: ./speedtest-exporter
-    image: ghcr.io/danopstech/speedtest_exporter:v0.0.5
     container_name: speedtest-exporter
     networks:
       - monitoring
@@ -81,7 +78,6 @@ services:
 
   speedtest:
     build: ./speedtest
-    image: lscr.io/linuxserver/speedtest-tracker:1.13.10
     container_name: speedtest
     env_file: ../.env
     networks:
@@ -119,7 +115,6 @@ services:
   # Accepted risk — admin-only, behind Authelia 2FA (secure-admin@file).
   portainer:
     build: ./portainer
-    image: portainer/portainer-ce:2.39.0
     container_name: portainer
     env_file: ../.env
     networks:
@@ -147,7 +142,6 @@ services:
 
   teamspeak-db:
     build: ./teamspeak-db
-    image: mariadb:12.2.2
     container_name: teamspeak-db
     env_file: ../.env
     networks:
@@ -175,7 +169,6 @@ services:
 
   teamspeak:
     build: ./teamspeak
-    image: teamspeak:3.13
     container_name: teamspeak
     env_file: ../.env
     depends_on:
@@ -220,7 +213,6 @@ services:
 
   autoheal:
     build: ./autoheal
-    image: willfarrell/autoheal:1.2.0
     container_name: autoheal
     restart: unless-stopped
     networks:

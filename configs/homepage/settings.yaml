@@ -1,0 +1,23 @@
+title: Romulus Homelab
+favicon: https://romulus.hu/favicon.ico
+theme: dark
+color: slate
+headerStyle: clean
+hideVersion: true
+
+layout:
+  Media:
+    style: row
+    columns: 4
+  Productivity:
+    style: row
+    columns: 3
+  Infrastructure:
+    style: row
+    columns: 4
+  Monitoring:
+    style: row
+    columns: 5
+  Notifications:
+    style: row
+    columns: 1

@@ -1,0 +1,411 @@
+networks:
+  proxy:
+    external: true
+  db-nextcloud:
+    external: true
+  db-immich:
+    external: true
+  db-paperless:
+    external: true
+
+services:
+  # ---------------------------------------------------------------------------
+  # Nextcloud Group
+  # ---------------------------------------------------------------------------
+  nextcloud-db:
+    image: postgres:16-alpine
+    container_name: nextcloud-db
+    restart: unless-stopped
+    env_file: ../.env
+    networks:
+      - db-nextcloud
+    environment:
+      POSTGRES_DB: nextcloud
+      POSTGRES_USER: nextcloud
+      POSTGRES_PASSWORD: ${NEXTCLOUD_DB_PASSWORD}
+    volumes:
+      - ${APPDATA}/productivity/nextcloud-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nextcloud"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+    security_opt:
+      - no-new-privileges:true
+
+  nextcloud-redis:
+    image: redis:7-alpine
+    container_name: nextcloud-redis
+    restart: unless-stopped
+    env_file: ../.env
+    networks:
+      - db-nextcloud
+    command: redis-server --requirepass ${NEXTCLOUD_REDIS_PASSWORD}
+    volumes:
+      - ${APPDATA}/productivity/nextcloud-redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${NEXTCLOUD_REDIS_PASSWORD}", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+    security_opt:
+      - no-new-privileges:true
+
+  nextcloud:
+    image: nextcloud:stable
+    container_name: nextcloud
+    restart: unless-stopped
+    env_file: ../.env
+    networks:
+      - proxy
+      - db-nextcloud
+    depends_on:
+      nextcloud-db:
+        condition: service_healthy
+      nextcloud-redis:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: nextcloud-db
+      POSTGRES_DB: nextcloud
+      POSTGRES_USER: nextcloud
+      POSTGRES_PASSWORD: ${NEXTCLOUD_DB_PASSWORD}
+      REDIS_HOST: nextcloud-redis
+      REDIS_HOST_PASSWORD: ${NEXTCLOUD_REDIS_PASSWORD}
+      NEXTCLOUD_TRUSTED_DOMAINS: "cloud.${DOMAIN} nextcloud"
+      OVERWRITEPROTOCOL: https
+      OVERWRITECLIURL: https://cloud.${DOMAIN}
+    volumes:
+      - ${APPDATA}/productivity/nextcloud/html:/var/www/html
+      - ${APPDATA}/productivity/nextcloud/data:/var/www/html/data
+      - ${APPDATA}/productivity/immich/upload:/media/immich-photos:ro  # Immich photos (read-only)
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.nextcloud.rule: "Host(`cloud.${DOMAIN}`)"
+      traefik.http.routers.nextcloud.entrypoints: "websecure"
+      traefik.http.routers.nextcloud.tls.certresolver: "cloudflare"
+      traefik.http.routers.nextcloud.service: "nextcloud"
+      traefik.http.routers.nextcloud.middlewares: "secure@file"
+      traefik.http.services.nextcloud.loadbalancer.server.port: "80"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/status.php"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 4g
+    security_opt:
+      - no-new-privileges:true
+
+  # ---------------------------------------------------------------------------
+  # Immich Group
+  # ---------------------------------------------------------------------------
+  immich-db:
+    image: tensorchord/pgvecto-rs:pg16-v0.2.0
+    container_name: immich-db
+    restart: unless-stopped
+    env_file: ../.env
+    networks:
+      - db-immich
+    environment:
+      POSTGRES_DB: immich
+      POSTGRES_USER: immich
+      POSTGRES_PASSWORD: ${IMMICH_DB_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+    volumes:
+      - ${APPDATA}/productivity/immich/db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U immich -d immich"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+    security_opt:
+      - no-new-privileges:true
+
+  immich-redis:
+    image: redis:7-alpine
+    container_name: immich-redis
+    restart: unless-stopped
+    env_file: ../.env
+    networks:
+      - db-immich
+    volumes:
+      - ${APPDATA}/productivity/immich/redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+    security_opt:
+      - no-new-privileges:true
+
+  immich-server:
+    image: ghcr.io/immich-app/immich-server:release
+    container_name: immich-server
+    restart: unless-stopped
+    env_file: ../.env
+    networks:
+      - proxy
+      - db-immich
+    depends_on:
+      immich-db:
+        condition: service_healthy
+      immich-redis:
+        condition: service_healthy
+    environment:
+      DB_HOSTNAME: immich-db
+      DB_USERNAME: immich
+      DB_PASSWORD: ${IMMICH_DB_PASSWORD}
+      DB_DATABASE_NAME: immich
+      REDIS_HOSTNAME: immich-redis
+      IMMICH_MACHINE_LEARNING_URL: http://immich-ml:3003
+      UPLOAD_LOCATION: /photos
+    volumes:
+      - ${HDD}/media/photos:/photos
+      - ${APPDATA}/productivity/immich/upload:/usr/src/app/upload
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.immich.rule: "Host(`photos.${DOMAIN}`)"
+      traefik.http.routers.immich.entrypoints: "websecure"
+      traefik.http.routers.immich.tls.certresolver: "cloudflare"
+      traefik.http.routers.immich.service: "immich"
+      traefik.http.routers.immich.middlewares: "secure@file"
+      traefik.http.services.immich.loadbalancer.server.port: "2283"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:2283/api/server/ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 4g
+    security_opt:
+      - no-new-privileges:true
+
+  immich-ml:
+    image: ghcr.io/immich-app/immich-machine-learning:release
+    container_name: immich-ml
+    restart: unless-stopped
+    env_file: ../.env
+    networks:
+      - db-immich
+    runtime: nvidia
+    environment:
+      NVIDIA_VISIBLE_DEVICES: all
+    volumes:
+      - ${APPDATA}/productivity/immich/ml-cache:/cache
+    deploy:
+      resources:
+        limits:
+          memory: 8g
+    security_opt:
+      - no-new-privileges:true
+
+  # ---------------------------------------------------------------------------
+  # Home Assistant
+  # ---------------------------------------------------------------------------
+  # NOTE: Home Assistant uses network_mode: host, which means it cannot be
+  # attached to Docker networks or use Traefik labels for routing.
+  # To expose Home Assistant via Traefik, use the Traefik file provider:
+  #   configs/traefik/dynamic/homeassistant.yml with a service URL of
+  #   http://<host-ip>:8123. See Traefik docs for file provider configuration.
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant:stable
+    container_name: homeassistant
+    restart: unless-stopped
+    env_file: ../.env
+    network_mode: host
+    privileged: true
+    environment:
+      TZ: ${TZ}
+    volumes:
+      - ${APPDATA}/productivity/homeassistant:/config
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8123"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+
+  # ---------------------------------------------------------------------------
+  # Paperless-ngx Group
+  # ---------------------------------------------------------------------------
+  paperless-db:
+    image: postgres:16-alpine
+    container_name: paperless-db
+    restart: unless-stopped
+    env_file: ../.env
+    networks:
+      - db-paperless
+    environment:
+      POSTGRES_DB: paperless
+      POSTGRES_USER: paperless
+      POSTGRES_PASSWORD: ${PAPERLESS_DB_PASSWORD}
+    volumes:
+      - ${APPDATA}/productivity/paperless-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U paperless"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+    security_opt:
+      - no-new-privileges:true
+
+  paperless-redis:
+    image: redis:7-alpine
+    container_name: paperless-redis
+    restart: unless-stopped
+    networks:
+      - db-paperless
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+    security_opt:
+      - no-new-privileges:true
+
+  paperless:
+    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    container_name: paperless
+    restart: unless-stopped
+    env_file: ../.env
+    depends_on:
+      paperless-db:
+        condition: service_healthy
+      paperless-redis:
+        condition: service_healthy
+    networks:
+      - proxy
+      - db-paperless
+    environment:
+      PAPERLESS_DBHOST: paperless-db
+      PAPERLESS_DBNAME: paperless
+      PAPERLESS_DBUSER: paperless
+      PAPERLESS_DBPASS: ${PAPERLESS_DB_PASSWORD}
+      PAPERLESS_REDIS: redis://paperless-redis:6379
+      PAPERLESS_SECRET_KEY: ${PAPERLESS_SECRET_KEY}
+      PAPERLESS_ADMIN_USER: admin
+      PAPERLESS_ADMIN_PASSWORD: ${PAPERLESS_ADMIN_PASSWORD}
+      PAPERLESS_URL: https://paperless.${DOMAIN}
+      PAPERLESS_TIME_ZONE: ${TZ}
+      PAPERLESS_OCR_LANGUAGE: eng+hun
+      PAPERLESS_OCR_LANGUAGES: hun
+    volumes:
+      - ${APPDATA}/productivity/paperless/data:/usr/src/paperless/data
+      - ${APPDATA}/productivity/paperless/media:/usr/src/paperless/media
+      - ${APPDATA}/productivity/paperless/consume:/usr/src/paperless/consume
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.paperless.rule: "Host(`paperless.${DOMAIN}`)"
+      traefik.http.routers.paperless.entrypoints: "websecure"
+      traefik.http.routers.paperless.tls.certresolver: "cloudflare"
+      traefik.http.routers.paperless.middlewares: "secure@file"
+      traefik.http.services.paperless.loadbalancer.server.port: "8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+    security_opt:
+      - no-new-privileges:true
+
+  # ---------------------------------------------------------------------------
+  # Actual Budget
+  # ---------------------------------------------------------------------------
+  actual-budget:
+    image: actualbudget/actual-server:latest
+    container_name: actual-budget
+    restart: unless-stopped
+    env_file: ../.env
+    networks:
+      - proxy
+    volumes:
+      - ${APPDATA}/productivity/actual-budget:/data
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.budget.rule: "Host(`budget.${DOMAIN}`)"
+      traefik.http.routers.budget.entrypoints: "websecure"
+      traefik.http.routers.budget.tls.certresolver: "cloudflare"
+      traefik.http.routers.budget.middlewares: "secure@file"
+      traefik.http.services.budget.loadbalancer.server.port: "5006"
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:5006', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))\""]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+    security_opt:
+      - no-new-privileges:true
+
+  # ---------------------------------------------------------------------------
+  # Homebox
+  # ---------------------------------------------------------------------------
+  homebox:
+    image: ghcr.io/sysadminsmedia/homebox:latest
+    container_name: homebox
+    restart: unless-stopped
+    env_file: ../.env
+    networks:
+      - proxy
+    environment:
+      HBOX_WEB_PORT: "7745"
+    volumes:
+      - ${APPDATA}/productivity/homebox:/data
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.homebox.rule: "Host(`homebox.${DOMAIN}`)"
+      traefik.http.routers.homebox.entrypoints: "websecure"
+      traefik.http.routers.homebox.tls.certresolver: "cloudflare"
+      traefik.http.routers.homebox.middlewares: "secure@file"
+      traefik.http.services.homebox.loadbalancer.server.port: "7745"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:7745"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+    security_opt:
+      - no-new-privileges:true

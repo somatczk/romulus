@@ -1,0 +1,204 @@
+groups:
+  - name: disk
+    rules:
+      - alert: DiskUsageWarning
+        expr: (1 - node_filesystem_avail_bytes{mountpoint=~"/|/media/SSD-Storage|/media/HDD-Storage",fstype!="tmpfs"} / node_filesystem_size_bytes) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disk usage above 80% on {{ $labels.mountpoint }}"
+          description: "{{ $labels.mountpoint }} on {{ $labels.instance }} is at {{ printf \"%.1f\" $value }}%."
+
+      - alert: DiskUsageCritical
+        expr: (1 - node_filesystem_avail_bytes{mountpoint=~"/|/media/SSD-Storage|/media/HDD-Storage",fstype!="tmpfs"} / node_filesystem_size_bytes) * 100 > 90
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Disk usage above 90% on {{ $labels.mountpoint }}"
+          description: "{{ $labels.mountpoint }} on {{ $labels.instance }} is at {{ printf \"%.1f\" $value }}%."
+
+  - name: containers
+    rules:
+      - alert: ContainerOOM
+        expr: increase(container_oom_events_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Container OOM kill detected"
+          description: "Container {{ $labels.name }} experienced an OOM kill."
+
+      - alert: ContainerHighCPU
+        expr: sum(rate(container_cpu_usage_seconds_total{name!=""}[5m])) by (name) > 0.9
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container high CPU usage"
+          description: "Container {{ $labels.name }} CPU usage is above 90% for 10 minutes."
+
+      - alert: ContainerHighMemory
+        expr: container_memory_usage_bytes{name!=""} / container_spec_memory_limit_bytes{name!=""} * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container approaching memory limit"
+          description: "Container {{ $labels.name }} is using {{ printf \"%.0f\" $value }}% of its memory limit."
+
+      - alert: ContainerRestarting
+        expr: changes(container_start_time_seconds{name!=""}[30m]) > 3
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container restart loop detected"
+          description: "Container {{ $labels.name }} has restarted more than 3 times in the last 30 minutes."
+
+  - name: gpu
+    rules:
+      - alert: GPUTempWarning
+        expr: nvidia_smi_temperature_gpu > 80
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "GPU temperature above 80C"
+          description: "GPU {{ $labels.gpu }} temperature is {{ printf \"%.0f\" $value }}C."
+
+      - alert: GPUHighVRAM
+        expr: nvidia_smi_memory_used_bytes / nvidia_smi_memory_total_bytes * 100 > 90
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "GPU VRAM usage above 90%"
+          description: "GPU VRAM is at {{ printf \"%.0f\" $value }}%, risk of OOM kills on GPU workloads."
+
+  - name: services
+    rules:
+      - alert: ServiceDown
+        expr: up == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service {{ $labels.job }} is down"
+          description: "Target {{ $labels.instance }} of job {{ $labels.job }} has been down for more than 5 minutes."
+
+  - name: host
+    rules:
+      - alert: HostHighMemory
+        expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Host memory usage above 85%"
+          description: "Memory usage on {{ $labels.instance }} is {{ printf \"%.1f\" $value }}%."
+
+      - alert: HostHighCPU
+        expr: 100 - avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Host CPU usage above 85%"
+          description: "CPU usage on {{ $labels.instance }} is {{ printf \"%.1f\" $value }}%."
+
+      - alert: HostReboot
+        expr: node_time_seconds - node_boot_time_seconds < 300
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Host reboot detected"
+          description: "System uptime is only {{ printf \"%.0f\" $value }} seconds, indicating a recent reboot."
+
+  - name: network
+    rules:
+      - alert: HighNetworkErrors
+        expr: rate(node_network_receive_errs_total{device=~"eth.*|enp.*"}[5m]) + rate(node_network_transmit_errs_total{device=~"eth.*|enp.*"}[5m]) > 10
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High network error rate on {{ $labels.device }}"
+          description: "Network interface {{ $labels.device }} is experiencing {{ printf \"%.0f\" $value }} errors/sec."
+
+  - name: traefik
+    rules:
+      - alert: TraefikHighErrorRate
+        expr: sum(rate(traefik_service_requests_total{code=~"5.."}[5m])) / sum(rate(traefik_service_requests_total[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Traefik high 5xx error rate"
+          description: "Traefik 5xx error rate is {{ $value | humanizePercentage }}."
+
+      - alert: CertExpiringSoon
+        expr: (traefik_tls_certs_not_after - time()) < 7 * 86400
+        for: 1h
+        labels:
+          severity: critical
+        annotations:
+          summary: "TLS certificate expiring soon"
+          description: "Certificate for {{ $labels.cn }} expires in less than 7 days."
+
+  - name: backup
+    rules:
+      - alert: BackupFailed
+        expr: time() - max(restic_backup_timestamp) > 90000
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Backup has not run in over 25 hours"
+          description: "Last successful restic backup was more than 25 hours ago."
+
+  - name: loki
+    rules:
+      - alert: LokiIngestionLag
+        expr: rate(loki_distributor_bytes_received_total[5m]) == 0
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Loki stopped receiving logs"
+          description: "Loki has received no log bytes in the last 15 minutes."
+
+  - name: disk-io
+    rules:
+      - alert: HighDiskIO
+        expr: rate(node_disk_io_time_seconds_total[5m]) > 0.9
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disk I/O saturated on {{ $labels.device }}"
+          description: "Disk {{ $labels.device }} is busy {{ $value | humanizePercentage }} of the time."
+
+  - name: ntfy
+    rules:
+      - alert: NtfyNotificationReceived
+        expr: increase(ntfy_messages_published_success[2m]) > 0
+        for: 0m
+        labels:
+          severity: info
+        annotations:
+          summary: "ntfy notification received"
+          description: "{{ printf \"%.0f\" $value }} new notification(s) published to ntfy in the last 2 minutes."
+
+  - name: speedtest
+    rules:
+      - alert: SpeedtestSlow
+        expr: speedtest_download_speed_Bps < 12500000
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Internet download speed below 100 Mbps"
+          description: "Download speed has dropped below 100 Mbps."

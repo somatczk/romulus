@@ -1,0 +1,53 @@
+http:
+  middlewares:
+    secure-headers:
+      headers:
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        stsPreload: true
+        forceSTSHeader: true
+        contentTypeNosniff: true
+        browserXssFilter: true
+        frameDeny: true
+        referrerPolicy: "strict-origin-when-cross-origin"
+
+    local-only:
+      ipAllowList:
+        sourceRange:
+          - "192.168.0.0/24"
+          - "172.22.0.0/16"
+          - "10.10.0.0/16"
+
+    crowdsec-bouncer:
+      forwardAuth:
+        address: http://crowdsec-bouncer:8080/api/v1/forwardAuth
+        trustForwardHeader: true
+
+    authelia:
+      forwardAuth:
+        address: http://authelia:9091/api/authz/forward-auth
+        trustForwardHeader: true
+        authResponseHeaders:
+          - Remote-User
+          - Remote-Groups
+          - Remote-Email
+          - Remote-Name
+
+    traefik-dashboard-redirect:
+      redirectRegex:
+        regex: "^(https?://[^/]+)/$"
+        replacement: "${1}/dashboard/"
+        permanent: true
+
+    secure:
+      chain:
+        middlewares:
+          - crowdsec-bouncer
+          - secure-headers
+
+    secure-admin:
+      chain:
+        middlewares:
+          - crowdsec-bouncer
+          - authelia
+          - secure-headers

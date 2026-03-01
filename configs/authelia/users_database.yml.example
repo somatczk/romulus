@@ -1,0 +1,15 @@
+# =============================================================================
+# Authelia Users Database
+# =============================================================================
+# Generate password hash:
+#   docker run authelia/authelia:latest authelia crypto hash generate argon2 --password 'YOUR_PASSWORD'
+# =============================================================================
+
+users:
+  your_username:
+    disabled: false
+    displayname: "Your Name"
+    email: your_email@example.com
+    password: "$argon2id$v=19$m=65536,t=3,p=4$REPLACE_WITH_HASH"
+    groups:
+      - admins

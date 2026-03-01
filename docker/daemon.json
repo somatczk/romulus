@@ -1,0 +1,23 @@
+{
+  "default-runtime": "nvidia",
+  "runtimes": {
+    "nvidia": {
+      "path": "nvidia-container-runtime",
+      "runtimeArgs": []
+    }
+  },
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "10m",
+    "max-file": "3"
+  },
+  "default-address-pools": [
+    {
+      "base": "10.10.0.0/16",
+      "size": 24
+    }
+  ],
+  "metrics-addr": "192.168.0.3:9323",
+  "experimental": true,
+  "storage-driver": "overlay2"
+}

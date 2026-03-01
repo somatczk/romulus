@@ -1,0 +1,98 @@
+- Media:
+    - Jellyfin:
+        href: https://jellyfin.romulus.hu
+        icon: jellyfin
+        description: Media streaming server
+    - Sonarr:
+        href: https://sonarr.romulus.hu
+        icon: sonarr
+        description: TV series management
+    - Radarr:
+        href: https://radarr.romulus.hu
+        icon: radarr
+        description: Movie management
+    - Prowlarr:
+        href: https://prowlarr.romulus.hu
+        icon: prowlarr
+        description: Indexer management
+    - Bazarr:
+        href: https://bazarr.romulus.hu
+        icon: bazarr
+        description: Subtitle management
+    - Lidarr:
+        href: https://lidarr.romulus.hu
+        icon: lidarr
+        description: Music management
+    - qBittorrent:
+        href: https://qbit.romulus.hu
+        icon: qbittorrent
+        description: Torrent client
+    - Jellyseerr:
+        href: https://requests.romulus.hu
+        icon: jellyseerr
+        description: Media request management
+
+- Productivity:
+    - Nextcloud:
+        href: https://cloud.romulus.hu
+        icon: nextcloud
+        description: File sync and collaboration
+    - Immich:
+        href: https://photos.romulus.hu
+        icon: immich
+        description: Photo and video management
+    - Home Assistant:
+        href: https://home.romulus.hu
+        icon: home-assistant
+        description: Home automation
+
+- Infrastructure:
+    - Traefik:
+        href: https://traefik.romulus.hu
+        icon: traefik
+        description: Reverse proxy and load balancer
+        widget:
+          type: traefik
+          url: http://traefik:8080
+    - AdGuard:
+        href: https://dns.romulus.hu
+        icon: adguard-home
+        description: DNS and ad blocking
+    - CrowdSec:
+        icon: crowdsec
+        description: Collaborative security engine
+    - Portainer:
+        href: https://portainer.romulus.hu
+        icon: portainer
+        description: Container management
+
+- Monitoring:
+    - Grafana:
+        href: https://grafana.romulus.hu
+        icon: grafana
+        description: Metrics visualization
+    - Prometheus:
+        href: https://prometheus.romulus.hu
+        icon: prometheus
+        description: Metrics collection
+        widget:
+          type: prometheus
+          url: http://prometheus:9090
+    - Uptime Kuma:
+        href: https://status.romulus.hu
+        icon: uptime-kuma
+        description: Service uptime monitoring
+    - Dozzle:
+        href: https://logs.romulus.hu
+        icon: dozzle
+        description: Container log viewer
+    - Speedtest:
+        href: https://speed.romulus.hu
+        icon: speedtest-tracker
+        description: Network speed tracking
+
+- Notifications:
+    - ntfy:
+        href: https://notify.romulus.hu
+        icon: ntfy
+        description: Push notifications

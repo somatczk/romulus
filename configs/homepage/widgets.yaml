@@ -1,0 +1,11 @@
+- resources:
+    cpu: true
+    memory: true
+    cputemp: true
+    uptime: true
+
+- search:
+    provider: google
+    target: _blank
+
+- docker:

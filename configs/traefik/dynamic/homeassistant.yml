@@ -1,0 +1,17 @@
+http:
+  routers:
+    homeassistant:
+      rule: "Host(`home.romulus.hu`)"
+      entrypoints:
+        - websecure
+      service: homeassistant
+      tls:
+        certResolver: cloudflare
+      middlewares:
+        - secure-headers
+
+  services:
+    homeassistant:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.0.3:8123"

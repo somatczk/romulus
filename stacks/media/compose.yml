@@ -1,0 +1,268 @@
+services:
+  jellyfin:
+    image: jellyfin/jellyfin:latest
+    container_name: jellyfin
+    runtime: nvidia
+    env_file: ../.env
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${APPDATA}/media/jellyfin/config:/config
+      - ${APPDATA}/media/jellyfin/cache:/cache
+      - ${HDD}/media/movies:/data/movies
+      - ${HDD}/media/series:/data/series
+      - ${HDD}/media/music:/data/music
+    networks:
+      - proxy
+      - media
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.jellyfin.rule=Host(`jellyfin.${DOMAIN}`)
+      - traefik.http.routers.jellyfin.entrypoints=websecure
+      - traefik.http.routers.jellyfin.tls.certresolver=cloudflare
+      - traefik.http.routers.jellyfin.middlewares=secure-headers@file
+      - traefik.http.services.jellyfin.loadbalancer.server.port=8096
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8096/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+    restart: unless-stopped
+
+  sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: sonarr
+    env_file: ../.env
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${APPDATA}/media/sonarr:/config
+      - ${HDD}/media/series:/tv
+      - ${HDD}/downloads:/downloads
+    networks:
+      - proxy
+      - media
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.sonarr.rule=Host(`sonarr.${DOMAIN}`)
+      - traefik.http.routers.sonarr.entrypoints=websecure
+      - traefik.http.routers.sonarr.tls.certresolver=cloudflare
+      - traefik.http.routers.sonarr.middlewares=secure-admin@file
+      - traefik.http.services.sonarr.loadbalancer.server.port=8989
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+  radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: radarr
+    env_file: ../.env
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${APPDATA}/media/radarr:/config
+      - ${HDD}/media/movies:/movies
+      - ${HDD}/downloads:/downloads
+    networks:
+      - proxy
+      - media
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.radarr.rule=Host(`radarr.${DOMAIN}`)
+      - traefik.http.routers.radarr.entrypoints=websecure
+      - traefik.http.routers.radarr.tls.certresolver=cloudflare
+      - traefik.http.routers.radarr.middlewares=secure-admin@file
+      - traefik.http.services.radarr.loadbalancer.server.port=7878
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+  flaresolverr:
+    image: ghcr.io/flaresolverr/flaresolverr:latest
+    container_name: flaresolverr
+    environment:
+      - TZ=${TZ}
+    networks:
+      - media
+      - proxy
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+  prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: prowlarr
+    env_file: ../.env
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${APPDATA}/media/prowlarr:/config
+    networks:
+      - proxy
+      - media
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.prowlarr.rule=Host(`prowlarr.${DOMAIN}`)
+      - traefik.http.routers.prowlarr.entrypoints=websecure
+      - traefik.http.routers.prowlarr.tls.certresolver=cloudflare
+      - traefik.http.routers.prowlarr.middlewares=secure-admin@file
+      - traefik.http.services.prowlarr.loadbalancer.server.port=9696
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+  bazarr:
+    image: lscr.io/linuxserver/bazarr:latest
+    container_name: bazarr
+    env_file: ../.env
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${APPDATA}/media/bazarr:/config
+      - ${HDD}/media/movies:/movies
+      - ${HDD}/media/series:/tv
+    networks:
+      - proxy
+      - media
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.bazarr.rule=Host(`bazarr.${DOMAIN}`)
+      - traefik.http.routers.bazarr.entrypoints=websecure
+      - traefik.http.routers.bazarr.tls.certresolver=cloudflare
+      - traefik.http.routers.bazarr.middlewares=secure-admin@file
+      - traefik.http.services.bazarr.loadbalancer.server.port=6767
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+  lidarr:
+    image: lscr.io/linuxserver/lidarr:latest
+    container_name: lidarr
+    env_file: ../.env
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - ${APPDATA}/media/lidarr:/config
+      - ${HDD}/media/music:/music
+      - ${HDD}/downloads:/downloads
+    networks:
+      - proxy
+      - media
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.lidarr.rule=Host(`lidarr.${DOMAIN}`)
+      - traefik.http.routers.lidarr.entrypoints=websecure
+      - traefik.http.routers.lidarr.tls.certresolver=cloudflare
+      - traefik.http.routers.lidarr.middlewares=secure-admin@file
+      - traefik.http.services.lidarr.loadbalancer.server.port=8686
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+  qbittorrent:
+    image: lscr.io/linuxserver/qbittorrent:latest
+    container_name: qbittorrent
+    env_file: ../.env
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - WEBUI_PORT=8080
+      - QBT_WEBUI_PASSWORD=${QBIT_WEBUI_PASSWORD}
+    volumes:
+      - ${APPDATA}/media/qbittorrent:/config
+      - ${HDD}/downloads:/downloads
+    ports:
+      - 6881:6881
+      - 6881:6881/udp
+    networks:
+      - proxy
+      - media
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.qbit.rule=Host(`qbit.${DOMAIN}`)
+      - traefik.http.routers.qbit.entrypoints=websecure
+      - traefik.http.routers.qbit.tls.certresolver=cloudflare
+      - traefik.http.routers.qbit.middlewares=secure-admin@file
+      - traefik.http.services.qbit.loadbalancer.server.port=8080
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+  jellyseerr:
+    image: fallenbagel/jellyseerr:latest
+    container_name: jellyseerr
+    env_file: ../.env
+    environment:
+      - TZ=${TZ}
+    volumes:
+      - ${APPDATA}/media/jellyseerr:/app/config
+    networks:
+      - proxy
+      - media
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.requests.rule=Host(`requests.${DOMAIN}`)
+      - traefik.http.routers.requests.entrypoints=websecure
+      - traefik.http.routers.requests.tls.certresolver=cloudflare
+      - traefik.http.routers.requests.middlewares=secure-headers@file
+      - traefik.http.services.requests.loadbalancer.server.port=5055
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+networks:
+  proxy:
+    external: true
+  media:
+    external: true

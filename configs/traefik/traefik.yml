@@ -1,0 +1,51 @@
+api:
+  dashboard: true
+
+ping:
+  entryPoint: metrics
+
+log:
+  level: WARN
+
+accessLog: {}
+
+entryPoints:
+  web:
+    address: ":80"
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+          permanent: true
+  websecure:
+    address: ":443"
+  metrics:
+    address: ":8082"
+
+providers:
+  docker:
+    endpoint: "tcp://socket-proxy:2375"
+    exposedByDefault: false
+    network: proxy
+  file:
+    directory: /dynamic
+    watch: true
+
+certificatesResolvers:
+  cloudflare:
+    acme:
+      email: "somatczk@gmail.com"
+      dnsChallenge:
+        provider: cloudflare
+        delayBeforeCheck: 10
+        resolvers:
+          - "1.1.1.1:53"
+          - "8.8.8.8:53"
+      storage: /acme.json
+
+metrics:
+  prometheus:
+    entryPoint: metrics
+    addEntryPointsLabels: true
+    addServicesLabels: true

@@ -33,9 +33,9 @@ runs:
       run: |
         sleep 15
         cd /DATA/stacks/stacks
-        docker compose -f ${{ inputs.stack }}/compose.yml ps --format json | \
-          jq -r '.[] | select(.Health == "unhealthy") | .Name' 2>/dev/null | while read -r name; do
+        docker compose -f ${{ inputs.stack }}/compose.yml ps --format json 2>/dev/null | \
+          jq -r 'select(.Health == "unhealthy") | .Name' 2>/dev/null | while read -r name; do
             if [ -n "$name" ]; then
               echo "::warning::Unhealthy: $name"
             fi
-          done
+          done || true

@@ -65,29 +65,27 @@ runs:
         YAML_FILES_FOUND=false
 
         # Validate config YAML files
-        if find "${{ inputs.config-path }}" -name "*.yml" -o -name "*.yaml" 2>/dev/null | grep -q .; then
+        while IFS= read -r file; do
           YAML_FILES_FOUND=true
-          find "${{ inputs.config-path }}" -name "*.yml" -o -name "*.yaml" | while read -r file; do
-            echo "Validating: $file"
-            if python3 -c "import yaml; yaml.safe_load(open('$file'))" 2>/dev/null; then
-              echo "  Valid YAML"
-            else
-              echo "  Invalid YAML"
-              ((YAML_ERRORS++))
-            fi
-          done
-        fi
+          echo "Validating: $file"
+          if python3 -c "import yaml; list(yaml.safe_load_all(open('$file')))" 2>/dev/null; then
+            echo "  Valid YAML"
+          else
+            echo "  Invalid YAML"
+            YAML_ERRORS=$((YAML_ERRORS + 1))
+          fi
+        done < <(find "${{ inputs.config-path }}" -name "*.yml" -o -name "*.yaml" 2>/dev/null)
 
         # Validate stacks compose files
         for compose_file in stacks/*/compose.yml; do
           if [[ -f "$compose_file" ]]; then
             YAML_FILES_FOUND=true
             echo "Validating: $compose_file"
-            if python3 -c "import yaml; yaml.safe_load(open('$compose_file'))" 2>/dev/null; then
+            if python3 -c "import yaml; list(yaml.safe_load_all(open('$compose_file')))" 2>/dev/null; then
               echo "  Valid YAML"
             else
               echo "  Invalid YAML"
-              ((YAML_ERRORS++))
+              YAML_ERRORS=$((YAML_ERRORS + 1))
             fi
           fi
         done
@@ -116,18 +114,16 @@ runs:
         SHELL_FILES_FOUND=false
         SHELL_ERRORS=0
 
-        if find "${{ inputs.scripts-path }}" -name "*.sh" 2>/dev/null | grep -q .; then
+        while IFS= read -r file; do
           SHELL_FILES_FOUND=true
-          find "${{ inputs.scripts-path }}" -name "*.sh" | while read -r file; do
-            echo "Validating: $file"
-            if bash -n "$file" 2>/dev/null; then
-              echo "  Valid shell script"
-            else
-              echo "  Invalid shell script"
-              ((SHELL_ERRORS++))
-            fi
-          done
-        fi
+          echo "Validating: $file"
+          if bash -n "$file" 2>/dev/null; then
+            echo "  Valid shell script"
+          else
+            echo "  Invalid shell script"
+            SHELL_ERRORS=$((SHELL_ERRORS + 1))
+          fi
+        done < <(find "${{ inputs.scripts-path }}" -name "*.sh" 2>/dev/null)
 
         if [[ "$SHELL_FILES_FOUND" == "true" ]]; then
           if [[ $SHELL_ERRORS -eq 0 ]]; then
@@ -151,10 +147,21 @@ runs:
         echo "Validating Docker Compose configuration..."
 
         if ! command -v docker &> /dev/null; then
-          echo "INFO: Docker not available, skipping validation"
+          echo "INFO: Docker not available, skipping compose validation"
           echo "valid=true" >> $GITHUB_OUTPUT
           exit 0
         fi
+
+        GENERATED_ENV=false
+        if [[ ! -f stacks/.env ]]; then
+          echo "stacks/.env not found, generating dummy env for validation..."
+          GENERATED_ENV=true
+          grep -rohP '\$\{([A-Z_][A-Z0-9_]*)' stacks/*/compose.yml | sed 's/\${//' | sort -u | while read -r var; do
+            echo "${var}=placeholder"
+          done > stacks/.env
+          echo "  Generated $(wc -l < stacks/.env) placeholder variables"
+        fi
+        trap '[ "$GENERATED_ENV" = true ] && rm -f stacks/.env' EXIT
 
         ERRORS=0
         for compose_file in stacks/*/compose.yml; do
@@ -163,11 +170,12 @@ runs:
             stack_name=$(basename "$stack_dir")
             echo "Validating: $compose_file"
 
-            if docker compose --env-file stacks/.env -f "$compose_file" config --quiet 2>/dev/null; then
+            if output=$(docker compose --env-file stacks/.env -f "$compose_file" config --quiet 2>&1); then
               echo "  Valid Docker Compose"
             else
               echo "  Invalid Docker Compose: $stack_name"
-              ((ERRORS++))
+              echo "  $output"
+              ERRORS=$((ERRORS + 1))
             fi
           fi
         done

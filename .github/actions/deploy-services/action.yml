@@ -21,12 +21,12 @@ runs:
         if [ -n "${{ inputs.force_recreate_services }}" ]; then
           echo "Force-recreating: ${{ inputs.force_recreate_services }}"
           docker compose --env-file .env -f ${{ inputs.stack }}/compose.yml \
-            up -d --force-recreate ${{ inputs.force_recreate_services }}
+            up -d --build --force-recreate ${{ inputs.force_recreate_services }}
         fi
 
         echo "Deploying stack: ${{ inputs.stack }}"
         docker compose --env-file .env -f ${{ inputs.stack }}/compose.yml \
-          up -d --remove-orphans
+          up -d --build --remove-orphans
 
     - name: Check Stack Health
       shell: bash

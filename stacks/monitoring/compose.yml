@@ -1,6 +1,7 @@
 services:
   prometheus:
-    image: prom/prometheus:latest
+    build: ./prometheus
+    image: prom/prometheus:v3.10.0
     container_name: prometheus
     restart: unless-stopped
     env_file: ../.env
@@ -39,7 +40,8 @@ services:
       - no-new-privileges:true
 
   grafana:
-    image: grafana/grafana:latest
+    build: ./grafana
+    image: grafana/grafana:12.4.0
     container_name: grafana
     restart: unless-stopped
     env_file: ../.env
@@ -84,7 +86,8 @@ services:
       - no-new-privileges:true
 
   loki:
-    image: grafana/loki:latest
+    build: ./loki
+    image: grafana/loki:3.6.7
     container_name: loki
     restart: unless-stopped
     env_file: ../.env
@@ -102,7 +105,8 @@ services:
       - no-new-privileges:true
 
   promtail:
-    image: grafana/promtail:latest
+    build: ./promtail
+    image: grafana/promtail:3.6.7
     container_name: promtail
     restart: unless-stopped
     networks:
@@ -123,7 +127,8 @@ services:
       - no-new-privileges:true
 
   node-exporter:
-    image: prom/node-exporter:latest
+    build: ./node-exporter
+    image: prom/node-exporter:v1.10.2
     container_name: node-exporter
     restart: unless-stopped
     pid: host
@@ -146,6 +151,7 @@ services:
       - no-new-privileges:true
 
   cadvisor:
+    build: ./cadvisor
     image: gcr.io/cadvisor/cadvisor:v0.51.0
     container_name: cadvisor
     restart: unless-stopped
@@ -169,6 +175,7 @@ services:
           memory: 512M
 
   nvidia-gpu-exporter:
+    build: ./nvidia-gpu-exporter
     image: utkuozdemir/nvidia_gpu_exporter:1.4.1
     container_name: nvidia-gpu-exporter
     restart: unless-stopped
@@ -183,7 +190,8 @@ services:
           memory: 64M
 
   restic-exporter:
-    image: ngosang/restic-exporter:latest
+    build: ./restic-exporter
+    image: ngosang/restic-exporter:2.0.2
     container_name: restic-exporter
     restart: unless-stopped
     env_file: ../.env
@@ -203,7 +211,8 @@ services:
       - no-new-privileges:true
 
   uptime-kuma:
-    image: louislam/uptime-kuma:1
+    build: ./uptime-kuma
+    image: louislam/uptime-kuma:1.23.14
     container_name: uptime-kuma
     restart: unless-stopped
     env_file: ../.env
@@ -230,7 +239,8 @@ services:
       - no-new-privileges:true
 
   glances:
-    image: nicolargo/glances:latest-full
+    build: ./glances
+    image: nicolargo/glances:4.5.0.5-full
     container_name: glances
     restart: unless-stopped
     pid: host
@@ -255,7 +265,8 @@ services:
           memory: 512M
 
   smartctl-exporter:
-    image: prometheuscommunity/smartctl-exporter:latest
+    build: ./smartctl-exporter
+    image: prometheuscommunity/smartctl-exporter:v0.14.0
     container_name: smartctl-exporter
     restart: unless-stopped
     privileged: true

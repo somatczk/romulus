@@ -1,0 +1,131 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - 'stacks/**'
+      - 'configs/**'
+      - '.github/**'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-config:
+    name: Validate Configuration
+    runs-on: [self-hosted, romulus]
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Validate Config
+        uses: ./.github/actions/validate-config
+
+  validate-dockerfiles:
+    name: Validate Dockerfiles
+    runs-on: [self-hosted, romulus]
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Lint Dockerfiles
+        run: |
+          ERRORS=0
+          for dockerfile in $(find stacks -name Dockerfile); do
+            echo "Checking: $dockerfile"
+
+            # Must be exactly one FROM line
+            from_count=$(grep -c '^FROM ' "$dockerfile" || true)
+            if [[ "$from_count" -ne 1 ]]; then
+              echo "  ERROR: Expected 1 FROM line, found $from_count"
+              ((ERRORS++))
+              continue
+            fi
+
+            # Extract the tag
+            tag=$(grep '^FROM ' "$dockerfile" | sed 's/FROM [^:]*://' | sed 's/ .*//')
+            if [[ -z "$tag" ]]; then
+              echo "  ERROR: No tag specified"
+              ((ERRORS++))
+              continue
+            fi
+
+            # Must not use unpinned tags
+            if [[ "$tag" == "latest" || "$tag" == "stable" || "$tag" == "release" ]]; then
+              echo "  ERROR: Unpinned tag '$tag' — must use a specific version"
+              ((ERRORS++))
+              continue
+            fi
+
+            echo "  OK (tag: $tag)"
+          done
+
+          if [[ $ERRORS -gt 0 ]]; then
+            echo ""
+            echo "Found $ERRORS Dockerfile validation error(s)"
+            exit 1
+          fi
+          echo ""
+          echo "All Dockerfiles are valid"
+
+  verify-images:
+    name: Verify Changed Images
+    runs-on: [self-hosted, romulus]
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Get changed Dockerfiles
+        id: changed
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            FILES=$(git diff --name-only --diff-filter=ACMR origin/${{ github.base_ref }}...HEAD -- 'stacks/*/Dockerfile' 'stacks/*/*/Dockerfile' || true)
+          else
+            FILES=$(find stacks -name Dockerfile)
+          fi
+          echo "files<<EOF" >> $GITHUB_OUTPUT
+          echo "$FILES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+          if [[ -z "$FILES" ]]; then
+            echo "No Dockerfile changes detected"
+          else
+            echo "Changed Dockerfiles:"
+            echo "$FILES"
+          fi
+
+      - name: Verify images exist
+        if: steps.changed.outputs.files != ''
+        run: |
+          ERRORS=0
+          PULLED_IMAGES=()
+
+          while IFS= read -r dockerfile; do
+            [[ -z "$dockerfile" ]] && continue
+            [[ ! -f "$dockerfile" ]] && continue
+
+            image=$(grep '^FROM ' "$dockerfile" | head -1 | awk '{print $2}')
+            echo "Verifying: $image (from $dockerfile)"
+
+            if docker pull "$image" --quiet; then
+              echo "  OK"
+              PULLED_IMAGES+=("$image")
+            else
+              echo "  ERROR: Failed to pull $image"
+              ((ERRORS++))
+            fi
+          done <<< "${{ steps.changed.outputs.files }}"
+
+          # Cleanup pulled images
+          for img in "${PULLED_IMAGES[@]}"; do
+            docker rmi "$img" > /dev/null 2>&1 || true
+          done
+
+          if [[ $ERRORS -gt 0 ]]; then
+            echo ""
+            echo "Failed to verify $ERRORS image(s)"
+            exit 1
+          fi
+          echo ""
+          echo "All images verified successfully"

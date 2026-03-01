@@ -147,9 +147,20 @@ runs:
         echo "Validating Docker Compose configuration..."
 
         if ! command -v docker &> /dev/null; then
-          echo "INFO: Docker not available, skipping validation"
+          echo "INFO: Docker not available, skipping compose validation"
           echo "valid=true" >> $GITHUB_OUTPUT
           exit 0
+        fi
+
+        ENV_FILE="stacks/.env"
+        if [[ ! -f "$ENV_FILE" ]]; then
+          echo "stacks/.env not found, generating dummy env for validation..."
+          ENV_FILE=$(mktemp)
+          trap "rm -f $ENV_FILE" EXIT
+          grep -rohP '\$\{([A-Z_][A-Z0-9_]*)' stacks/*/compose.yml | sed 's/\${//' | sort -u | while read -r var; do
+            echo "${var}=placeholder"
+          done > "$ENV_FILE"
+          echo "  Generated $(wc -l < "$ENV_FILE") placeholder variables"
         fi
 
         ERRORS=0
@@ -159,7 +170,7 @@ runs:
             stack_name=$(basename "$stack_dir")
             echo "Validating: $compose_file"
 
-            if output=$(docker compose --env-file stacks/.env -f "$compose_file" config --quiet 2>&1); then
+            if output=$(docker compose --env-file "$ENV_FILE" -f "$compose_file" config --quiet 2>&1); then
               echo "  Valid Docker Compose"
             else
               echo "  Invalid Docker Compose: $stack_name"

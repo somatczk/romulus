@@ -147,7 +147,7 @@ services:
 
   teamspeak-db:
     build: ./teamspeak-db
-    image: mariadb:11.8.6
+    image: mariadb:12.2.2
     container_name: teamspeak-db
     env_file: ../.env
     networks:

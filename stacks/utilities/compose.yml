@@ -225,7 +225,7 @@ services:
       - socket
     environment:
       AUTOHEAL_CONTAINER_LABEL: all
-      DOCKER_HOST: tcp://socket-proxy:2375
+      DOCKER_SOCK: tcp://socket-proxy:2375
       AUTOHEAL_INTERVAL: 60
       AUTOHEAL_START_PERIOD: 300
     deploy:

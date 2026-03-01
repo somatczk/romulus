@@ -39,7 +39,7 @@ jobs:
             from_count=$(grep -c '^FROM ' "$dockerfile" || true)
             if [[ "$from_count" -ne 1 ]]; then
               echo "  ERROR: Expected 1 FROM line, found $from_count"
-              ((ERRORS++))
+              ERRORS=$((ERRORS + 1))
               continue
             fi
 
@@ -47,14 +47,14 @@ jobs:
             tag=$(grep '^FROM ' "$dockerfile" | sed 's/FROM [^:]*://' | sed 's/ .*//')
             if [[ -z "$tag" ]]; then
               echo "  ERROR: No tag specified"
-              ((ERRORS++))
+              ERRORS=$((ERRORS + 1))
               continue
             fi
 
             # Must not use unpinned tags
             if [[ "$tag" == "latest" || "$tag" == "stable" || "$tag" == "release" ]]; then
               echo "  ERROR: Unpinned tag '$tag' — must use a specific version"
-              ((ERRORS++))
+              ERRORS=$((ERRORS + 1))
               continue
             fi
 
@@ -113,7 +113,7 @@ jobs:
               PULLED_IMAGES+=("$image")
             else
               echo "  ERROR: Failed to pull $image"
-              ((ERRORS++))
+              ERRORS=$((ERRORS + 1))
             fi
           done <<< "${{ steps.changed.outputs.files }}"
 

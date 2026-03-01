@@ -20,7 +20,7 @@ x-runner: &runner-defaults
     ORG_NAME: ${GITHUB_ORG}
     ACCESS_TOKEN: ${GITHUB_PAT}
     RUNNER_NAME_PREFIX: zimaos
-    LABELS: self-hosted,linux,x64,zimaos
+    LABELS: self-hosted,linux,x64,zimaos,org-dsfsm
     EPHEMERAL: "true"
     DISABLE_AUTO_UPDATE: "true"
     RUNNER_WORKDIR: /work
@@ -47,7 +47,34 @@ x-solhouse-runner: &solhouse-defaults
     REPO_URL: https://github.com/somatczk/solhouse-nextjs
     ACCESS_TOKEN: ${GITHUB_PAT}
     RUNNER_NAME_PREFIX: zimaos-solhouse
-    LABELS: self-hosted,linux,x64,zimaos
+    LABELS: self-hosted,linux,x64,zimaos,solhouse
+    EPHEMERAL: "true"
+    DISABLE_AUTO_UPDATE: "true"
+    RUNNER_WORKDIR: /work
+  deploy:
+    resources:
+      limits:
+        memory: 6G
+        cpus: "4.0"
+  security_opt:
+    - no-new-privileges:true
+  restart: unless-stopped
+
+x-romulus-runner: &romulus-defaults
+  image: myoung34/github-runner:latest
+  env_file: ../.env
+  networks:
+    - ci
+    - ci-socket
+    - proxy
+  environment:
+    DOCKER_HOST: tcp://ci-socket-proxy:2375
+    DOCKER_CONFIG: /tmp/.docker
+    RUNNER_SCOPE: repo
+    REPO_URL: https://github.com/somatczk/romulus
+    ACCESS_TOKEN: ${GITHUB_PAT}
+    RUNNER_NAME_PREFIX: zimaos-romulus
+    LABELS: self-hosted,linux,x64,zimaos,romulus
     EPHEMERAL: "true"
     DISABLE_AUTO_UPDATE: "true"
     RUNNER_WORKDIR: /work
@@ -137,3 +164,15 @@ services:
     container_name: gh-runner-solhouse-4
     volumes:
       - ${APPDATA}/ci/runners/runner-solhouse-4:/work
+
+  gh-runner-romulus-1:
+    <<: *romulus-defaults
+    container_name: gh-runner-romulus-1
+    volumes:
+      - ${APPDATA}/ci/runners/runner-romulus-1:/work
+
+  gh-runner-romulus-2:
+    <<: *romulus-defaults
+    container_name: gh-runner-romulus-2
+    volumes:
+      - ${APPDATA}/ci/runners/runner-romulus-2:/work

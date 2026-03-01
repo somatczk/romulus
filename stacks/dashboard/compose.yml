@@ -6,6 +6,7 @@ networks:
 
 services:
   homepage:
+    build: ./homepage
     image: ghcr.io/gethomepage/homepage:v1.10.1
     container_name: homepage
     networks:

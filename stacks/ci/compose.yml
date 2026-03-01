@@ -7,7 +7,8 @@ networks:
     external: true
 
 x-runner: &runner-defaults
-  image: myoung34/github-runner:latest
+  build: ./gh-runner
+  image: myoung34/github-runner:2.332.0
   env_file: ../.env
   networks:
     - ci
@@ -34,7 +35,8 @@ x-runner: &runner-defaults
   restart: unless-stopped
 
 x-solhouse-runner: &solhouse-defaults
-  image: myoung34/github-runner:latest
+  build: ./gh-runner
+  image: myoung34/github-runner:2.332.0
   env_file: ../.env
   networks:
     - ci
@@ -61,7 +63,8 @@ x-solhouse-runner: &solhouse-defaults
   restart: unless-stopped
 
 x-romulus-runner: &romulus-defaults
-  image: myoung34/github-runner:latest
+  build: ./gh-runner
+  image: myoung34/github-runner:2.332.0
   env_file: ../.env
   networks:
     - ci
@@ -89,6 +92,7 @@ x-romulus-runner: &romulus-defaults
 
 services:
   ci-socket-proxy:
+    build: ./socket-proxy
     image: tecnativa/docker-socket-proxy:0.3
     container_name: ci-socket-proxy
     restart: unless-stopped

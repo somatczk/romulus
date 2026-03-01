@@ -6,6 +6,7 @@ networks:
 
 services:
   socket-proxy:
+    build: ./socket-proxy
     image: tecnativa/docker-socket-proxy:0.3
     container_name: socket-proxy
     restart: unless-stopped
@@ -35,6 +36,7 @@ services:
       - no-new-privileges:true
 
   traefik:
+    build: ./traefik
     image: traefik:v3.3
     container_name: traefik
     restart: unless-stopped
@@ -75,7 +77,8 @@ services:
       - no-new-privileges:true
 
   cloudflare-ddns:
-    image: favonia/cloudflare-ddns:latest
+    build: ./cloudflare-ddns
+    image: favonia/cloudflare-ddns:1.15.1
     container_name: cloudflare-ddns
     restart: unless-stopped
     environment:
@@ -92,6 +95,7 @@ services:
       - no-new-privileges:true
 
   adguard:
+    build: ./adguard
     image: adguard/adguardhome:v0.107.72
     container_name: adguard
     restart: unless-stopped

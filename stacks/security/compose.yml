@@ -8,7 +8,8 @@ networks:
 
 services:
   authelia:
-    image: authelia/authelia:latest
+    build: ./authelia
+    image: authelia/authelia:4.39.15
     container_name: authelia
     restart: unless-stopped
     env_file: ../.env
@@ -44,7 +45,8 @@ services:
       - no-new-privileges:true
 
   crowdsec:
-    image: crowdsecurity/crowdsec:latest
+    build: ./crowdsec
+    image: crowdsecurity/crowdsec:v1.7.6
     container_name: crowdsec
     restart: unless-stopped
     env_file: ../.env
@@ -72,7 +74,8 @@ services:
       - no-new-privileges:true
 
   crowdsec-bouncer:
-    image: fbonalair/traefik-crowdsec-bouncer:latest
+    build: ./crowdsec-bouncer
+    image: fbonalair/traefik-crowdsec-bouncer:0.5.0
     container_name: crowdsec-bouncer
     restart: unless-stopped
     env_file: ../.env

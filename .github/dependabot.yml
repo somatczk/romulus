@@ -4,3 +4,70 @@ updates:
     directory: /
     schedule:
       interval: weekly
+
+  - package-ecosystem: docker
+    directories:
+      - /stacks/ci/socket-proxy
+      - /stacks/ci/gh-runner
+      - /stacks/core/socket-proxy
+      - /stacks/core/traefik
+      - /stacks/core/cloudflare-ddns
+      - /stacks/core/adguard
+      - /stacks/dashboard/homepage
+      - /stacks/media/jellyfin
+      - /stacks/media/sonarr
+      - /stacks/media/radarr
+      - /stacks/media/flaresolverr
+      - /stacks/media/prowlarr
+      - /stacks/media/bazarr
+      - /stacks/media/lidarr
+      - /stacks/media/qbittorrent
+      - /stacks/media/jellyseerr
+      - /stacks/monitoring/prometheus
+      - /stacks/monitoring/grafana
+      - /stacks/monitoring/loki
+      - /stacks/monitoring/promtail
+      - /stacks/monitoring/node-exporter
+      - /stacks/monitoring/cadvisor
+      - /stacks/monitoring/nvidia-gpu-exporter
+      - /stacks/monitoring/restic-exporter
+      - /stacks/monitoring/uptime-kuma
+      - /stacks/monitoring/glances
+      - /stacks/monitoring/smartctl-exporter
+      - /stacks/notifications/ntfy
+      - /stacks/productivity/postgres
+      - /stacks/productivity/redis
+      - /stacks/productivity/nextcloud
+      - /stacks/productivity/immich-db
+      - /stacks/productivity/immich-server
+      - /stacks/productivity/immich-ml
+      - /stacks/productivity/homeassistant
+      - /stacks/productivity/paperless
+      - /stacks/productivity/actual-budget
+      - /stacks/productivity/homebox
+      - /stacks/security/authelia
+      - /stacks/security/crowdsec
+      - /stacks/security/crowdsec-bouncer
+      - /stacks/utilities/watchtower
+      - /stacks/utilities/dozzle
+      - /stacks/utilities/speedtest-exporter
+      - /stacks/utilities/speedtest
+      - /stacks/utilities/portainer
+      - /stacks/utilities/teamspeak-db
+      - /stacks/utilities/teamspeak
+      - /stacks/utilities/autoheal
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Budapest
+    labels:
+      - dependencies
+      - docker
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: "docker"
+    groups:
+      immich-stack:
+        patterns:
+          - "ghcr.io/immich-app/*"

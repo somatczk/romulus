@@ -13,7 +13,8 @@ services:
   # Nextcloud Group
   # ---------------------------------------------------------------------------
   nextcloud-db:
-    image: postgres:16-alpine
+    build: ./postgres
+    image: postgres:16.13-alpine
     container_name: nextcloud-db
     restart: unless-stopped
     env_file: ../.env
@@ -38,7 +39,8 @@ services:
       - no-new-privileges:true
 
   nextcloud-redis:
-    image: redis:7-alpine
+    build: ./redis
+    image: redis:7.4.8-alpine
     container_name: nextcloud-redis
     restart: unless-stopped
     env_file: ../.env
@@ -60,7 +62,8 @@ services:
       - no-new-privileges:true
 
   nextcloud:
-    image: nextcloud:stable
+    build: ./nextcloud
+    image: nextcloud:33.0.0
     container_name: nextcloud
     restart: unless-stopped
     env_file: ../.env
@@ -111,6 +114,7 @@ services:
   # Immich Group
   # ---------------------------------------------------------------------------
   immich-db:
+    build: ./immich-db
     image: tensorchord/pgvecto-rs:pg16-v0.2.0
     container_name: immich-db
     restart: unless-stopped
@@ -137,7 +141,8 @@ services:
       - no-new-privileges:true
 
   immich-redis:
-    image: redis:7-alpine
+    build: ./redis
+    image: redis:7.4.8-alpine
     container_name: immich-redis
     restart: unless-stopped
     env_file: ../.env
@@ -158,7 +163,8 @@ services:
       - no-new-privileges:true
 
   immich-server:
-    image: ghcr.io/immich-app/immich-server:release
+    build: ./immich-server
+    image: ghcr.io/immich-app/immich-server:v2.5.6
     container_name: immich-server
     restart: unless-stopped
     env_file: ../.env
@@ -202,7 +208,8 @@ services:
       - no-new-privileges:true
 
   immich-ml:
-    image: ghcr.io/immich-app/immich-machine-learning:release
+    build: ./immich-ml
+    image: ghcr.io/immich-app/immich-machine-learning:v2.5.6
     container_name: immich-ml
     restart: unless-stopped
     env_file: ../.env
@@ -229,7 +236,8 @@ services:
   #   configs/traefik/dynamic/homeassistant.yml with a service URL of
   #   http://<host-ip>:8123. See Traefik docs for file provider configuration.
   homeassistant:
-    image: ghcr.io/home-assistant/home-assistant:stable
+    build: ./homeassistant
+    image: ghcr.io/home-assistant/home-assistant:2026.2.3
     container_name: homeassistant
     restart: unless-stopped
     env_file: ../.env
@@ -254,7 +262,8 @@ services:
   # Paperless-ngx Group
   # ---------------------------------------------------------------------------
   paperless-db:
-    image: postgres:16-alpine
+    build: ./postgres
+    image: postgres:16.13-alpine
     container_name: paperless-db
     restart: unless-stopped
     env_file: ../.env
@@ -279,7 +288,8 @@ services:
       - no-new-privileges:true
 
   paperless-redis:
-    image: redis:7-alpine
+    build: ./redis
+    image: redis:7.4.8-alpine
     container_name: paperless-redis
     restart: unless-stopped
     networks:
@@ -297,7 +307,8 @@ services:
       - no-new-privileges:true
 
   paperless:
-    image: ghcr.io/paperless-ngx/paperless-ngx:latest
+    build: ./paperless
+    image: ghcr.io/paperless-ngx/paperless-ngx:2.20.9
     container_name: paperless
     restart: unless-stopped
     env_file: ../.env
@@ -350,7 +361,8 @@ services:
   # Actual Budget
   # ---------------------------------------------------------------------------
   actual-budget:
-    image: actualbudget/actual-server:latest
+    build: ./actual-budget
+    image: actualbudget/actual-server:26.2.1
     container_name: actual-budget
     restart: unless-stopped
     env_file: ../.env
@@ -381,7 +393,8 @@ services:
   # Homebox
   # ---------------------------------------------------------------------------
   homebox:
-    image: ghcr.io/sysadminsmedia/homebox:latest
+    build: ./homebox
+    image: ghcr.io/sysadminsmedia/homebox:v0.23.1
     container_name: homebox
     restart: unless-stopped
     env_file: ../.env

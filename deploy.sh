@@ -179,7 +179,7 @@ do_phase2() {
     ssh_cmd bash <<'REMOTE_SCRIPT'
 set -euo pipefail
 cd /DATA/stacks/stacks
-docker compose --env-file .env -f core/compose.yml up -d
+docker compose --env-file .env -f core/compose.yml up -d --build
 echo "Waiting for Traefik to obtain certificates..."
 sleep 15
 docker compose --env-file .env -f core/compose.yml ps
@@ -195,7 +195,7 @@ do_phase3() {
     ssh_cmd bash <<'REMOTE_SCRIPT'
 set -euo pipefail
 cd /DATA/stacks/stacks
-docker compose --env-file .env -f security/compose.yml up -d
+docker compose --env-file .env -f security/compose.yml up -d --build
 sleep 5
 docker compose --env-file .env -f security/compose.yml ps
 REMOTE_SCRIPT
@@ -260,43 +260,43 @@ REMOTE_SCRIPT
 ###############################################################################
 do_media() {
     log "Starting media stack..."
-    ssh_cmd "cd /DATA/stacks/stacks && docker compose --env-file .env -f media/compose.yml up -d"
+    ssh_cmd "cd /DATA/stacks/stacks && docker compose --env-file .env -f media/compose.yml up -d --build"
     ok "Media stack running"
 }
 
 do_productivity() {
     log "Starting productivity stack..."
-    ssh_cmd "cd /DATA/stacks/stacks && docker compose --env-file .env -f productivity/compose.yml up -d"
+    ssh_cmd "cd /DATA/stacks/stacks && docker compose --env-file .env -f productivity/compose.yml up -d --build"
     ok "Productivity stack running"
 }
 
 do_ci() {
     log "Starting CI stack..."
-    ssh_cmd "cd /DATA/stacks/stacks && docker compose --env-file .env -f ci/compose.yml up -d"
+    ssh_cmd "cd /DATA/stacks/stacks && docker compose --env-file .env -f ci/compose.yml up -d --build"
     ok "CI stack running"
 }
 
 do_monitoring() {
     log "Starting monitoring stack..."
-    ssh_cmd "cd /DATA/stacks/stacks && docker compose --env-file .env -f monitoring/compose.yml up -d"
+    ssh_cmd "cd /DATA/stacks/stacks && docker compose --env-file .env -f monitoring/compose.yml up -d --build"
     ok "Monitoring stack running"
 }
 
 do_notifications() {
     log "Starting notifications stack..."
-    ssh_cmd "cd /DATA/stacks/stacks && docker compose --env-file .env -f notifications/compose.yml up -d"
+    ssh_cmd "cd /DATA/stacks/stacks && docker compose --env-file .env -f notifications/compose.yml up -d --build"
     ok "Notifications stack running"
 }
 
 do_utilities() {
     log "Starting utilities stack..."
-    ssh_cmd "cd /DATA/stacks/stacks && docker compose --env-file .env -f utilities/compose.yml up -d"
+    ssh_cmd "cd /DATA/stacks/stacks && docker compose --env-file .env -f utilities/compose.yml up -d --build"
     ok "Utilities stack running"
 }
 
 do_dashboard() {
     log "Starting dashboard stack..."
-    ssh_cmd "cd /DATA/stacks/stacks && docker compose --env-file .env -f dashboard/compose.yml up -d"
+    ssh_cmd "cd /DATA/stacks/stacks && docker compose --env-file .env -f dashboard/compose.yml up -d --build"
     ok "Dashboard stack running"
 }
 

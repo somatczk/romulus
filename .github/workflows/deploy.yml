@@ -289,8 +289,6 @@ jobs:
 
       - name: Send Notification
         if: always()
-        env:
-          NTFY_BASE_URL: ${{ secrets.NTFY_BASE_URL }}
         run: |
           if [[ "${{ needs.deploy-apps.result }}" == "failure" ]]; then
             STATUS="FAILED"
@@ -300,8 +298,8 @@ jobs:
             EMOJI="white_check_mark"
           fi
 
-          curl -s \
+          curl -s --max-time 10 \
             -H "Title: Romulus Deploy: ${STATUS}" \
             -H "Tags: ${EMOJI}" \
             -d "Deployment ${STATUS} for commit ${GITHUB_SHA:0:7} on $(date -u '+%Y-%m-%d %H:%M UTC')" \
-            "${NTFY_BASE_URL}/deployments" || true
+            "http://ntfy:80/deployments" || true

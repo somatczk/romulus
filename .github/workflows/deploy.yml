@@ -286,6 +286,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Health Check
+        id: health
         uses: ./.github/actions/health-check
 
       - name: Send Notification
@@ -294,7 +295,7 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          if [[ "${{ needs.deploy-apps.result }}" == "failure" ]]; then
+          if [[ "${{ needs.deploy-apps.result }}" == "failure" || "${{ steps.health.outcome }}" == "failure" ]]; then
             STATUS="FAILED"
             EMOJI="x"
             TG_EMOJI="&#10060;"

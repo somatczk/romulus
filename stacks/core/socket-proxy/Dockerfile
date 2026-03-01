@@ -1,1 +1,1 @@
-FROM tecnativa/docker-socket-proxy:0.3
+FROM tecnativa/docker-socket-proxy:v0.4.2

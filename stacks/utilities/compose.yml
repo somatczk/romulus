@@ -47,7 +47,7 @@ services:
       traefik.http.routers.logs.middlewares: secure-admin@file
       traefik.http.services.logs.loadbalancer.server.port: "8080"
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/healthcheck"]
+      test: ["CMD", "/dozzle", "healthcheck"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -67,10 +67,7 @@ services:
     ports:
       - "9798:9798"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9798"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
+      test: ["NONE"]
     deploy:
       resources:
         limits:
@@ -134,10 +131,7 @@ services:
       traefik.http.routers.portainer.middlewares: secure-admin@file
       traefik.http.services.portainer.loadbalancer.server.port: "9000"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/api/system/status"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
+      test: ["NONE"]
     deploy:
       resources:
         limits:

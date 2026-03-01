@@ -314,8 +314,7 @@ jobs:
             "http://ntfy:80/deployments" || true
 
           # Telegram
-          TG_TEXT="${TG_EMOJI} <b>Romulus Deploy: ${STATUS}</b>
-${MSG}"
+          TG_TEXT="${TG_EMOJI} <b>Romulus Deploy: ${STATUS}</b>"$'\n'"${MSG}"
           curl -s --max-time 10 \
             -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \

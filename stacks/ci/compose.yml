@@ -170,9 +170,11 @@ services:
     container_name: gh-runner-romulus-1
     volumes:
       - ${APPDATA}/ci/runners/runner-romulus-1:/work
+      - /DATA/stacks:/DATA/stacks
 
   gh-runner-romulus-2:
     <<: *romulus-defaults
     container_name: gh-runner-romulus-2
     volumes:
       - ${APPDATA}/ci/runners/runner-romulus-2:/work
+      - /DATA/stacks:/DATA/stacks

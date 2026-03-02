@@ -1,1 +1,1 @@
-FROM tensorchord/pgvecto-rs:pg16-v0.4.0
+FROM tensorchord/pgvecto-rs:pg16-v0.3.0

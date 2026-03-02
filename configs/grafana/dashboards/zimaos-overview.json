@@ -275,10 +275,10 @@
       "gridPos": { "h": 8, "w": 8, "x": 16, "y": 16 },
       "id": 23,
       "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi", "sort": "desc" } },
-      "title": "Drive Temperatures (SMART)",
+      "title": "Disk I/O Utilization",
       "type": "timeseries",
       "targets": [
-        { "expr": "smartctl_device_temperature{temperature_type=\"current\"}", "legendFormat": "{{device}}" }
+        { "expr": "rate(node_disk_io_time_seconds_total{device=~\"sd[a-z]|nvme.*\"}[5m]) * 100", "legendFormat": "{{device}} %" }
       ]
     },
     {
@@ -616,7 +616,7 @@
       "title": "CrowdSec Decisions",
       "type": "stat",
       "targets": [
-        { "expr": "sum(increase(cs_bucket_overflowed_total[24h])) or vector(0)", "legendFormat": "Triggers (24h)" }
+        { "expr": "sum(cs_active_decisions) or vector(0)", "legendFormat": "Active Bans" }
       ]
     },
     {
@@ -627,12 +627,12 @@
       "gridPos": { "h": 8, "w": 8, "x": 8, "y": 94 },
       "id": 80,
       "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi", "sort": "desc" } },
-      "title": "CrowdSec Parsed Events",
+      "title": "CrowdSec LAPI Activity",
       "type": "timeseries",
       "targets": [
-        { "expr": "sum(rate(cs_parser_hits_total[5m]))", "legendFormat": "Parsed" },
-        { "expr": "sum(rate(cs_parser_hits_ok_total[5m]))", "legendFormat": "OK" },
-        { "expr": "rate(cs_bucket_created_total[5m])", "legendFormat": "Buckets Created" }
+        { "expr": "sum(rate(cs_lapi_route_requests_total[5m]))", "legendFormat": "API Requests" },
+        { "expr": "sum(rate(cs_lapi_bouncer_requests_total[5m]))", "legendFormat": "Bouncer Requests" },
+        { "expr": "sum(rate(cs_lapi_decisions_ok_total[5m]))", "legendFormat": "Decisions Served" }
       ]
     },
     {
@@ -783,33 +783,36 @@
           "thresholds": { "mode": "absolute", "steps": [
             { "color": "red", "value": null },
             { "color": "green", "value": 1 }
-          ]},
-          "mappings": [
-            { "type": "value", "options": { "0": { "text": "FAIL", "color": "red", "index": 0 }, "1": { "text": "OK", "color": "green", "index": 1 } } }
-          ]
+          ]}
         }
       },
       "gridPos": { "h": 6, "w": 4, "x": 8, "y": 112 },
       "id": 212,
       "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "graphMode": "none", "colorMode": "background", "justifyMode": "auto", "textMode": "value", "wideLayout": true },
-      "title": "SMART Status",
+      "title": "Detected Drives",
       "type": "stat",
       "targets": [
-        { "expr": "smartctl_device_smart_status", "legendFormat": "{{device}}" }
+        { "expr": "smartctl_devices", "legendFormat": "Drives" }
       ]
     },
     {
       "datasource": { "type": "prometheus" },
       "fieldConfig": {
-        "defaults": { "unit": "s", "custom": { "fillOpacity": 15, "lineWidth": 2 } }
+        "defaults": {
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 500 },
+            { "color": "red", "value": 2000 }
+          ]}
+        }
       },
       "gridPos": { "h": 6, "w": 12, "x": 12, "y": 112 },
       "id": 213,
-      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
-      "title": "Drive Power-On Time",
-      "type": "timeseries",
+      "options": { "displayMode": "gradient", "orientation": "horizontal", "showUnfilled": true, "minVizWidth": 10, "minVizHeight": 10, "sizing": "auto" },
+      "title": "CrowdSec Active Bans by Reason",
+      "type": "bargauge",
       "targets": [
-        { "expr": "smartctl_device_power_on_seconds", "legendFormat": "{{device}}" }
+        { "expr": "cs_active_decisions", "legendFormat": "{{reason}}", "instant": true }
       ]
     },
 

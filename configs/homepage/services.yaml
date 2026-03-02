@@ -45,6 +45,31 @@
         href: https://home.romulus.hu
         icon: home-assistant
         description: Home automation
+    - Paperless-ngx:
+        href: https://paperless.romulus.hu
+        icon: paperless-ngx
+        description: Document management
+    - Actual Budget:
+        href: https://budget.romulus.hu
+        icon: actual-budget
+        description: Personal budgeting
+    - Homebox:
+        href: https://homebox.romulus.hu
+        icon: homebox
+        description: Home inventory management
+
+- AI:
+    - OpenClaw:
+        href: https://ai.romulus.hu
+        icon: mdi-robot
+        description: AI agent and assistant
+    - Open WebUI:
+        href: https://chat.romulus.hu
+        icon: open-webui
+        description: Chat interface for LLMs
+    - Ollama:
+        icon: ollama
+        description: Local LLM inference server
 
 - Infrastructure:
     - Traefik:
@@ -54,6 +79,10 @@
         widget:
           type: traefik
           url: http://traefik:8080
+    - Authelia:
+        href: https://auth.romulus.hu
+        icon: authelia
+        description: Authentication and SSO
     - AdGuard:
         href: https://dns.romulus.hu
         icon: adguard-home
@@ -82,6 +111,10 @@
         href: https://status.romulus.hu
         icon: uptime-kuma
         description: Service uptime monitoring
+    - Glances:
+        href: https://glances.romulus.hu
+        icon: glances
+        description: System monitoring
     - Dozzle:
         href: https://logs.romulus.hu
         icon: dozzle
@@ -90,6 +123,12 @@
         href: https://speed.romulus.hu
         icon: speedtest-tracker
         description: Network speed tracking
+
+- Utilities:
+    - TeamSpeak:
+        href: https://teamspeak.romulus.hu
+        icon: teamspeak
+        description: Voice communication server
 
 - Notifications:
     - ntfy:

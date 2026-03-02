@@ -893,7 +893,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "loki", "uid": "loki" },
+      "datasource": { "type": "loki" },
       "gridPos": { "h": 12, "w": 24, "x": 0, "y": 128 },
       "id": 220,
       "options": {

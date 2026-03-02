@@ -58,6 +58,7 @@ services:
       resources:
         limits:
           memory: 32G
+          cpus: "16.0"
 
   openclaw:
     build: ./openclaw
@@ -71,6 +72,8 @@ services:
     volumes:
       - ${APPDATA}/ai/openclaw:/home/node/.openclaw
       - ${APPDATA}/ai/openclaw-workspace:/home/node/workspace
+      - ../../configs/openclaw/openclaw.json:/seed/openclaw.json:ro
+    entrypoint: ["/bin/sh", "-c", "[ -f /home/node/.openclaw/openclaw.json ] || cp /seed/openclaw.json /home/node/.openclaw/openclaw.json; exec docker-entrypoint.sh node openclaw.mjs gateway --allow-unconfigured"]
     networks:
       - proxy
       - ai

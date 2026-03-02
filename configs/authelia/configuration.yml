@@ -42,9 +42,13 @@ access_control:
         - speed.romulus.hu
         - dns.romulus.hu
         - glances.romulus.hu
+      policy: two_factor
+
+    # AI services — one_factor (Authelia + CrowdSec is sufficient)
+    - domain:
         - ai.romulus.hu
         - chat.romulus.hu
-      policy: two_factor
+      policy: one_factor
 
     # Services with native auth — bypass (mobile apps handle their own auth)
     - domain:

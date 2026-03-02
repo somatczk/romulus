@@ -107,6 +107,11 @@ SSD_DIRS=(
     "${APPDATA}/utilities/teamspeak-db"
     # Backups
     "${APPDATA}/backups/db-dumps"
+    # AI
+    "${APPDATA}/ai/ollama"
+    "${APPDATA}/ai/openclaw"
+    "${APPDATA}/ai/openclaw-workspace"
+    "${APPDATA}/ai/open-webui"
 )
 
 # HDD directories
@@ -185,6 +190,7 @@ NETWORKS=(
     ["monitoring"]="internal"
     ["ci"]="internal"
     ["db-paperless"]="internal"
+    ["ai"]="internal"
 )
 
 for net in "${!NETWORKS[@]}"; do
@@ -223,5 +229,5 @@ echo "    1. Edit stacks/.env and replace all changeme_ values"
 echo "    2. Copy docker/daemon.json to /etc/docker/daemon.json"
 echo "    3. Run: sudo systemctl restart docker"
 echo "    4. Run: sudo bash scripts/swap.sh (configure 8GB swap + kernel tuning)"
-echo "    5. Deploy stacks in order: core -> security -> media -> productivity -> monitoring -> ci -> notifications -> dashboard -> utilities"
+echo "    5. Deploy stacks in order: core -> security -> media -> productivity -> monitoring -> ci -> notifications -> dashboard -> utilities -> ai"
 echo ""

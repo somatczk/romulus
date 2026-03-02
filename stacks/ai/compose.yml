@@ -1,0 +1,128 @@
+networks:
+  proxy:
+    external: true
+  ai:
+    external: true
+  ai-socket:
+    driver: bridge
+
+services:
+  ai-socket-proxy:
+    build: ./socket-proxy
+    container_name: ai-socket-proxy
+    restart: unless-stopped
+    networks:
+      - ai-socket
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      CONTAINERS: 1
+      IMAGES: 1
+      NETWORKS: 1
+      SERVICES: 1
+      TASKS: 1
+      VOLUMES: 1
+      POST: 1
+      BUILD: 1
+      COMMIT: 0
+      EXEC: 1
+      EVENTS: 1
+      INFO: 1
+      LOG_LEVEL: warning
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+    security_opt:
+      - no-new-privileges:true
+
+  ollama:
+    build: ./ollama
+    container_name: ollama
+    restart: unless-stopped
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_NUM_GPU=10
+      - OLLAMA_NUM_CTX=24576
+    volumes:
+      - ${APPDATA}/ai/ollama:/root/.ollama
+    networks:
+      - ai
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 16G
+
+  openclaw:
+    build: ./openclaw
+    container_name: openclaw
+    restart: unless-stopped
+    env_file: ../.env
+    environment:
+      - DOCKER_HOST=tcp://ai-socket-proxy:2375
+    volumes:
+      - ${APPDATA}/ai/openclaw:/home/node/.openclaw
+      - ${APPDATA}/ai/openclaw-workspace:/home/node/workspace
+    networks:
+      - proxy
+      - ai
+      - ai-socket
+    depends_on:
+      ollama:
+        condition: service_healthy
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.openclaw.rule=Host(`ai.${DOMAIN}`)
+      - traefik.http.routers.openclaw.entrypoints=websecure
+      - traefik.http.routers.openclaw.tls.certresolver=cloudflare
+      - traefik.http.routers.openclaw.middlewares=secure-admin@file
+      - traefik.http.services.openclaw.loadbalancer.server.port=18789
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:18789/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+
+  open-webui:
+    build: ./open-webui
+    container_name: open-webui
+    restart: unless-stopped
+    env_file: ../.env
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - WEBUI_AUTH=false
+    volumes:
+      - ${APPDATA}/ai/open-webui:/app/backend/data
+    networks:
+      - proxy
+      - ai
+    depends_on:
+      ollama:
+        condition: service_healthy
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.open-webui.rule=Host(`chat.${DOMAIN}`)
+      - traefik.http.routers.open-webui.entrypoints=websecure
+      - traefik.http.routers.open-webui.tls.certresolver=cloudflare
+      - traefik.http.routers.open-webui.middlewares=secure-admin@file
+      - traefik.http.services.open-webui.loadbalancer.server.port=8080
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 1G

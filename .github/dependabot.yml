@@ -56,6 +56,10 @@ updates:
       - /stacks/utilities/teamspeak-db
       - /stacks/utilities/teamspeak
       - /stacks/utilities/autoheal
+      - /stacks/ai/socket-proxy
+      - /stacks/ai/ollama
+      - /stacks/ai/openclaw
+      - /stacks/ai/open-webui
     schedule:
       interval: weekly
       day: monday

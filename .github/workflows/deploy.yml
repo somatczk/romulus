@@ -31,6 +31,7 @@ jobs:
       notifications: ${{ steps.filter.outputs.notifications }}
       utilities: ${{ steps.filter.outputs.utilities }}
       dashboard: ${{ steps.filter.outputs.dashboard }}
+      ai: ${{ steps.filter.outputs.ai }}
       full_deploy: ${{ steps.full-deploy.outputs.result }}
 
     steps:
@@ -70,6 +71,8 @@ jobs:
             dashboard:
               - 'stacks/dashboard/**'
               - 'configs/homepage/**'
+            ai:
+              - 'stacks/ai/**'
 
       - name: Determine Full Deploy
         id: full-deploy
@@ -96,6 +99,7 @@ jobs:
           echo "  Notifications .... ${{ steps.filter.outputs.notifications }}"
           echo "  Utilities ........ ${{ steps.filter.outputs.utilities }}"
           echo "  Dashboard ........ ${{ steps.filter.outputs.dashboard }}"
+          echo "  AI ............... ${{ steps.filter.outputs.ai }}"
           echo "===================================="
 
   prepare:
@@ -167,7 +171,7 @@ jobs:
 
       - name: Ensure Docker Networks
         run: |
-          for net in proxy socket media db-nextcloud db-immich monitoring ci db-paperless; do
+          for net in proxy socket media db-nextcloud db-immich monitoring ci db-paperless ai; do
             docker network create "$net" 2>/dev/null || true
           done
 
@@ -233,6 +237,7 @@ jobs:
           - notifications
           - utilities
           - dashboard
+          - ai
 
     steps:
       - name: Checkout Repository
@@ -248,6 +253,7 @@ jobs:
           CHANGED_NOTIFICATIONS: ${{ needs.detect-changes.outputs.notifications }}
           CHANGED_UTILITIES: ${{ needs.detect-changes.outputs.utilities }}
           CHANGED_DASHBOARD: ${{ needs.detect-changes.outputs.dashboard }}
+          CHANGED_AI: ${{ needs.detect-changes.outputs.ai }}
           STACK: ${{ matrix.stack }}
         run: |
           if [[ "$FULL_DEPLOY" == "true" ]]; then

@@ -95,6 +95,8 @@ SSD_DIRS=(
     "${APPDATA}/ci/runners/runner-solhouse-4"
     "${APPDATA}/ci/runners/runner-romulus-1"
     "${APPDATA}/ci/runners/runner-romulus-2"
+    "${APPDATA}/ci/runners/runner-romulus-3"
+    "${APPDATA}/ci/runners/runner-romulus-4"
     # Notifications
     "${APPDATA}/notifications/ntfy/cache"
     "${APPDATA}/notifications/ntfy/etc"

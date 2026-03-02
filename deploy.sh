@@ -54,6 +54,7 @@ Phases (run all if none specified):
   notifications  Notifications stack
   utilities   Utilities stack
   dashboard   Dashboard stack
+  ai          AI stack
   crons       Install cron jobs
   samba       Configure Samba
   verify      Run verification checks
@@ -85,7 +86,7 @@ done
 
 # If no phases specified, run all in order
 if [[ ${#PHASES[@]} -eq 0 ]]; then
-    PHASES=(sync phase0 phase1 phase2 phase3 media productivity ci monitoring notifications utilities dashboard crons samba phase4 verify)
+    PHASES=(sync phase0 phase1 phase2 phase3 media productivity ci monitoring notifications utilities dashboard ai crons samba phase4 verify)
 fi
 
 run() {
@@ -300,6 +301,12 @@ do_dashboard() {
     ok "Dashboard stack running"
 }
 
+do_ai() {
+    log "Starting AI stack..."
+    ssh_cmd "cd /DATA/stacks/stacks && docker compose --env-file .env -f ai/compose.yml up -d --build --pull always"
+    ok "AI stack running"
+}
+
 ###############################################################################
 # Cron jobs
 ###############################################################################
@@ -374,6 +381,8 @@ curl -sk -o /dev/null -w "Jellyfin: %{http_code}\n" https://jellyfin.romulus.hu 
 curl -sk -o /dev/null -w "Grafana: %{http_code}\n" https://grafana.romulus.hu 2>/dev/null || echo "Grafana: unreachable"
 # Check Homepage
 curl -sk -o /dev/null -w "Homepage: %{http_code}\n" https://romulus.hu 2>/dev/null || echo "Homepage: unreachable"
+curl -sk -o /dev/null -w "Open WebUI: %{http_code}\n" https://chat.romulus.hu 2>/dev/null || echo "Open WebUI: unreachable"
+curl -sk -o /dev/null -w "OpenClaw: %{http_code}\n" https://ai.romulus.hu 2>/dev/null || echo "OpenClaw: unreachable"
 
 echo ""
 echo "=== GPU Status ==="
@@ -408,6 +417,7 @@ for phase in "${PHASES[@]}"; do
         notifications)  run do_notifications ;;
         utilities)      run do_utilities ;;
         dashboard)      run do_dashboard ;;
+        ai)             run do_ai ;;
         crons)          run do_crons ;;
         samba)          run do_samba ;;
         verify)         run do_verify ;;

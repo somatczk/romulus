@@ -278,7 +278,7 @@
       "title": "Drive Temperatures (SMART)",
       "type": "timeseries",
       "targets": [
-        { "expr": "smartctl_device_temperature{temperature_type=\"current\"}", "legendFormat": "{{device}} ({{model_name}})" }
+        { "expr": "smartctl_device_temperature{temperature_type=\"current\"}", "legendFormat": "{{device}}" }
       ]
     },
     {
@@ -616,7 +616,7 @@
       "title": "CrowdSec Decisions",
       "type": "stat",
       "targets": [
-        { "expr": "sum(cs_active_decisions) or vector(0)", "legendFormat": "Active Bans" }
+        { "expr": "sum(increase(cs_bucket_overflowed_total[24h])) or vector(0)", "legendFormat": "Triggers (24h)" }
       ]
     },
     {
@@ -630,8 +630,8 @@
       "title": "CrowdSec Parsed Events",
       "type": "timeseries",
       "targets": [
-        { "expr": "rate(cs_parsers_hits_total[5m])", "legendFormat": "Parsed" },
-        { "expr": "rate(cs_parsers_hits_ok_total[5m])", "legendFormat": "OK" },
+        { "expr": "sum(rate(cs_parser_hits_total[5m]))", "legendFormat": "Parsed" },
+        { "expr": "sum(rate(cs_parser_hits_ok_total[5m]))", "legendFormat": "OK" },
         { "expr": "rate(cs_bucket_created_total[5m])", "legendFormat": "Buckets Created" }
       ]
     },
@@ -717,16 +717,15 @@
     {
       "datasource": { "type": "prometheus" },
       "fieldConfig": {
-        "defaults": { "unit": "ms", "custom": { "fillOpacity": 15, "lineWidth": 2 } }
+        "defaults": { "unit": "s", "custom": { "fillOpacity": 15, "lineWidth": 2 } }
       },
       "gridPos": { "h": 8, "w": 8, "x": 16, "y": 103 },
       "id": 72,
       "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
-      "title": "Latency & Jitter",
+      "title": "Latency",
       "type": "timeseries",
       "targets": [
-        { "expr": "speedtest_ping_latency_milliseconds", "legendFormat": "Latency" },
-        { "expr": "speedtest_jitter_latency_milliseconds", "legendFormat": "Jitter" }
+        { "expr": "speedtest_latency_seconds", "legendFormat": "Latency" }
       ]
     },
 
@@ -782,11 +781,11 @@
       "fieldConfig": {
         "defaults": {
           "thresholds": { "mode": "absolute", "steps": [
-            { "color": "green", "value": null },
-            { "color": "red", "value": 0 }
+            { "color": "red", "value": null },
+            { "color": "green", "value": 1 }
           ]},
           "mappings": [
-            { "options": { "0": { "text": "FAILING", "color": "red" }, "1": { "text": "HEALTHY", "color": "green" } }, "type": "value" }
+            { "type": "value", "options": { "0": { "text": "FAIL", "color": "red", "index": 0 }, "1": { "text": "OK", "color": "green", "index": 1 } } }
           ]
         }
       },
@@ -810,7 +809,7 @@
       "title": "Drive Power-On Time",
       "type": "timeseries",
       "targets": [
-        { "expr": "smartctl_device_power_on_seconds", "legendFormat": "{{device}} ({{model_name}})" }
+        { "expr": "smartctl_device_power_on_seconds", "legendFormat": "{{device}}" }
       ]
     },
 
@@ -894,7 +893,7 @@
       "type": "row"
     },
     {
-      "datasource": { "type": "loki" },
+      "datasource": { "type": "loki", "uid": "loki" },
       "gridPos": { "h": 12, "w": 24, "x": 0, "y": 128 },
       "id": 220,
       "options": {
@@ -910,7 +909,7 @@
       "title": "Recent Container Logs",
       "type": "logs",
       "targets": [
-        { "expr": "{job=\"docker\"} |~ \"(?i)(error|warn|fatal|panic|exception|fail|oom|killed)\"", "legendFormat": "", "refId": "A" }
+        { "expr": "{job=\"docker\"}", "legendFormat": "", "refId": "A" }
       ]
     }
   ],

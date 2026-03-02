@@ -44,7 +44,6 @@ services:
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
       - OLLAMA_HOST=0.0.0.0
-      - OLLAMA_NUM_GPU=10
       - OLLAMA_NUM_CTX=24576
     volumes:
       - ${APPDATA}/ai/ollama:/root/.ollama
@@ -58,7 +57,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 16G
+          memory: 32G
 
   openclaw:
     build: ./openclaw
@@ -67,6 +66,8 @@ services:
     env_file: ../.env
     environment:
       - DOCKER_HOST=tcp://ai-socket-proxy:2375
+      - OLLAMA_HOST=http://ollama:11434
+      - OLLAMA_API_KEY=ollama-local
     volumes:
       - ${APPDATA}/ai/openclaw:/home/node/.openclaw
       - ${APPDATA}/ai/openclaw-workspace:/home/node/workspace

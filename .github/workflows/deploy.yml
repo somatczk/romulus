@@ -73,6 +73,7 @@ jobs:
               - 'configs/homepage/**'
             ai:
               - 'stacks/ai/**'
+              - 'configs/openclaw/**'
 
       - name: Determine Full Deploy
         id: full-deploy
@@ -279,7 +280,7 @@ jobs:
         uses: ./.github/actions/deploy-services
         with:
           stack: ${{ matrix.stack }}
-          force_recreate_services: ${{ matrix.stack == 'monitoring' && 'grafana' || '' }}
+          force_recreate_services: ${{ matrix.stack == 'monitoring' && 'grafana' || matrix.stack == 'dashboard' && 'homepage' || '' }}
 
   verify:
     name: Verify Deployment

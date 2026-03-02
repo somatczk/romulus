@@ -22,20 +22,15 @@
             { "color": "yellow", "value": 60 },
             { "color": "red", "value": 85 }
           ]},
-          "unit": "percent",
-          "min": 0,
-          "max": 100
+          "unit": "percent", "min": 0, "max": 100
         }
       },
-      "gridPos": { "h": 5, "w": 4, "x": 0, "y": 1 },
+      "gridPos": { "h": 5, "w": 3, "x": 0, "y": 1 },
       "id": 1,
       "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "showThresholdLabels": false, "showThresholdMarkers": true, "sizing": "auto" },
-      "title": "CPU Usage",
+      "title": "CPU",
       "type": "gauge",
-      "targets": [{
-        "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
-        "legendFormat": "CPU"
-      }]
+      "targets": [{ "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)", "legendFormat": "CPU" }]
     },
     {
       "datasource": { "type": "prometheus" },
@@ -46,20 +41,34 @@
             { "color": "yellow", "value": 60 },
             { "color": "red", "value": 85 }
           ]},
-          "unit": "percent",
-          "min": 0,
-          "max": 100
+          "unit": "percent", "min": 0, "max": 100
         }
       },
-      "gridPos": { "h": 5, "w": 4, "x": 4, "y": 1 },
+      "gridPos": { "h": 5, "w": 3, "x": 3, "y": 1 },
       "id": 2,
       "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "showThresholdLabels": false, "showThresholdMarkers": true, "sizing": "auto" },
-      "title": "Memory Usage",
+      "title": "Memory",
       "type": "gauge",
-      "targets": [{
-        "expr": "100 * (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes))",
-        "legendFormat": "RAM"
-      }]
+      "targets": [{ "expr": "100 * (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes))", "legendFormat": "RAM" }]
+    },
+    {
+      "datasource": { "type": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 50 },
+            { "color": "red", "value": 80 }
+          ]},
+          "unit": "percent", "min": 0, "max": 100
+        }
+      },
+      "gridPos": { "h": 5, "w": 3, "x": 6, "y": 1 },
+      "id": 7,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "showThresholdLabels": false, "showThresholdMarkers": true, "sizing": "auto" },
+      "title": "Swap",
+      "type": "gauge",
+      "targets": [{ "expr": "(1 - node_memory_SwapFree_bytes / node_memory_SwapTotal_bytes) * 100", "legendFormat": "Swap" }]
     },
     {
       "datasource": { "type": "prometheus" },
@@ -70,20 +79,15 @@
             { "color": "yellow", "value": 60 },
             { "color": "red", "value": 85 }
           ]},
-          "unit": "percent",
-          "min": 0,
-          "max": 100
+          "unit": "percent", "min": 0, "max": 100
         }
       },
-      "gridPos": { "h": 5, "w": 4, "x": 8, "y": 1 },
+      "gridPos": { "h": 5, "w": 3, "x": 9, "y": 1 },
       "id": 3,
       "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "showThresholdLabels": false, "showThresholdMarkers": true, "sizing": "auto" },
-      "title": "SSD Usage",
+      "title": "SSD",
       "type": "gauge",
-      "targets": [{
-        "expr": "100 - (node_filesystem_avail_bytes{mountpoint=\"/media/SSD-Storage\"} / node_filesystem_size_bytes{mountpoint=\"/media/SSD-Storage\"} * 100)",
-        "legendFormat": "SSD"
-      }]
+      "targets": [{ "expr": "100 - (node_filesystem_avail_bytes{mountpoint=\"/media/SSD-Storage\"} / node_filesystem_size_bytes{mountpoint=\"/media/SSD-Storage\"} * 100)", "legendFormat": "SSD" }]
     },
     {
       "datasource": { "type": "prometheus" },
@@ -94,20 +98,34 @@
             { "color": "yellow", "value": 60 },
             { "color": "red", "value": 85 }
           ]},
-          "unit": "percent",
-          "min": 0,
-          "max": 100
+          "unit": "percent", "min": 0, "max": 100
         }
       },
-      "gridPos": { "h": 5, "w": 4, "x": 12, "y": 1 },
+      "gridPos": { "h": 5, "w": 3, "x": 12, "y": 1 },
       "id": 4,
       "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "showThresholdLabels": false, "showThresholdMarkers": true, "sizing": "auto" },
-      "title": "HDD Usage",
+      "title": "HDD",
       "type": "gauge",
-      "targets": [{
-        "expr": "100 - (node_filesystem_avail_bytes{mountpoint=\"/media/HDD-Storage\"} / node_filesystem_size_bytes{mountpoint=\"/media/HDD-Storage\"} * 100)",
-        "legendFormat": "HDD"
-      }]
+      "targets": [{ "expr": "100 - (node_filesystem_avail_bytes{mountpoint=\"/media/HDD-Storage\"} / node_filesystem_size_bytes{mountpoint=\"/media/HDD-Storage\"} * 100)", "legendFormat": "HDD" }]
+    },
+    {
+      "datasource": { "type": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 60 },
+            { "color": "red", "value": 90 }
+          ]},
+          "unit": "percent", "min": 0, "max": 100
+        }
+      },
+      "gridPos": { "h": 5, "w": 3, "x": 15, "y": 1 },
+      "id": 8,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "showThresholdLabels": false, "showThresholdMarkers": true, "sizing": "auto" },
+      "title": "GPU VRAM",
+      "type": "gauge",
+      "targets": [{ "expr": "nvidia_smi_memory_used_bytes / nvidia_smi_memory_total_bytes * 100", "legendFormat": "VRAM" }]
     },
     {
       "datasource": { "type": "prometheus" },
@@ -121,42 +139,32 @@
           "unit": "celsius"
         }
       },
-      "gridPos": { "h": 5, "w": 4, "x": 16, "y": 1 },
+      "gridPos": { "h": 5, "w": 3, "x": 18, "y": 1 },
       "id": 5,
       "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "graphMode": "area", "colorMode": "background", "justifyMode": "auto", "textMode": "value_and_name", "wideLayout": true },
-      "title": "Temperatures",
+      "title": "Temps",
       "type": "stat",
       "targets": [
-        {
-          "expr": "node_hwmon_temp_celsius{chip=~\".*k10temp.*\"}",
-          "legendFormat": "CPU"
-        },
-        {
-          "expr": "nvidia_smi_temperature_gpu",
-          "legendFormat": "GPU"
-        }
+        { "expr": "node_hwmon_temp_celsius{chip=~\".*k10temp.*\"}", "legendFormat": "CPU" },
+        { "expr": "nvidia_smi_temperature_gpu", "legendFormat": "GPU" }
       ]
     },
     {
       "datasource": { "type": "prometheus" },
       "fieldConfig": {
         "defaults": {
-          "thresholds": { "mode": "absolute", "steps": [
-            { "color": "green", "value": null }
-          ]},
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] },
           "unit": "s"
         }
       },
-      "gridPos": { "h": 5, "w": 4, "x": 20, "y": 1 },
+      "gridPos": { "h": 5, "w": 3, "x": 21, "y": 1 },
       "id": 6,
       "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "graphMode": "none", "colorMode": "value", "justifyMode": "auto", "textMode": "value", "wideLayout": true },
       "title": "Uptime",
       "type": "stat",
-      "targets": [{
-        "expr": "node_time_seconds - node_boot_time_seconds",
-        "legendFormat": "Uptime"
-      }]
+      "targets": [{ "expr": "node_time_seconds - node_boot_time_seconds", "legendFormat": "Uptime" }]
     },
+
     {
       "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 6 },
@@ -169,28 +177,16 @@
       "fieldConfig": {
         "defaults": { "unit": "percent", "min": 0, "max": 100, "custom": { "fillOpacity": 20, "lineWidth": 2, "spanNulls": false } }
       },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 7 },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 7 },
       "id": 10,
       "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi", "sort": "desc" } },
       "title": "CPU Usage Over Time",
       "type": "timeseries",
       "targets": [
-        {
-          "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
-          "legendFormat": "Total CPU"
-        },
-        {
-          "expr": "avg(rate(node_cpu_seconds_total{mode=\"user\"}[5m])) * 100",
-          "legendFormat": "User"
-        },
-        {
-          "expr": "avg(rate(node_cpu_seconds_total{mode=\"system\"}[5m])) * 100",
-          "legendFormat": "System"
-        },
-        {
-          "expr": "avg(rate(node_cpu_seconds_total{mode=\"iowait\"}[5m])) * 100",
-          "legendFormat": "IOWait"
-        }
+        { "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)", "legendFormat": "Total CPU" },
+        { "expr": "avg(rate(node_cpu_seconds_total{mode=\"user\"}[5m])) * 100", "legendFormat": "User" },
+        { "expr": "avg(rate(node_cpu_seconds_total{mode=\"system\"}[5m])) * 100", "legendFormat": "System" },
+        { "expr": "avg(rate(node_cpu_seconds_total{mode=\"iowait\"}[5m])) * 100", "legendFormat": "IOWait" }
       ]
     },
     {
@@ -198,28 +194,16 @@
       "fieldConfig": {
         "defaults": { "unit": "bytes", "min": 0, "custom": { "fillOpacity": 30, "lineWidth": 2, "stacking": { "mode": "normal" } } }
       },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 7 },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 7 },
       "id": 11,
       "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi", "sort": "desc" } },
       "title": "Memory Usage Over Time",
       "type": "timeseries",
       "targets": [
-        {
-          "expr": "node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes",
-          "legendFormat": "Used"
-        },
-        {
-          "expr": "node_memory_Cached_bytes",
-          "legendFormat": "Cached"
-        },
-        {
-          "expr": "node_memory_Buffers_bytes",
-          "legendFormat": "Buffers"
-        },
-        {
-          "expr": "node_memory_MemFree_bytes",
-          "legendFormat": "Free"
-        }
+        { "expr": "node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes", "legendFormat": "Used" },
+        { "expr": "node_memory_Cached_bytes", "legendFormat": "Cached" },
+        { "expr": "node_memory_Buffers_bytes", "legendFormat": "Buffers" },
+        { "expr": "node_memory_SwapTotal_bytes - node_memory_SwapFree_bytes", "legendFormat": "Swap Used" }
       ]
     },
     {
@@ -227,7 +211,7 @@
       "fieldConfig": {
         "defaults": { "unit": "short", "custom": { "fillOpacity": 10, "lineWidth": 1 } }
       },
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 15 },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 7 },
       "id": 12,
       "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi", "sort": "desc" } },
       "title": "System Load Average",
@@ -239,9 +223,10 @@
         { "expr": "count(node_cpu_seconds_total{mode=\"idle\"})", "legendFormat": "CPU Cores" }
       ]
     },
+
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 23 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 15 },
       "id": 102,
       "title": "Disk I/O & Storage",
       "type": "row"
@@ -251,7 +236,7 @@
       "fieldConfig": {
         "defaults": { "unit": "Bps", "custom": { "fillOpacity": 20, "lineWidth": 2 } }
       },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 16 },
       "id": 20,
       "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi", "sort": "desc" } },
       "title": "Disk Read Throughput",
@@ -265,7 +250,7 @@
       "fieldConfig": {
         "defaults": { "unit": "Bps", "custom": { "fillOpacity": 20, "lineWidth": 2 } }
       },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 16 },
       "id": 21,
       "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi", "sort": "desc" } },
       "title": "Disk Write Throughput",
@@ -277,35 +262,47 @@
     {
       "datasource": { "type": "prometheus" },
       "fieldConfig": {
-        "defaults": { "unit": "bytes" },
-        "overrides": []
+        "defaults": {
+          "unit": "celsius",
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 45 },
+            { "color": "red", "value": 55 }
+          ]},
+          "custom": { "fillOpacity": 20, "lineWidth": 2 }
+        }
       },
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 32 },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 16 },
+      "id": 23,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "title": "Drive Temperatures (SMART)",
+      "type": "timeseries",
+      "targets": [
+        { "expr": "smartctl_device_temperature{temperature_type=\"current\"}", "legendFormat": "{{device}} ({{model_name}})" }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "bytes" }
+      },
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 24 },
       "id": 22,
       "options": {
-        "displayMode": "gradient",
-        "minVizWidth": 10,
-        "minVizHeight": 10,
-        "showUnfilled": true,
-        "orientation": "horizontal",
-        "sizing": "auto"
+        "displayMode": "gradient", "minVizWidth": 10, "minVizHeight": 10,
+        "showUnfilled": true, "orientation": "horizontal", "sizing": "auto"
       },
       "title": "Disk Space",
       "type": "bargauge",
       "targets": [
-        {
-          "expr": "node_filesystem_size_bytes{mountpoint=~\"/media/.*|/DATA\"} - node_filesystem_avail_bytes{mountpoint=~\"/media/.*|/DATA\"}",
-          "legendFormat": "{{mountpoint}} used"
-        },
-        {
-          "expr": "node_filesystem_avail_bytes{mountpoint=~\"/media/.*|/DATA\"}",
-          "legendFormat": "{{mountpoint}} free"
-        }
+        { "expr": "node_filesystem_size_bytes{mountpoint=~\"/media/.*|/DATA\"} - node_filesystem_avail_bytes{mountpoint=~\"/media/.*|/DATA\"}", "legendFormat": "{{mountpoint}} used" },
+        { "expr": "node_filesystem_avail_bytes{mountpoint=~\"/media/.*|/DATA\"}", "legendFormat": "{{mountpoint}} free" }
       ]
     },
+
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 40 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 30 },
       "id": 103,
       "title": "Network",
       "type": "row"
@@ -315,7 +312,7 @@
       "fieldConfig": {
         "defaults": { "unit": "bps", "custom": { "fillOpacity": 20, "lineWidth": 2 } }
       },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 41 },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 31 },
       "id": 30,
       "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi", "sort": "desc" } },
       "title": "Network Received",
@@ -329,7 +326,7 @@
       "fieldConfig": {
         "defaults": { "unit": "bps", "custom": { "fillOpacity": 20, "lineWidth": 2 } }
       },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 41 },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 31 },
       "id": 31,
       "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi", "sort": "desc" } },
       "title": "Network Transmitted",
@@ -338,9 +335,10 @@
         { "expr": "rate(node_network_transmit_bytes_total{device=~\"eth.*|enp.*\"}[5m]) * 8", "legendFormat": "{{device}} TX" }
       ]
     },
+
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 49 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 39 },
       "id": 104,
       "title": "GPU (GTX 1650 SUPER)",
       "type": "row"
@@ -350,7 +348,7 @@
       "fieldConfig": {
         "defaults": { "unit": "percent", "min": 0, "max": 100, "custom": { "fillOpacity": 30, "lineWidth": 2 } }
       },
-      "gridPos": { "h": 8, "w": 6, "x": 0, "y": 50 },
+      "gridPos": { "h": 8, "w": 6, "x": 0, "y": 40 },
       "id": 40,
       "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } },
       "title": "GPU Utilization",
@@ -365,7 +363,7 @@
       "fieldConfig": {
         "defaults": { "unit": "bytes", "custom": { "fillOpacity": 30, "lineWidth": 2 } }
       },
-      "gridPos": { "h": 8, "w": 6, "x": 6, "y": 50 },
+      "gridPos": { "h": 8, "w": 6, "x": 6, "y": 40 },
       "id": 41,
       "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
       "title": "GPU VRAM",
@@ -386,7 +384,7 @@
           ]}
         }
       },
-      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 50 },
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 40 },
       "id": 42,
       "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } },
       "title": "GPU Temperature",
@@ -400,7 +398,7 @@
       "fieldConfig": {
         "defaults": { "unit": "watt", "custom": { "fillOpacity": 20, "lineWidth": 2 } }
       },
-      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 50 },
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 40 },
       "id": 43,
       "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
       "title": "GPU Power Draw",
@@ -410,9 +408,61 @@
         { "expr": "nvidia_smi_power_limit_watts", "legendFormat": "Power Limit" }
       ]
     },
+
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 58 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 48 },
+      "id": 110,
+      "title": "AI Stack (Ollama / OpenClaw / Open WebUI)",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "percent", "custom": { "fillOpacity": 20, "lineWidth": 2 } }
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 49 },
+      "id": 200,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "title": "AI Container CPU",
+      "type": "timeseries",
+      "targets": [
+        { "expr": "sum(rate(container_cpu_usage_seconds_total{name=~\"ollama|openclaw|open-webui|ai-socket-proxy\"}[5m])) by (name) * 100", "legendFormat": "{{name}}" }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "bytes", "custom": { "fillOpacity": 20, "lineWidth": 2 } }
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 49 },
+      "id": 201,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "title": "AI Container Memory",
+      "type": "timeseries",
+      "targets": [
+        { "expr": "container_memory_usage_bytes{name=~\"ollama|openclaw|open-webui|ai-socket-proxy\"}", "legendFormat": "{{name}}" }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "Bps", "custom": { "fillOpacity": 15, "lineWidth": 2 } }
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 49 },
+      "id": 202,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "title": "AI Container Network I/O",
+      "type": "timeseries",
+      "targets": [
+        { "expr": "sum(rate(container_network_receive_bytes_total{name=~\"ollama|openclaw|open-webui\"}[5m])) by (name)", "legendFormat": "{{name}} RX" },
+        { "expr": "sum(rate(container_network_transmit_bytes_total{name=~\"ollama|openclaw|open-webui\"}[5m])) by (name)", "legendFormat": "{{name}} TX" }
+      ]
+    },
+
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 57 },
       "id": 105,
       "title": "Docker Containers",
       "type": "row"
@@ -422,64 +472,53 @@
       "fieldConfig": {
         "defaults": { "unit": "percent", "custom": { "fillOpacity": 20, "lineWidth": 1 } }
       },
-      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 59 },
+      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 58 },
       "id": 50,
       "options": { "legend": { "displayMode": "table", "placement": "right", "sortBy": "Last *", "sortDesc": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
       "title": "Container CPU Usage",
       "type": "timeseries",
-      "targets": [{
-        "expr": "sum(rate(container_cpu_usage_seconds_total{name!=\"\",name!~\"POD.*\"}[5m])) by (name) * 100",
-        "legendFormat": "{{name}}"
-      }]
+      "targets": [{ "expr": "sum(rate(container_cpu_usage_seconds_total{name!=\"\",name!~\"POD.*\"}[5m])) by (name) * 100", "legendFormat": "{{name}}" }]
     },
     {
       "datasource": { "type": "prometheus" },
       "fieldConfig": {
         "defaults": { "unit": "bytes", "custom": { "fillOpacity": 20, "lineWidth": 1 } }
       },
-      "gridPos": { "h": 10, "w": 12, "x": 12, "y": 59 },
+      "gridPos": { "h": 10, "w": 12, "x": 12, "y": 58 },
       "id": 51,
       "options": { "legend": { "displayMode": "table", "placement": "right", "sortBy": "Last *", "sortDesc": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
       "title": "Container Memory Usage",
       "type": "timeseries",
-      "targets": [{
-        "expr": "container_memory_usage_bytes{name!=\"\",name!~\"POD.*\"}",
-        "legendFormat": "{{name}}"
-      }]
+      "targets": [{ "expr": "container_memory_usage_bytes{name!=\"\",name!~\"POD.*\"}", "legendFormat": "{{name}}" }]
     },
     {
       "datasource": { "type": "prometheus" },
       "fieldConfig": {
         "defaults": { "unit": "Bps", "custom": { "fillOpacity": 15, "lineWidth": 1 } }
       },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 69 },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 68 },
       "id": 52,
       "options": { "legend": { "displayMode": "table", "placement": "right", "sortBy": "Last *", "sortDesc": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
       "title": "Container Network RX",
       "type": "timeseries",
-      "targets": [{
-        "expr": "sum(rate(container_network_receive_bytes_total{name!=\"\",name!~\"POD.*\"}[5m])) by (name)",
-        "legendFormat": "{{name}}"
-      }]
+      "targets": [{ "expr": "sum(rate(container_network_receive_bytes_total{name!=\"\",name!~\"POD.*\"}[5m])) by (name)", "legendFormat": "{{name}}" }]
     },
     {
       "datasource": { "type": "prometheus" },
       "fieldConfig": {
         "defaults": { "unit": "Bps", "custom": { "fillOpacity": 15, "lineWidth": 1 } }
       },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 69 },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 68 },
       "id": 53,
       "options": { "legend": { "displayMode": "table", "placement": "right", "sortBy": "Last *", "sortDesc": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
       "title": "Container Network TX",
       "type": "timeseries",
-      "targets": [{
-        "expr": "sum(rate(container_network_transmit_bytes_total{name!=\"\",name!~\"POD.*\"}[5m])) by (name)",
-        "legendFormat": "{{name}}"
-      }]
+      "targets": [{ "expr": "sum(rate(container_network_transmit_bytes_total{name!=\"\",name!~\"POD.*\"}[5m])) by (name)", "legendFormat": "{{name}}" }]
     },
+
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 77 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 76 },
       "id": 106,
       "title": "Traefik",
       "type": "row"
@@ -489,7 +528,7 @@
       "fieldConfig": {
         "defaults": { "unit": "reqps", "custom": { "fillOpacity": 20, "lineWidth": 2 } }
       },
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 78 },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 77 },
       "id": 60,
       "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi", "sort": "desc" } },
       "title": "Traefik Request Rate",
@@ -503,7 +542,7 @@
       "fieldConfig": {
         "defaults": { "unit": "s", "custom": { "fillOpacity": 20, "lineWidth": 2 } }
       },
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 78 },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 77 },
       "id": 61,
       "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi", "sort": "desc" } },
       "title": "Traefik Response Time (avg)",
@@ -523,7 +562,7 @@
           { "matcher": { "id": "byRegexp", "options": ".*3.." }, "properties": [{ "id": "color", "value": { "fixedColor": "blue", "mode": "fixed" } }] }
         ]
       },
-      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 86 },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 85 },
       "id": 62,
       "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi", "sort": "desc" } },
       "title": "Traefik Response Codes",
@@ -532,9 +571,105 @@
         { "expr": "sum(rate(traefik_service_requests_total[5m])) by (code)", "legendFormat": "{{code}}" }
       ]
     },
+
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 94 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 93 },
+      "id": 108,
+      "title": "Security & CrowdSec",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 1 },
+            { "color": "red", "value": 3 }
+          ]}
+        }
+      },
+      "gridPos": { "h": 8, "w": 4, "x": 0, "y": 94 },
+      "id": 73,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "graphMode": "area", "colorMode": "background", "justifyMode": "auto", "textMode": "value", "wideLayout": true },
+      "title": "Active Alerts",
+      "type": "stat",
+      "targets": [
+        { "expr": "count(ALERTS{alertstate=\"firing\"}) or vector(0)", "legendFormat": "Firing" }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 10 },
+            { "color": "red", "value": 100 }
+          ]}
+        }
+      },
+      "gridPos": { "h": 8, "w": 4, "x": 4, "y": 94 },
+      "id": 79,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "graphMode": "area", "colorMode": "background", "justifyMode": "auto", "textMode": "value_and_name", "wideLayout": true },
+      "title": "CrowdSec Decisions",
+      "type": "stat",
+      "targets": [
+        { "expr": "sum(cs_active_decisions) or vector(0)", "legendFormat": "Active Bans" }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "short", "custom": { "fillOpacity": 20, "lineWidth": 2 } }
+      },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 94 },
+      "id": 80,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "title": "CrowdSec Parsed Events",
+      "type": "timeseries",
+      "targets": [
+        { "expr": "rate(cs_parsers_hits_total[5m])", "legendFormat": "Parsed" },
+        { "expr": "rate(cs_parsers_hits_ok_total[5m])", "legendFormat": "OK" },
+        { "expr": "rate(cs_bucket_created_total[5m])", "legendFormat": "Buckets Created" }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "reqps", "custom": { "fillOpacity": 20, "lineWidth": 2 } }
+      },
+      "gridPos": { "h": 8, "w": 4, "x": 16, "y": 94 },
+      "id": 74,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "title": "Traefik 4xx",
+      "type": "timeseries",
+      "targets": [
+        { "expr": "sum(rate(traefik_service_requests_total{code=~\"4..\"}[5m])) by (service)", "legendFormat": "{{service}}" }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus" },
+      "fieldConfig": {
+        "defaults": { "unit": "reqps", "custom": { "fillOpacity": 20, "lineWidth": 2 } },
+        "overrides": [
+          { "matcher": { "id": "byRegexp", "options": ".*" }, "properties": [{ "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }] }
+        ]
+      },
+      "gridPos": { "h": 8, "w": 4, "x": 20, "y": 94 },
+      "id": 75,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi", "sort": "desc" } },
+      "title": "Traefik 5xx",
+      "type": "timeseries",
+      "targets": [
+        { "expr": "sum(rate(traefik_service_requests_total{code=~\"5..\"}[5m])) by (service)", "legendFormat": "{{service}}" }
+      ]
+    },
+
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 102 },
       "id": 107,
       "title": "Internet Speed",
       "type": "row"
@@ -550,7 +685,7 @@
           ]}
         }
       },
-      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 95 },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 103 },
       "id": 70,
       "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } },
       "title": "Download Speed",
@@ -570,7 +705,7 @@
           ]}
         }
       },
-      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 95 },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 103 },
       "id": 71,
       "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } },
       "title": "Upload Speed",
@@ -584,7 +719,7 @@
       "fieldConfig": {
         "defaults": { "unit": "ms", "custom": { "fillOpacity": 15, "lineWidth": 2 } }
       },
-      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 95 },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 103 },
       "id": 72,
       "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
       "title": "Latency & Jitter",
@@ -594,12 +729,53 @@
         { "expr": "speedtest_jitter_latency_milliseconds", "legendFormat": "Jitter" }
       ]
     },
+
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 103 },
-      "id": 108,
-      "title": "Security & Alerts",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 111 },
+      "id": 111,
+      "title": "Backup & Disk Health",
       "type": "row"
+    },
+    {
+      "datasource": { "type": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 86400 },
+            { "color": "red", "value": 172800 }
+          ]}
+        }
+      },
+      "gridPos": { "h": 6, "w": 4, "x": 0, "y": 112 },
+      "id": 210,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "graphMode": "none", "colorMode": "background", "justifyMode": "auto", "textMode": "value", "wideLayout": true },
+      "title": "Last Backup Age",
+      "type": "stat",
+      "targets": [
+        { "expr": "time() - max(restic_backup_timestamp)", "legendFormat": "Age" }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "red", "value": null },
+            { "color": "green", "value": 1 }
+          ]}
+        }
+      },
+      "gridPos": { "h": 6, "w": 4, "x": 4, "y": 112 },
+      "id": 211,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "graphMode": "none", "colorMode": "background", "justifyMode": "auto", "textMode": "value", "wideLayout": true },
+      "title": "Backup Snapshots",
+      "type": "stat",
+      "targets": [
+        { "expr": "restic_snapshots_total", "legendFormat": "Snapshots" }
+      ]
     },
     {
       "datasource": { "type": "prometheus" },
@@ -607,54 +783,40 @@
         "defaults": {
           "thresholds": { "mode": "absolute", "steps": [
             { "color": "green", "value": null },
-            { "color": "yellow", "value": 1 },
-            { "color": "red", "value": 3 }
-          ]}
+            { "color": "red", "value": 0 }
+          ]},
+          "mappings": [
+            { "options": { "0": { "text": "FAILING", "color": "red" }, "1": { "text": "HEALTHY", "color": "green" } }, "type": "value" }
+          ]
         }
       },
-      "gridPos": { "h": 8, "w": 4, "x": 0, "y": 104 },
-      "id": 73,
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "graphMode": "area", "colorMode": "background", "justifyMode": "auto", "textMode": "value", "wideLayout": true },
-      "title": "Active Alerts",
+      "gridPos": { "h": 6, "w": 4, "x": 8, "y": 112 },
+      "id": 212,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "graphMode": "none", "colorMode": "background", "justifyMode": "auto", "textMode": "value", "wideLayout": true },
+      "title": "SMART Status",
       "type": "stat",
       "targets": [
-        { "expr": "count(ALERTS{alertstate=\"firing\"}) or vector(0)", "legendFormat": "Firing" }
+        { "expr": "smartctl_device_smart_status", "legendFormat": "{{device}}" }
       ]
     },
     {
       "datasource": { "type": "prometheus" },
       "fieldConfig": {
-        "defaults": { "unit": "reqps", "custom": { "fillOpacity": 20, "lineWidth": 2 } }
+        "defaults": { "unit": "s", "custom": { "fillOpacity": 15, "lineWidth": 2 } }
       },
-      "gridPos": { "h": 8, "w": 10, "x": 4, "y": 104 },
-      "id": 74,
-      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi", "sort": "desc" } },
-      "title": "Traefik 4xx Rate",
+      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 112 },
+      "id": 213,
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
+      "title": "Drive Power-On Time",
       "type": "timeseries",
       "targets": [
-        { "expr": "sum(rate(traefik_service_requests_total{code=~\"4..\"}[5m])) by (service)", "legendFormat": "{{service}}" }
+        { "expr": "smartctl_device_power_on_seconds", "legendFormat": "{{device}} ({{model_name}})" }
       ]
     },
-    {
-      "datasource": { "type": "prometheus" },
-      "fieldConfig": {
-        "defaults": { "unit": "reqps", "custom": { "fillOpacity": 20, "lineWidth": 2 } },
-        "overrides": [
-          { "matcher": { "id": "byRegexp", "options": ".*" }, "properties": [{ "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }] }
-        ]
-      },
-      "gridPos": { "h": 8, "w": 10, "x": 14, "y": 104 },
-      "id": 75,
-      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi", "sort": "desc" } },
-      "title": "Traefik 5xx Rate",
-      "type": "timeseries",
-      "targets": [
-        { "expr": "sum(rate(traefik_service_requests_total{code=~\"5..\"}[5m])) by (service)", "legendFormat": "{{service}}" }
-      ]
-    },
+
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 112 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 118 },
       "id": 109,
       "title": "Container Health",
       "type": "row"
@@ -670,7 +832,7 @@
           ]}
         }
       },
-      "gridPos": { "h": 8, "w": 4, "x": 0, "y": 113 },
+      "gridPos": { "h": 8, "w": 4, "x": 0, "y": 119 },
       "id": 76,
       "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "graphMode": "none", "colorMode": "background", "justifyMode": "auto", "textMode": "value", "wideLayout": true },
       "title": "Container Count",
@@ -690,7 +852,7 @@
           ]}
         }
       },
-      "gridPos": { "h": 8, "w": 10, "x": 4, "y": 113 },
+      "gridPos": { "h": 8, "w": 10, "x": 4, "y": 119 },
       "id": 77,
       "options": { "showHeader": true, "sortBy": [{ "displayName": "Value", "desc": true }] },
       "title": "Container Restarts (30m)",
@@ -714,13 +876,41 @@
           ]}
         }
       },
-      "gridPos": { "h": 8, "w": 10, "x": 14, "y": 113 },
+      "gridPos": { "h": 8, "w": 10, "x": 14, "y": 119 },
       "id": 78,
       "options": { "displayMode": "gradient", "orientation": "horizontal", "showUnfilled": true, "minVizWidth": 10, "minVizHeight": 10, "sizing": "auto" },
       "title": "Top CPU Consumers",
       "type": "bargauge",
       "targets": [
         { "expr": "topk(10, sum(rate(container_cpu_usage_seconds_total{name!=\"\"}[5m])) by (name) * 100)", "legendFormat": "{{name}}", "instant": true }
+      ]
+    },
+
+    {
+      "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 127 },
+      "id": 112,
+      "title": "Logs",
+      "type": "row"
+    },
+    {
+      "datasource": { "type": "loki" },
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 128 },
+      "id": 220,
+      "options": {
+        "showTime": true,
+        "showLabels": false,
+        "showCommonLabels": false,
+        "wrapLogMessage": true,
+        "prettifyLogMessage": false,
+        "enableLogDetails": true,
+        "sortOrder": "Descending",
+        "dedupStrategy": "none"
+      },
+      "title": "Recent Container Logs",
+      "type": "logs",
+      "targets": [
+        { "expr": "{job=\"docker\"} |~ \"(?i)(error|warn|fatal|panic|exception|fail|oom|killed)\"", "legendFormat": "", "refId": "A" }
       ]
     }
   ],

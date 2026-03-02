@@ -42,6 +42,8 @@ access_control:
         - speed.romulus.hu
         - dns.romulus.hu
         - glances.romulus.hu
+        - ai.romulus.hu
+        - chat.romulus.hu
       policy: two_factor
 
     # Services with native auth — bypass (mobile apps handle their own auth)

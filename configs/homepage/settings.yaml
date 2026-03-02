@@ -12,12 +12,18 @@ layout:
   Productivity:
     style: row
     columns: 3
+  AI:
+    style: row
+    columns: 3
   Infrastructure:
     style: row
-    columns: 4
+    columns: 5
   Monitoring:
     style: row
-    columns: 5
+    columns: 3
+  Utilities:
+    style: row
+    columns: 1
   Notifications:
     style: row
     columns: 1

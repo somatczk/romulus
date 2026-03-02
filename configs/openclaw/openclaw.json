@@ -1,0 +1,57 @@
+{
+  "models": {
+    "providers": {
+      "ollama": {
+        "baseUrl": "http://ollama:11434",
+        "apiKey": "ollama-local",
+        "models": [
+          {
+            "id": "qwen3.5-hybrid",
+            "name": "qwen3.5-hybrid"
+          },
+          {
+            "id": "qwen3.5:35b-a3b",
+            "name": "qwen3.5:35b-a3b"
+          }
+        ]
+      }
+    }
+  },
+  "agents": {
+    "defaults": {
+      "model": "ollama/qwen3.5-hybrid",
+      "compaction": {
+        "mode": "safeguard"
+      },
+      "maxConcurrent": 4,
+      "subagents": {
+        "maxConcurrent": 8
+      }
+    }
+  },
+  "commands": {
+    "native": "auto",
+    "nativeSkills": "auto",
+    "restart": true,
+    "ownerDisplay": "raw"
+  },
+  "gateway": {
+    "bind": "lan",
+    "trustedProxies": [
+      "10.10.0.0/16",
+      "172.16.0.0/12"
+    ],
+    "controlUi": {
+      "allowedOrigins": [
+        "https://ai.romulus.hu"
+      ],
+      "dangerouslyDisableDeviceAuth": true
+    },
+    "auth": {
+      "mode": "trusted-proxy",
+      "trustedProxy": {
+        "userHeader": "Remote-User"
+      }
+    }
+  }
+}

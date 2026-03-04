@@ -7,7 +7,7 @@ set -euo pipefail
 # HDD: daily snapshots, keep 7
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/../.env"
+source "${SCRIPT_DIR}/../stacks/.env"
 
 if [[ $EUID -ne 0 ]]; then
     echo "Error: This script must be run as root (sudo)."

@@ -162,10 +162,20 @@ sudo cp /DATA/stacks/docker/daemon.json /etc/docker/daemon.json
 sudo systemctl restart docker
 echo "Docker daemon restarted with new config."
 
-# Run setup script (creates dirs + networks)
+# Run setup script (creates dirs + networks + installs restic)
 echo "Running setup script..."
 chmod +x /DATA/stacks/scripts/setup.sh
 sudo /DATA/stacks/scripts/setup.sh
+
+# Ensure restic is installed (belt-and-suspenders)
+if [ ! -f /DATA/bin/restic ]; then
+    echo "Installing restic..."
+    mkdir -p /DATA/bin
+    RESTIC_VERSION="0.17.3"
+    curl -sSL "https://github.com/restic/restic/releases/download/v${RESTIC_VERSION}/restic_${RESTIC_VERSION}_linux_amd64.bz2" \
+        | bunzip2 > /DATA/bin/restic
+    chmod +x /DATA/bin/restic
+fi
 
 echo "Phase 1 complete."
 REMOTE_SCRIPT

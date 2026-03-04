@@ -176,6 +176,16 @@ jobs:
             docker network create "$net" 2>/dev/null || true
           done
 
+      - name: Ensure Restic Installed
+        run: |
+          if [ ! -f /DATA/bin/restic ]; then
+            mkdir -p /DATA/bin
+            RESTIC_VERSION="0.17.3"
+            curl -sSL "https://github.com/restic/restic/releases/download/v${RESTIC_VERSION}/restic_${RESTIC_VERSION}_linux_amd64.bz2" \
+              | bunzip2 > /DATA/bin/restic
+            chmod +x /DATA/bin/restic
+          fi
+
   deploy-core:
     name: Deploy Core
     needs: [detect-changes, prepare]

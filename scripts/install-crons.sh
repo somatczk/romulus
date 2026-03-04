@@ -4,7 +4,7 @@ set -euo pipefail
 # Install all crontab entries for homelab automation
 # Run once to set up the schedule
 
-SCRIPTS_DIR="/DATA/stacks/stacks/scripts"
+SCRIPTS_DIR="/DATA/stacks/scripts"
 
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"

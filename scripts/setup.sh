@@ -210,6 +210,23 @@ for net in "${!NETWORKS[@]}"; do
 done
 
 # =============================================================================
+# 6. Install Restic
+# =============================================================================
+log_info "Ensuring restic is installed..."
+
+mkdir -p /DATA/bin
+if ! command -v restic &>/dev/null && [ ! -f /DATA/bin/restic ]; then
+    log_info "Installing restic..."
+    RESTIC_VERSION="0.17.3"
+    curl -sSL "https://github.com/restic/restic/releases/download/v${RESTIC_VERSION}/restic_${RESTIC_VERSION}_linux_amd64.bz2" \
+        | bunzip2 > /DATA/bin/restic
+    chmod +x /DATA/bin/restic
+    log_info "Restic ${RESTIC_VERSION} installed to /DATA/bin/restic"
+else
+    log_info "Restic already available, skipping."
+fi
+
+# =============================================================================
 # Done
 # =============================================================================
 echo ""

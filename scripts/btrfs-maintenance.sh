@@ -6,7 +6,7 @@ set -euo pipefail
 # Scrub: weekly (Sunday), Balance: monthly (1st)
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/../.env"
+source "${SCRIPT_DIR}/../stacks/.env"
 
 if [[ $EUID -ne 0 ]]; then
     echo "Error: This script must be run as root (sudo)."

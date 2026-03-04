@@ -35,6 +35,7 @@ jobs:
         if: steps.pr.outputs.number != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
         run: |
-          gh pr merge ${{ steps.pr.outputs.number }} \
+          gh pr merge "$PR_NUMBER" \
             --merge --delete-branch

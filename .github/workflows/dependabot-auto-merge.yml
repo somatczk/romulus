@@ -24,9 +24,10 @@ jobs:
         id: pr
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
         run: |
           PR_NUMBER=$(gh pr list \
-            --head "${{ github.event.workflow_run.head_branch }}" \
+            --head "$HEAD_BRANCH" \
             --json number --jq '.[0].number')
           echo "number=$PR_NUMBER" >> $GITHUB_OUTPUT
 

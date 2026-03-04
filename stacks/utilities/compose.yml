@@ -64,6 +64,7 @@ services:
     container_name: speedtest-exporter
     networks:
       - monitoring
+      - proxy
     ports:
       - "9798:9798"
     healthcheck:

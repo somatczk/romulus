@@ -68,7 +68,7 @@
       "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "showThresholdLabels": false, "showThresholdMarkers": true, "sizing": "auto" },
       "title": "Swap",
       "type": "gauge",
-      "targets": [{ "expr": "(1 - node_memory_SwapFree_bytes / node_memory_SwapTotal_bytes) * 100", "legendFormat": "Swap" }]
+      "targets": [{ "expr": "(1 - node_memory_SwapFree_bytes / node_memory_SwapTotal_bytes) * 100 and node_memory_SwapTotal_bytes > 0", "legendFormat": "Swap" }]
     },
     {
       "datasource": { "type": "prometheus" },
@@ -737,7 +737,7 @@
     {
       "datasource": { "type": "prometheus" },
       "fieldConfig": {
-        "defaults": { "unit": "s", "custom": { "fillOpacity": 15, "lineWidth": 2 } }
+        "defaults": { "unit": "ms", "custom": { "fillOpacity": 15, "lineWidth": 2 } }
       },
       "gridPos": { "h": 8, "w": 8, "x": 16, "y": 111 },
       "id": 72,
@@ -745,7 +745,7 @@
       "title": "Latency",
       "type": "timeseries",
       "targets": [
-        { "expr": "speedtest_ping_latency_milliseconds / 1000", "legendFormat": "Latency" }
+        { "expr": "speedtest_ping_latency_milliseconds", "legendFormat": "Latency" }
       ]
     },
 
@@ -837,7 +837,9 @@
         { "expr": "homelab_backup_success", "legendFormat": "Backup" },
         { "expr": "homelab_snapshot_success{drive=\"ssd\"}", "legendFormat": "Snap SSD" },
         { "expr": "homelab_snapshot_success{drive=\"hdd\"}", "legendFormat": "Snap HDD" },
-        { "expr": "homelab_restore_test_success", "legendFormat": "Restore" }
+        { "expr": "homelab_restore_test_success", "legendFormat": "Restore" },
+        { "expr": "homelab_maintenance_success{action=\"scrub\"}", "legendFormat": "Scrub" },
+        { "expr": "homelab_maintenance_success{action=\"balance\"}", "legendFormat": "Balance" }
       ]
     },
     {

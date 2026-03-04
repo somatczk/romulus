@@ -1,1 +1,1 @@
-FROM ghcr.io/danopstech/speedtest_exporter:v0.0.5
+FROM ghcr.io/miguelndecarvalho/speedtest-exporter:v3.5.4

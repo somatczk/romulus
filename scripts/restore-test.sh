@@ -11,6 +11,8 @@ source "${SCRIPT_DIR}/../stacks/.env"
 
 NTFY_URL="https://notify.${DOMAIN}/backups"
 RESTORE_DIR=$(mktemp -d "/tmp/restore-test-XXXXXX")
+METRICS_DIR="/var/lib/node_exporter/textfile_collector"
+START_TIME=$(date +%s)
 
 export RESTIC_REPOSITORY="${HDD}/backups/restic-repo"
 export RESTIC_PASSWORD="${RESTIC_PASSWORD}"
@@ -24,6 +26,31 @@ notify() {
     local message="$2"
     local priority="${3:-default}"
     curl -sf -H "Title: ${title}" -H "Priority: ${priority}" -d "${message}" "${NTFY_URL}" || true
+}
+
+write_metrics() {
+    local success="$1"
+    local errors="$2"
+    local duration=$(( $(date +%s) - START_TIME ))
+    local now
+    now=$(date +%s)
+    local tmpfile="${METRICS_DIR}/restore_test.prom.$$"
+    mkdir -p "${METRICS_DIR}"
+    cat > "${tmpfile}" <<PROM
+# HELP homelab_restore_test_success Whether the last restore test succeeded (1=success, 0=failure).
+# TYPE homelab_restore_test_success gauge
+homelab_restore_test_success ${success}
+# HELP homelab_restore_test_duration_seconds Duration of the last restore test in seconds.
+# TYPE homelab_restore_test_duration_seconds gauge
+homelab_restore_test_duration_seconds ${duration}
+# HELP homelab_restore_test_last_run_timestamp Unix timestamp of the last restore test run.
+# TYPE homelab_restore_test_last_run_timestamp gauge
+homelab_restore_test_last_run_timestamp ${now}
+# HELP homelab_restore_test_errors_total Number of validation errors in the last restore test.
+# TYPE homelab_restore_test_errors_total gauge
+homelab_restore_test_errors_total ${errors}
+PROM
+    mv "${tmpfile}" "${METRICS_DIR}/restore_test.prom"
 }
 
 cleanup() {
@@ -89,9 +116,11 @@ RESTORE_SIZE=$(du -sh "${RESTORE_DIR}" 2>/dev/null | cut -f1)
 
 if [ "${ERRORS}" -eq 0 ]; then
     log "Restore test PASSED - all validations successful"
+    write_metrics 1 0
     notify "Restore Test PASSED" "Monthly restore test passed. Restored size: ${RESTORE_SIZE}. All validations OK." "low"
 else
     log "Restore test FAILED - ${ERRORS} validation(s) failed"
+    write_metrics 0 "${ERRORS}"
     notify "Restore Test FAILED" "Monthly restore test had ${ERRORS} failure(s). Check logs for details." "high"
     exit 1
 fi

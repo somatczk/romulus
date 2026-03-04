@@ -666,10 +666,30 @@
         { "expr": "sum(rate(traefik_service_requests_total{code=~\"5..\"}[5m])) by (service)", "legendFormat": "{{service}}" }
       ]
     },
+    {
+      "datasource": { "type": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 500 },
+            { "color": "red", "value": 2000 }
+          ]}
+        }
+      },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 102 },
+      "id": 216,
+      "options": { "displayMode": "gradient", "orientation": "horizontal", "showUnfilled": true, "minVizWidth": 10, "minVizHeight": 10, "sizing": "auto" },
+      "title": "CrowdSec Active Bans by Reason",
+      "type": "bargauge",
+      "targets": [
+        { "expr": "cs_active_decisions", "legendFormat": "{{reason}}", "instant": true }
+      ]
+    },
 
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 102 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 110 },
       "id": 107,
       "title": "Internet Speed",
       "type": "row"
@@ -685,13 +705,13 @@
           ]}
         }
       },
-      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 103 },
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 111 },
       "id": 70,
       "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } },
       "title": "Download Speed",
       "type": "timeseries",
       "targets": [
-        { "expr": "speedtest_download_speed_Bps * 8 / 1000000", "legendFormat": "Download Mbps" }
+        { "expr": "speedtest_download_bits_per_second / 1000000", "legendFormat": "Download Mbps" }
       ]
     },
     {
@@ -705,13 +725,13 @@
           ]}
         }
       },
-      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 103 },
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 111 },
       "id": 71,
       "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "single" } },
       "title": "Upload Speed",
       "type": "timeseries",
       "targets": [
-        { "expr": "speedtest_upload_speed_Bps * 8 / 1000000", "legendFormat": "Upload Mbps" }
+        { "expr": "speedtest_upload_bits_per_second / 1000000", "legendFormat": "Upload Mbps" }
       ]
     },
     {
@@ -719,19 +739,19 @@
       "fieldConfig": {
         "defaults": { "unit": "s", "custom": { "fillOpacity": 15, "lineWidth": 2 } }
       },
-      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 103 },
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 111 },
       "id": 72,
       "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi" } },
       "title": "Latency",
       "type": "timeseries",
       "targets": [
-        { "expr": "speedtest_latency_seconds", "legendFormat": "Latency" }
+        { "expr": "speedtest_ping_latency_milliseconds / 1000", "legendFormat": "Latency" }
       ]
     },
 
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 111 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 119 },
       "id": 111,
       "title": "Backup & Disk Health",
       "type": "row"
@@ -748,7 +768,7 @@
           ]}
         }
       },
-      "gridPos": { "h": 6, "w": 4, "x": 0, "y": 112 },
+      "gridPos": { "h": 6, "w": 4, "x": 0, "y": 120 },
       "id": 210,
       "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "graphMode": "none", "colorMode": "background", "justifyMode": "auto", "textMode": "value", "wideLayout": true },
       "title": "Last Backup Age",
@@ -767,7 +787,7 @@
           ]}
         }
       },
-      "gridPos": { "h": 6, "w": 4, "x": 4, "y": 112 },
+      "gridPos": { "h": 6, "w": 4, "x": 4, "y": 120 },
       "id": 211,
       "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "graphMode": "none", "colorMode": "background", "justifyMode": "auto", "textMode": "value", "wideLayout": true },
       "title": "Backup Snapshots",
@@ -786,7 +806,7 @@
           ]}
         }
       },
-      "gridPos": { "h": 6, "w": 4, "x": 8, "y": 112 },
+      "gridPos": { "h": 6, "w": 4, "x": 8, "y": 120 },
       "id": 212,
       "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "graphMode": "none", "colorMode": "background", "justifyMode": "auto", "textMode": "value", "wideLayout": true },
       "title": "Detected Drives",
@@ -799,26 +819,73 @@
       "datasource": { "type": "prometheus" },
       "fieldConfig": {
         "defaults": {
+          "mappings": [
+            { "options": { "0": { "color": "red", "text": "FAIL" }, "1": { "color": "green", "text": "OK" } }, "type": "value" }
+          ],
           "thresholds": { "mode": "absolute", "steps": [
-            { "color": "green", "value": null },
-            { "color": "yellow", "value": 500 },
-            { "color": "red", "value": 2000 }
+            { "color": "red", "value": null },
+            { "color": "green", "value": 1 }
           ]}
         }
       },
-      "gridPos": { "h": 6, "w": 12, "x": 12, "y": 112 },
+      "gridPos": { "h": 6, "w": 4, "x": 12, "y": 120 },
       "id": 213,
-      "options": { "displayMode": "gradient", "orientation": "horizontal", "showUnfilled": true, "minVizWidth": 10, "minVizHeight": 10, "sizing": "auto" },
-      "title": "CrowdSec Active Bans by Reason",
-      "type": "bargauge",
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "graphMode": "none", "colorMode": "background", "justifyMode": "auto", "textMode": "value_and_name", "wideLayout": true },
+      "title": "Script Health",
+      "type": "stat",
       "targets": [
-        { "expr": "cs_active_decisions", "legendFormat": "{{reason}}", "instant": true }
+        { "expr": "homelab_backup_success", "legendFormat": "Backup" },
+        { "expr": "homelab_snapshot_success{drive=\"ssd\"}", "legendFormat": "Snap SSD" },
+        { "expr": "homelab_snapshot_success{drive=\"hdd\"}", "legendFormat": "Snap HDD" },
+        { "expr": "homelab_restore_test_success", "legendFormat": "Restore" }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 1800 },
+            { "color": "red", "value": 3600 }
+          ]}
+        }
+      },
+      "gridPos": { "h": 6, "w": 4, "x": 16, "y": 120 },
+      "id": 214,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "graphMode": "area", "colorMode": "value", "justifyMode": "auto", "textMode": "value", "wideLayout": true },
+      "title": "Backup Duration",
+      "type": "stat",
+      "targets": [
+        { "expr": "homelab_backup_duration_seconds", "legendFormat": "Duration" }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "red", "value": null },
+            { "color": "yellow", "value": 1 },
+            { "color": "green", "value": 5 }
+          ]}
+        }
+      },
+      "gridPos": { "h": 6, "w": 4, "x": 20, "y": 120 },
+      "id": 215,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "graphMode": "none", "colorMode": "background", "justifyMode": "auto", "textMode": "value_and_name", "wideLayout": true },
+      "title": "BTRFS Snapshots",
+      "type": "stat",
+      "targets": [
+        { "expr": "homelab_snapshot_count{drive=\"ssd\"}", "legendFormat": "SSD" },
+        { "expr": "homelab_snapshot_count{drive=\"hdd\"}", "legendFormat": "HDD" }
       ]
     },
 
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 118 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 126 },
       "id": 109,
       "title": "Container Health",
       "type": "row"
@@ -834,7 +901,7 @@
           ]}
         }
       },
-      "gridPos": { "h": 8, "w": 4, "x": 0, "y": 119 },
+      "gridPos": { "h": 8, "w": 4, "x": 0, "y": 127 },
       "id": 76,
       "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "graphMode": "none", "colorMode": "background", "justifyMode": "auto", "textMode": "value", "wideLayout": true },
       "title": "Container Count",
@@ -854,7 +921,7 @@
           ]}
         }
       },
-      "gridPos": { "h": 8, "w": 10, "x": 4, "y": 119 },
+      "gridPos": { "h": 8, "w": 10, "x": 4, "y": 127 },
       "id": 77,
       "options": { "showHeader": true, "sortBy": [{ "displayName": "Value", "desc": true }] },
       "title": "Container Restarts (30m)",
@@ -878,7 +945,7 @@
           ]}
         }
       },
-      "gridPos": { "h": 8, "w": 10, "x": 14, "y": 119 },
+      "gridPos": { "h": 8, "w": 10, "x": 14, "y": 127 },
       "id": 78,
       "options": { "displayMode": "gradient", "orientation": "horizontal", "showUnfilled": true, "minVizWidth": 10, "minVizHeight": 10, "sizing": "auto" },
       "title": "Top CPU Consumers",
@@ -890,14 +957,14 @@
 
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 127 },
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 135 },
       "id": 112,
       "title": "Logs",
       "type": "row"
     },
     {
       "datasource": { "type": "loki" },
-      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 128 },
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 136 },
       "id": 220,
       "options": {
         "showTime": true,

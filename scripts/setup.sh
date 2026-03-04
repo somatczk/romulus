@@ -210,7 +210,14 @@ for net in "${!NETWORKS[@]}"; do
 done
 
 # =============================================================================
-# 6. Install Restic
+# 6. Create Metrics Directory (for node-exporter textfile collector)
+# =============================================================================
+log_info "Creating metrics directory for textfile collector..."
+mkdir -p /var/lib/node_exporter/textfile_collector
+log_info "Metrics directory created."
+
+# =============================================================================
+# 7. Install Restic
 # =============================================================================
 log_info "Ensuring restic is installed..."
 

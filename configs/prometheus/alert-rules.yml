@@ -168,6 +168,51 @@ groups:
           summary: "Backup has not run in over 25 hours"
           description: "Last successful restic backup was more than 25 hours ago."
 
+      - alert: BackupScriptFailed
+        expr: homelab_backup_success == 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Backup script failed"
+          description: "The daily backup script exited with an error."
+
+      - alert: SnapshotFailed
+        expr: homelab_snapshot_success == 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "BTRFS snapshot failed on {{ $labels.drive }}"
+          description: "The BTRFS snapshot script failed for the {{ $labels.drive }} drive."
+
+      - alert: SnapshotStale
+        expr: time() - homelab_snapshot_last_run_timestamp{drive="ssd"} > 7200
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "SSD snapshots not running"
+          description: "No SSD snapshot has been taken in over 2 hours (expected hourly)."
+
+      - alert: MaintenanceFailed
+        expr: homelab_maintenance_success == 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "BTRFS {{ $labels.action }} failed"
+          description: "The BTRFS {{ $labels.action }} maintenance task failed."
+
+      - alert: RestoreTestFailed
+        expr: homelab_restore_test_success == 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Monthly restore test failed"
+          description: "The automated restore test failed with {{ $value }} validation errors."
+
   - name: loki
     rules:
       - alert: LokiIngestionLag
@@ -204,7 +249,7 @@ groups:
   - name: speedtest
     rules:
       - alert: SpeedtestSlow
-        expr: speedtest_download_speed_Bps < 12500000
+        expr: speedtest_download_bits_per_second < 100000000
         for: 0m
         labels:
           severity: warning

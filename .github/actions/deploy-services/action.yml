@@ -18,6 +18,19 @@ runs:
       run: |
         cd /DATA/stacks/stacks
 
+        # Check if compose.yml exists or is disabled
+        if [ ! -f "${{ inputs.stack }}/compose.yml" ]; then
+          if [ -f "${{ inputs.stack }}/compose.yml.disabled" ]; then
+            echo "::warning::Stack ${{ inputs.stack }} is disabled - stopping any running containers"
+            # Stop any running containers from this stack
+            docker compose --env-file .env -f ${{ inputs.stack }}/compose.yml.disabled down 2>/dev/null || true
+            exit 0
+          else
+            echo "::error::No compose.yml found for stack ${{ inputs.stack }}"
+            exit 1
+          fi
+        fi
+
         if [ -n "${{ inputs.force_recreate_services }}" ]; then
           echo "Force-recreating: ${{ inputs.force_recreate_services }}"
           docker compose --env-file .env -f ${{ inputs.stack }}/compose.yml \
@@ -31,8 +44,17 @@ runs:
     - name: Check Stack Health
       shell: bash
       run: |
-        sleep 15
         cd /DATA/stacks/stacks
+        
+        # Skip health check for disabled stacks
+        if [ ! -f "${{ inputs.stack }}/compose.yml" ]; then
+          if [ -f "${{ inputs.stack }}/compose.yml.disabled" ]; then
+            echo "Skipping health check for disabled stack ${{ inputs.stack }}"
+          fi
+          exit 0
+        fi
+        
+        sleep 15
         docker compose -f ${{ inputs.stack }}/compose.yml ps --format json 2>/dev/null | \
           jq -r 'select(.Health == "unhealthy") | .Name' 2>/dev/null | while read -r name; do
             if [ -n "$name" ]; then

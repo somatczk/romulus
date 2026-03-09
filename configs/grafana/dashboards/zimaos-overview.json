@@ -592,13 +592,19 @@
       },
       "gridPos": { "h": 8, "w": 4, "x": 0, "y": 94 },
       "id": 73,
-      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "graphMode": "area", "colorMode": "background", "justifyMode": "auto", "textMode": "value", "wideLayout": true },
+      "options": { "showHeader": true, "sortBy": [{ "displayName": "severity", "desc": true }] },
       "title": "Active Alerts",
-      "type": "stat",
+      "type": "table",
       "targets": [
-        { "expr": "count(ALERTS{alertstate=\"firing\"}) or vector(0)", "legendFormat": "Firing" }
+        { "expr": "ALERTS{alertstate=\"firing\"}", "legendFormat": "", "format": "table", "instant": true }
+      ],
+      "transformations": [
+        { "id": "organize", "options": { 
+          "excludeByName": { "Time": true, "__name__": true, "job": true }, 
+          "renameByName": { "alertname": "Alert", "severity": "Severity", "instance": "Instance" }
+        }}
       ]
-    },
+    }
     {
       "datasource": { "type": "prometheus" },
       "fieldConfig": {
@@ -970,7 +976,7 @@
       "id": 220,
       "options": {
         "showTime": true,
-        "showLabels": false,
+        "showLabels": true,
         "showCommonLabels": false,
         "wrapLogMessage": true,
         "prettifyLogMessage": false,
@@ -981,8 +987,14 @@
       "title": "Recent Container Logs",
       "type": "logs",
       "targets": [
-        { "expr": "{job=\"docker\"}", "legendFormat": "", "refId": "A" }
-      ]
+        { 
+          "expr": "{container_name=~\".+\"} |~ \"(?i)(error|warn|fail|critical|alert)\"", 
+          "legendFormat": "", 
+          "refId": "A",
+          "maxLines": 1000
+        }
+      ],
+      "pluginVersion": "10.0.0"
     }
   ],
   "refresh": "30s",

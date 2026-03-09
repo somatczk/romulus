@@ -17,13 +17,16 @@ scrape_configs:
       - source_labels:
           - __meta_docker_container_name
         regex: /(.*)
-        target_label: container
+        target_label: container_name
       - source_labels:
           - __meta_docker_container_log_stream
-        target_label: logstream
+        target_label: stream
       - source_labels:
           - __meta_docker_container_label_com_docker_compose_service
-        target_label: service
+        target_label: compose_service
+      - source_labels:
+          - __meta_docker_container_label_com_docker_compose_project
+        target_label: compose_project
 
   - job_name: syslog
     static_configs:

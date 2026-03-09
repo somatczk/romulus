@@ -233,60 +233,80 @@ jobs:
         with:
           stack: security
 
-  deploy-apps:
-    name: Deploy ${{ matrix.stack }}
+  generate-matrix:
+    name: Generate Deployment Matrix
     needs: [detect-changes, deploy-security]
     runs-on: [self-hosted, romulus]
     if: always() && needs.deploy-security.result != 'failure'
+    outputs:
+      matrix: ${{ steps.generate.outputs.matrix }}
+      has_stacks: ${{ steps.generate.outputs.has_stacks }}
+    
+    steps:
+      - name: Generate Matrix
+        id: generate
+        run: |
+          STACKS='[]'
+          HAS_STACKS="false"
+          
+          if [[ "${{ needs.detect-changes.outputs.full_deploy }}" == "true" ]]; then
+            echo "Full deployment - including all stacks"
+            STACKS='["media","productivity","monitoring","notifications","utilities","dashboard","ai"]'
+            HAS_STACKS="true"
+          else
+            # Build array of stacks that have changes
+            CHANGED_STACKS='[]'
+            
+            if [[ "${{ needs.detect-changes.outputs.media }}" == "true" ]]; then
+              CHANGED_STACKS=$(echo $CHANGED_STACKS | jq '. += ["media"]')
+            fi
+            if [[ "${{ needs.detect-changes.outputs.productivity }}" == "true" ]]; then
+              CHANGED_STACKS=$(echo $CHANGED_STACKS | jq '. += ["productivity"]')
+            fi
+            if [[ "${{ needs.detect-changes.outputs.monitoring }}" == "true" ]]; then
+              CHANGED_STACKS=$(echo $CHANGED_STACKS | jq '. += ["monitoring"]')
+            fi
+            if [[ "${{ needs.detect-changes.outputs.notifications }}" == "true" ]]; then
+              CHANGED_STACKS=$(echo $CHANGED_STACKS | jq '. += ["notifications"]')
+            fi
+            if [[ "${{ needs.detect-changes.outputs.utilities }}" == "true" ]]; then
+              CHANGED_STACKS=$(echo $CHANGED_STACKS | jq '. += ["utilities"]')
+            fi
+            if [[ "${{ needs.detect-changes.outputs.dashboard }}" == "true" ]]; then
+              CHANGED_STACKS=$(echo $CHANGED_STACKS | jq '. += ["dashboard"]')
+            fi
+            if [[ "${{ needs.detect-changes.outputs.ai }}" == "true" ]]; then
+              CHANGED_STACKS=$(echo $CHANGED_STACKS | jq '. += ["ai"]')
+            fi
+            
+            STACKS=$CHANGED_STACKS
+            
+            # Check if we have any stacks to deploy
+            if [[ $(echo $STACKS | jq '. | length') -gt 0 ]]; then
+              HAS_STACKS="true"
+              echo "Stacks to deploy: $(echo $STACKS | jq -r '. | join(", ")')"
+            else
+              echo "No stacks to deploy"
+            fi
+          fi
+          
+          echo "matrix={\"stack\":$STACKS}" >> $GITHUB_OUTPUT
+          echo "has_stacks=$HAS_STACKS" >> $GITHUB_OUTPUT
+
+  deploy-apps:
+    name: Deploy ${{ matrix.stack }}
+    needs: [generate-matrix]
+    runs-on: [self-hosted, romulus]
+    if: needs.generate-matrix.outputs.has_stacks == 'true'
     strategy:
       fail-fast: false
-      matrix:
-        stack:
-          - media
-          - productivity
-          - monitoring
-          - notifications
-          - utilities
-          - dashboard
-          - ai
+      matrix: ${{ fromJson(needs.generate-matrix.outputs.matrix) }}
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v6
 
-      - name: Check if Stack Should Deploy
-        id: should-deploy
-        env:
-          FULL_DEPLOY: ${{ needs.detect-changes.outputs.full_deploy }}
-          CHANGED_MEDIA: ${{ needs.detect-changes.outputs.media }}
-          CHANGED_PRODUCTIVITY: ${{ needs.detect-changes.outputs.productivity }}
-          CHANGED_MONITORING: ${{ needs.detect-changes.outputs.monitoring }}
-          CHANGED_NOTIFICATIONS: ${{ needs.detect-changes.outputs.notifications }}
-          CHANGED_UTILITIES: ${{ needs.detect-changes.outputs.utilities }}
-          CHANGED_DASHBOARD: ${{ needs.detect-changes.outputs.dashboard }}
-          CHANGED_AI: ${{ needs.detect-changes.outputs.ai }}
-          STACK: ${{ matrix.stack }}
-        run: |
-          if [[ "$FULL_DEPLOY" == "true" ]]; then
-            echo "Full deploy requested - deploying $STACK"
-            echo "skip=false" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          # Map stack name to its change detection output
-          CHANGED_VAR="CHANGED_$(echo "$STACK" | tr '[:lower:]' '[:upper:]')"
-          CHANGED="${!CHANGED_VAR}"
-
-          if [[ "$CHANGED" == "true" ]]; then
-            echo "Changes detected for $STACK - deploying"
-            echo "skip=false" >> $GITHUB_OUTPUT
-          else
-            echo "No changes for $STACK - skipping"
-            echo "skip=true" >> $GITHUB_OUTPUT
-          fi
-
       - name: Deploy ${{ matrix.stack }}
-        if: steps.should-deploy.outputs.skip != 'true'
         uses: ./.github/actions/deploy-services
         with:
           stack: ${{ matrix.stack }}
@@ -294,7 +314,7 @@ jobs:
 
   verify:
     name: Verify Deployment
-    needs: [detect-changes, deploy-apps]
+    needs: [detect-changes, generate-matrix, deploy-apps]
     runs-on: [self-hosted, romulus]
     if: always()
 

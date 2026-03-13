@@ -42,6 +42,7 @@ access_control:
         - speed.romulus.hu
         - dns.romulus.hu
         - glances.romulus.hu
+        - trading.romulus.hu
       policy: two_factor
 
     # AI services — one_factor (Authelia + CrowdSec is sufficient)

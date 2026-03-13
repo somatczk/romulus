@@ -192,6 +192,8 @@ services:
       TS3SERVER_LICENSE: accept
     volumes:
       - ${APPDATA}/utilities/teamspeak:/var/ts3server
+    tmpfs:
+      - /var/run/ts3server:uid=9987,gid=9987
     labels:
       traefik.enable: "true"
       traefik.http.routers.teamspeak.rule: Host(`teamspeak.${DOMAIN}`)

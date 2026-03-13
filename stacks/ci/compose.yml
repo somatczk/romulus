@@ -133,6 +133,8 @@ services:
       POST: 1
       BUILD: 1
       COMMIT: 0
+      AUTH: 1
+      DISTRIBUTION: 1
       EXEC: 1
       EVENTS: 1
       INFO: 1

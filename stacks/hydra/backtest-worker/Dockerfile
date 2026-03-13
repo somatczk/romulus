@@ -1,1 +1,1 @@
-FROM ghcr.io/somatczk/hydra-backtest:sha-ca1fce3
+FROM ghcr.io/somatczk/hydra-backtest:sha-7641cdf

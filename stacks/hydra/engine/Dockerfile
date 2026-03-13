@@ -1,1 +1,1 @@
-FROM ghcr.io/somatczk/hydra-engine:sha-ca1fce3
+FROM ghcr.io/somatczk/hydra-engine:sha-7641cdf

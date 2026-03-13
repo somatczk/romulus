@@ -1,1 +1,1 @@
-FROM ghcr.io/somatczk/hydra-dashboard:sha-ca1fce3
+FROM ghcr.io/somatczk/hydra-dashboard:sha-7641cdf

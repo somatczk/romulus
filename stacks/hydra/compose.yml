@@ -1,0 +1,191 @@
+networks:
+  proxy:
+    external: true
+  hydra:
+    external: true
+  monitoring:
+    external: true
+
+services:
+  # ---------------------------------------------------------------------------
+  # Hydra Engine (FastAPI backend + trading engine)
+  # ---------------------------------------------------------------------------
+  hydra-engine:
+    build: ./engine
+    container_name: hydra-engine
+    restart: unless-stopped
+    env_file: ../.env
+    networks:
+      - proxy
+      - hydra
+      - monitoring
+    depends_on:
+      hydra-timescaledb:
+        condition: service_healthy
+      hydra-redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://hydra:${HYDRA_DB_PASSWORD}@hydra-timescaledb:5432/hydra
+      REDIS_URL: redis://hydra-redis:6379
+      BINANCE_API_KEY: ${BINANCE_API_KEY}
+      BINANCE_API_SECRET: ${BINANCE_API_SECRET}
+      BYBIT_API_KEY: ${BYBIT_API_KEY}
+      BYBIT_API_SECRET: ${BYBIT_API_SECRET}
+      KRAKEN_API_KEY: ${KRAKEN_API_KEY}
+      KRAKEN_API_SECRET: ${KRAKEN_API_SECRET}
+      OKX_API_KEY: ${OKX_API_KEY}
+      OKX_API_SECRET: ${OKX_API_SECRET}
+      OKX_PASSPHRASE: ${OKX_PASSPHRASE}
+      HYDRA_TESTNET: ${HYDRA_TESTNET}
+      HYDRA_TELEGRAM_BOT_TOKEN: ${HYDRA_TELEGRAM_BOT_TOKEN}
+      HYDRA_TELEGRAM_CHAT_ID: ${HYDRA_TELEGRAM_CHAT_ID}
+    volumes:
+      - ${APPDATA}/hydra/config:/app/config:ro
+      - ${APPDATA}/hydra/models:/app/models:ro
+      - ${APPDATA}/hydra/logs:/app/logs
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.hydra-api.rule: "Host(`trading.${DOMAIN}`) && PathPrefix(`/api`)"
+      traefik.http.routers.hydra-api.entrypoints: "websecure"
+      traefik.http.routers.hydra-api.tls.certresolver: "cloudflare"
+      traefik.http.routers.hydra-api.middlewares: "secure@file"
+      traefik.http.routers.hydra-api.service: "hydra-api"
+      traefik.http.services.hydra-api.loadbalancer.server.port: "8000"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 4g
+          cpus: "4.0"
+    security_opt:
+      - no-new-privileges:true
+
+  # ---------------------------------------------------------------------------
+  # Hydra Dashboard (Next.js frontend)
+  # ---------------------------------------------------------------------------
+  hydra-dashboard:
+    build: ./dashboard
+    container_name: hydra-dashboard
+    restart: unless-stopped
+    env_file: ../.env
+    networks:
+      - proxy
+      - hydra
+    depends_on:
+      - hydra-engine
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.hydra-dashboard.rule: "Host(`trading.${DOMAIN}`)"
+      traefik.http.routers.hydra-dashboard.entrypoints: "websecure"
+      traefik.http.routers.hydra-dashboard.tls.certresolver: "cloudflare"
+      traefik.http.routers.hydra-dashboard.middlewares: "secure@file"
+      traefik.http.routers.hydra-dashboard.service: "hydra-dashboard"
+      traefik.http.routers.hydra-dashboard.priority: "1"
+      traefik.http.services.hydra-dashboard.loadbalancer.server.port: "3000"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "0.5"
+    security_opt:
+      - no-new-privileges:true
+
+  # ---------------------------------------------------------------------------
+  # Hydra Backtest Worker (background backtest jobs)
+  # ---------------------------------------------------------------------------
+  hydra-backtest-worker:
+    build: ./backtest-worker
+    container_name: hydra-backtest-worker
+    restart: unless-stopped
+    env_file: ../.env
+    networks:
+      - hydra
+    depends_on:
+      hydra-timescaledb:
+        condition: service_healthy
+      hydra-redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://hydra:${HYDRA_DB_PASSWORD}@hydra-timescaledb:5432/hydra
+      REDIS_URL: redis://hydra-redis:6379
+    volumes:
+      - ${APPDATA}/hydra/config:/app/config:ro
+      - ${APPDATA}/hydra/models:/app/models:ro
+      - ${APPDATA}/hydra/logs:/app/logs
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os; exit(0)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 8g
+          cpus: "8.0"
+    security_opt:
+      - no-new-privileges:true
+
+  # ---------------------------------------------------------------------------
+  # Hydra TimescaleDB (PostgreSQL 16 + TimescaleDB)
+  # ---------------------------------------------------------------------------
+  hydra-timescaledb:
+    build: ./timescaledb
+    container_name: hydra-timescaledb
+    restart: unless-stopped
+    env_file: ../.env
+    networks:
+      - hydra
+    environment:
+      POSTGRES_DB: hydra
+      POSTGRES_USER: hydra
+      POSTGRES_PASSWORD: ${HYDRA_DB_PASSWORD}
+    volumes:
+      - ${APPDATA}/hydra/timescaledb:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hydra"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 4g
+          cpus: "2.0"
+    security_opt:
+      - no-new-privileges:true
+
+  # ---------------------------------------------------------------------------
+  # Hydra Redis (event bus + cache)
+  # ---------------------------------------------------------------------------
+  hydra-redis:
+    build: ./redis
+    container_name: hydra-redis
+    restart: unless-stopped
+    env_file: ../.env
+    networks:
+      - hydra
+    command: redis-server --maxmemory 1536mb --maxmemory-policy allkeys-lru
+    volumes:
+      - ${APPDATA}/hydra/redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+          cpus: "0.5"
+    security_opt:
+      - no-new-privileges:true

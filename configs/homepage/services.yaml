@@ -71,6 +71,12 @@
         icon: ollama
         description: Local LLM inference server
 
+- Trading:
+    - Hydra:
+        href: https://trading.romulus.hu
+        icon: mdi-chart-line
+        description: Bitcoin auto-trading platform
+
 - Infrastructure:
     - Traefik:
         href: https://traefik.romulus.hu

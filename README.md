@@ -4,7 +4,7 @@ Homelab configuration for ZimaCube (Ryzen 9 5950X, 128GB RAM, GTX 1650 SUPER) ru
 
 ## Architecture
 
-10 Docker Compose stacks:
+11 Docker Compose stacks:
 
 | Stack | Services | RAM |
 |-------|----------|-----|
@@ -18,6 +18,7 @@ Homelab configuration for ZimaCube (Ryzen 9 5950X, 128GB RAM, GTX 1650 SUPER) ru
 | **utilities** | Watchtower, Dozzle, Speedtest, Portainer, TeamSpeak, Autoheal | 2.6 GB |
 | **dashboard** | Homepage | 512 MB |
 | **ai** | Ollama, OpenClaw, Open WebUI, Socket Proxy | ~19 GB |
+| **hydra** | Hydra Engine, Dashboard, Backtest Worker, TimescaleDB, Redis | 18.5 GB |
 
 Image versions pinned in single-line Dockerfiles (`stacks/<stack>/<service>/Dockerfile`). Dependabot opens weekly PRs for bumps, auto-merged after CI passes.
 
@@ -61,6 +62,7 @@ All at `*.romulus.hu` via Traefik + Authelia 2FA:
 | TeamSpeak | `teamspeak.romulus.hu` |
 | OpenClaw | `ai.romulus.hu` |
 | Open WebUI | `chat.romulus.hu` |
+| Hydra Trading | `trading.romulus.hu` |
 
 ## GPU Sharing
 

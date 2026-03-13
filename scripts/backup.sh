@@ -86,6 +86,11 @@ docker exec paperless-db pg_dump -U paperless paperless \
     > "${BACKUP_DIR}/db-dumps/paperless_${TIMESTAMP}.sql"
 log "Paperless database dump complete"
 
+log "Dumping Hydra database..."
+docker exec hydra-timescaledb pg_dump -U hydra hydra \
+    > "${BACKUP_DIR}/db-dumps/hydra_${TIMESTAMP}.sql"
+log "Hydra database dump complete"
+
 # Clean up old database dumps (keep last 7)
 find "${BACKUP_DIR}/db-dumps" -name "*.sql" -mtime +7 -delete
 

@@ -15,6 +15,9 @@ layout:
   AI:
     style: row
     columns: 3
+  Trading:
+    style: row
+    columns: 1
   Infrastructure:
     style: row
     columns: 5

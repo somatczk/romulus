@@ -277,28 +277,28 @@ jobs:
             CHANGED_STACKS='[]'
             
             if [[ "${{ needs.detect-changes.outputs.media }}" == "true" ]]; then
-              CHANGED_STACKS=$(echo $CHANGED_STACKS | jq '. += ["media"]')
+              CHANGED_STACKS=$(echo $CHANGED_STACKS | jq -c '. += ["media"]')
             fi
             if [[ "${{ needs.detect-changes.outputs.productivity }}" == "true" ]]; then
-              CHANGED_STACKS=$(echo $CHANGED_STACKS | jq '. += ["productivity"]')
+              CHANGED_STACKS=$(echo $CHANGED_STACKS | jq -c '. += ["productivity"]')
             fi
             if [[ "${{ needs.detect-changes.outputs.monitoring }}" == "true" ]]; then
-              CHANGED_STACKS=$(echo $CHANGED_STACKS | jq '. += ["monitoring"]')
+              CHANGED_STACKS=$(echo $CHANGED_STACKS | jq -c '. += ["monitoring"]')
             fi
             if [[ "${{ needs.detect-changes.outputs.notifications }}" == "true" ]]; then
-              CHANGED_STACKS=$(echo $CHANGED_STACKS | jq '. += ["notifications"]')
+              CHANGED_STACKS=$(echo $CHANGED_STACKS | jq -c '. += ["notifications"]')
             fi
             if [[ "${{ needs.detect-changes.outputs.utilities }}" == "true" ]]; then
-              CHANGED_STACKS=$(echo $CHANGED_STACKS | jq '. += ["utilities"]')
+              CHANGED_STACKS=$(echo $CHANGED_STACKS | jq -c '. += ["utilities"]')
             fi
             if [[ "${{ needs.detect-changes.outputs.dashboard }}" == "true" ]]; then
-              CHANGED_STACKS=$(echo $CHANGED_STACKS | jq '. += ["dashboard"]')
+              CHANGED_STACKS=$(echo $CHANGED_STACKS | jq -c '. += ["dashboard"]')
             fi
             if [[ "${{ needs.detect-changes.outputs.ai }}" == "true" ]]; then
-              CHANGED_STACKS=$(echo $CHANGED_STACKS | jq '. += ["ai"]')
+              CHANGED_STACKS=$(echo $CHANGED_STACKS | jq -c '. += ["ai"]')
             fi
             if [[ "${{ needs.detect-changes.outputs.hydra }}" == "true" ]]; then
-              CHANGED_STACKS=$(echo $CHANGED_STACKS | jq '. += ["hydra"]')
+              CHANGED_STACKS=$(echo $CHANGED_STACKS | jq -c '. += ["hydra"]')
             fi
             
             STACKS=$CHANGED_STACKS

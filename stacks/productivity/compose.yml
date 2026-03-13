@@ -284,6 +284,8 @@ services:
     restart: unless-stopped
     networks:
       - db-paperless
+    volumes:
+      - ${APPDATA}/productivity/paperless-redis:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 30s

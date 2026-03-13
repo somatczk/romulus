@@ -95,6 +95,11 @@ jobs:
             echo "$FILES"
           fi
 
+      - name: Login to GHCR
+        env:
+          GHCR_TOKEN: ${{ secrets.G_PAT }}
+        run: echo "$GHCR_TOKEN" | docker login ghcr.io -u somatczk --password-stdin
+
       - name: Verify images exist
         if: steps.changed.outputs.files != ''
         run: |

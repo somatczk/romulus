@@ -1,4 +1,11 @@
 version: 2
+registries:
+  ghcr:
+    type: docker-registry
+    url: https://ghcr.io
+    username: somatczk
+    password: ${{secrets.G_PAT}}
+
 updates:
   - package-ecosystem: github-actions
     directory: /
@@ -6,6 +13,8 @@ updates:
       interval: weekly
 
   - package-ecosystem: docker
+    registries:
+      - ghcr
     directories:
       - /stacks/ci/socket-proxy
       - /stacks/ci/gh-runner
@@ -80,3 +89,6 @@ updates:
       immich-stack:
         patterns:
           - "ghcr.io/immich-app/*"
+      hydra-stack:
+        patterns:
+          - "ghcr.io/somatczk/hydra-*"

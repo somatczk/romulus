@@ -60,6 +60,11 @@ updates:
       - /stacks/ai/ollama
       - /stacks/ai/openclaw
       - /stacks/ai/open-webui
+      - /stacks/hydra/engine
+      - /stacks/hydra/dashboard
+      - /stacks/hydra/backtest-worker
+      - /stacks/hydra/timescaledb
+      - /stacks/hydra/redis
     schedule:
       interval: weekly
       day: monday

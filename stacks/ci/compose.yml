@@ -60,6 +60,33 @@ x-solhouse-runner: &solhouse-defaults
     - no-new-privileges:true
   restart: unless-stopped
 
+x-hydra-runner: &hydra-defaults
+  build: ./gh-runner
+  env_file: ../.env
+  networks:
+    - ci
+    - ci-socket
+    - proxy
+  environment:
+    DOCKER_HOST: tcp://ci-socket-proxy:2375
+    DOCKER_CONFIG: /tmp/.docker
+    RUNNER_SCOPE: repo
+    REPO_URL: https://github.com/somatczk/hydra
+    ACCESS_TOKEN: ${GITHUB_PAT}
+    RUNNER_NAME_PREFIX: zimaos-hydra
+    LABELS: self-hosted,linux,x64,zimaos,hydra
+    EPHEMERAL: "true"
+    DISABLE_AUTO_UPDATE: "true"
+    RUNNER_WORKDIR: /work
+  deploy:
+    resources:
+      limits:
+        memory: 6G
+        cpus: "4.0"
+  security_opt:
+    - no-new-privileges:true
+  restart: unless-stopped
+
 x-romulus-runner: &romulus-defaults
   build: ./gh-runner
   env_file: ../.env
@@ -164,6 +191,30 @@ services:
     container_name: gh-runner-solhouse-4
     volumes:
       - ${APPDATA}/ci/runners/runner-solhouse-4:/work
+
+  gh-runner-hydra-1:
+    <<: *hydra-defaults
+    container_name: gh-runner-hydra-1
+    volumes:
+      - ${APPDATA}/ci/runners/runner-hydra-1:/work
+
+  gh-runner-hydra-2:
+    <<: *hydra-defaults
+    container_name: gh-runner-hydra-2
+    volumes:
+      - ${APPDATA}/ci/runners/runner-hydra-2:/work
+
+  gh-runner-hydra-3:
+    <<: *hydra-defaults
+    container_name: gh-runner-hydra-3
+    volumes:
+      - ${APPDATA}/ci/runners/runner-hydra-3:/work
+
+  gh-runner-hydra-4:
+    <<: *hydra-defaults
+    container_name: gh-runner-hydra-4
+    volumes:
+      - ${APPDATA}/ci/runners/runner-hydra-4:/work
 
   gh-runner-romulus-1:
     <<: *romulus-defaults

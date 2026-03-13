@@ -32,6 +32,7 @@ jobs:
       utilities: ${{ steps.filter.outputs.utilities }}
       dashboard: ${{ steps.filter.outputs.dashboard }}
       ai: ${{ steps.filter.outputs.ai }}
+      hydra: ${{ steps.filter.outputs.hydra }}
       full_deploy: ${{ steps.full-deploy.outputs.result }}
 
     steps:
@@ -74,6 +75,9 @@ jobs:
             ai:
               - 'stacks/ai/**'
               - 'configs/openclaw/**'
+            hydra:
+              - 'stacks/hydra/**'
+              - 'configs/hydra/**'
 
       - name: Determine Full Deploy
         id: full-deploy
@@ -101,6 +105,7 @@ jobs:
           echo "  Utilities ........ ${{ steps.filter.outputs.utilities }}"
           echo "  Dashboard ........ ${{ steps.filter.outputs.dashboard }}"
           echo "  AI ............... ${{ steps.filter.outputs.ai }}"
+          echo "  Hydra ............ ${{ steps.filter.outputs.hydra }}"
           echo "===================================="
 
   prepare:
@@ -159,6 +164,20 @@ jobs:
           PAPERLESS_DB_PASSWORD=${{ secrets.PAPERLESS_DB_PASSWORD }}
           PAPERLESS_SECRET_KEY=${{ secrets.PAPERLESS_SECRET_KEY }}
           PAPERLESS_ADMIN_PASSWORD=${{ secrets.PAPERLESS_ADMIN_PASSWORD }}
+          # --- Hydra Trading ---
+          HYDRA_DB_PASSWORD=${{ secrets.HYDRA_DB_PASSWORD }}
+          BINANCE_API_KEY=${{ secrets.BINANCE_API_KEY }}
+          BINANCE_API_SECRET=${{ secrets.BINANCE_API_SECRET }}
+          BYBIT_API_KEY=${{ secrets.BYBIT_API_KEY }}
+          BYBIT_API_SECRET=${{ secrets.BYBIT_API_SECRET }}
+          KRAKEN_API_KEY=${{ secrets.KRAKEN_API_KEY }}
+          KRAKEN_API_SECRET=${{ secrets.KRAKEN_API_SECRET }}
+          OKX_API_KEY=${{ secrets.OKX_API_KEY }}
+          OKX_API_SECRET=${{ secrets.OKX_API_SECRET }}
+          OKX_PASSPHRASE=${{ secrets.OKX_PASSPHRASE }}
+          HYDRA_TESTNET=${{ secrets.HYDRA_TESTNET }}
+          HYDRA_TELEGRAM_BOT_TOKEN=${{ secrets.HYDRA_TELEGRAM_BOT_TOKEN }}
+          HYDRA_TELEGRAM_CHAT_ID=${{ secrets.HYDRA_TELEGRAM_CHAT_ID }}
           EOF
 
       - name: Rsync to /DATA/stacks/
@@ -172,7 +191,7 @@ jobs:
 
       - name: Ensure Docker Networks
         run: |
-          for net in proxy socket media db-nextcloud db-immich monitoring ci db-paperless ai; do
+          for net in proxy socket media db-nextcloud db-immich monitoring ci db-paperless ai hydra; do
             docker network create "$net" 2>/dev/null || true
           done
 
@@ -251,7 +270,7 @@ jobs:
           
           if [[ "${{ needs.detect-changes.outputs.full_deploy }}" == "true" ]]; then
             echo "Full deployment - including all stacks"
-            STACKS='["media","productivity","monitoring","notifications","utilities","dashboard","ai"]'
+            STACKS='["media","productivity","monitoring","notifications","utilities","dashboard","ai","hydra"]'
             HAS_STACKS="true"
           else
             # Build array of stacks that have changes
@@ -277,6 +296,9 @@ jobs:
             fi
             if [[ "${{ needs.detect-changes.outputs.ai }}" == "true" ]]; then
               CHANGED_STACKS=$(echo $CHANGED_STACKS | jq '. += ["ai"]')
+            fi
+            if [[ "${{ needs.detect-changes.outputs.hydra }}" == "true" ]]; then
+              CHANGED_STACKS=$(echo $CHANGED_STACKS | jq '. += ["hydra"]')
             fi
             
             STACKS=$CHANGED_STACKS
@@ -310,7 +332,7 @@ jobs:
         uses: ./.github/actions/deploy-services
         with:
           stack: ${{ matrix.stack }}
-          force_recreate_services: ${{ matrix.stack == 'monitoring' && 'grafana' || matrix.stack == 'dashboard' && 'homepage' || '' }}
+          force_recreate_services: ${{ matrix.stack == 'monitoring' && 'grafana' || matrix.stack == 'dashboard' && 'homepage' || matrix.stack == 'hydra' && 'hydra-engine' || '' }}
 
   verify:
     name: Verify Deployment

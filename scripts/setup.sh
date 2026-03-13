@@ -93,6 +93,10 @@ SSD_DIRS=(
     "${APPDATA}/ci/runners/runner-solhouse-2"
     "${APPDATA}/ci/runners/runner-solhouse-3"
     "${APPDATA}/ci/runners/runner-solhouse-4"
+    "${APPDATA}/ci/runners/runner-hydra-1"
+    "${APPDATA}/ci/runners/runner-hydra-2"
+    "${APPDATA}/ci/runners/runner-hydra-3"
+    "${APPDATA}/ci/runners/runner-hydra-4"
     "${APPDATA}/ci/runners/runner-romulus-1"
     "${APPDATA}/ci/runners/runner-romulus-2"
     "${APPDATA}/ci/runners/runner-romulus-3"
@@ -114,6 +118,14 @@ SSD_DIRS=(
     "${APPDATA}/ai/openclaw"
     "${APPDATA}/ai/openclaw-workspace"
     "${APPDATA}/ai/open-webui"
+    # Hydra Trading
+    "${APPDATA}/hydra/config"
+    "${APPDATA}/hydra/models"
+    "${APPDATA}/hydra/logs"
+    "${APPDATA}/hydra/timescaledb"
+    "${APPDATA}/hydra/redis"
+    "${APPDATA}/hydra/backtest"
+    "${APPDATA}/hydra/data"
 )
 
 # HDD directories
@@ -193,6 +205,7 @@ NETWORKS=(
     ["ci"]="internal"
     ["db-paperless"]="internal"
     ["ai"]="internal"
+    ["hydra"]="internal"
 )
 
 for net in "${!NETWORKS[@]}"; do
@@ -255,5 +268,5 @@ echo "    1. Edit stacks/.env and replace all changeme_ values"
 echo "    2. Copy docker/daemon.json to /etc/docker/daemon.json"
 echo "    3. Run: sudo systemctl restart docker"
 echo "    4. Run: sudo bash scripts/swap.sh (configure 8GB swap + kernel tuning)"
-echo "    5. Deploy stacks in order: core -> security -> media -> productivity -> monitoring -> ci -> notifications -> dashboard -> utilities -> ai"
+echo "    5. Deploy stacks in order: core -> security -> media -> productivity -> monitoring -> ci -> notifications -> dashboard -> utilities -> ai -> hydra"
 echo ""

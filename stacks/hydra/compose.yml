@@ -39,20 +39,29 @@ services:
       HYDRA_TESTNET: ${HYDRA_TESTNET}
       HYDRA_TELEGRAM_BOT_TOKEN: ${HYDRA_TELEGRAM_BOT_TOKEN}
       HYDRA_TELEGRAM_CHAT_ID: ${HYDRA_TELEGRAM_CHAT_ID}
+      HYDRA_CORS_ORIGINS: https://trading.${DOMAIN}
     volumes:
       - ${APPDATA}/hydra/config:/app/config:ro
       - ${APPDATA}/hydra/models:/app/models:ro
       - ${APPDATA}/hydra/logs:/app/logs
     labels:
       traefik.enable: "true"
-      traefik.http.routers.hydra-api.rule: "Host(`trading.${DOMAIN}`) && PathPrefix(`/api`)"
+      # API routes (behind Authelia 2FA)
+      traefik.http.routers.hydra-api.rule: "Host(`trading.${DOMAIN}`) && (PathPrefix(`/api`) || PathPrefix(`/ws`))"
       traefik.http.routers.hydra-api.entrypoints: "websecure"
       traefik.http.routers.hydra-api.tls.certresolver: "cloudflare"
-      traefik.http.routers.hydra-api.middlewares: "secure@file"
+      traefik.http.routers.hydra-api.middlewares: "secure-admin@file"
       traefik.http.routers.hydra-api.service: "hydra-api"
       traefik.http.services.hydra-api.loadbalancer.server.port: "8000"
+      # Health/metrics (no auth — for Prometheus scraping)
+      traefik.http.routers.hydra-metrics.rule: "Host(`trading.${DOMAIN}`) && (Path(`/health`) || Path(`/metrics`))"
+      traefik.http.routers.hydra-metrics.entrypoints: "websecure"
+      traefik.http.routers.hydra-metrics.tls.certresolver: "cloudflare"
+      traefik.http.routers.hydra-metrics.middlewares: "secure@file"
+      traefik.http.routers.hydra-metrics.service: "hydra-api"
+      traefik.http.routers.hydra-metrics.priority: "10"
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8000/health"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -76,6 +85,8 @@ services:
     networks:
       - proxy
       - hydra
+    environment:
+      NEXT_PUBLIC_API_URL: https://trading.${DOMAIN}
     depends_on:
       - hydra-engine
     labels:
@@ -83,12 +94,12 @@ services:
       traefik.http.routers.hydra-dashboard.rule: "Host(`trading.${DOMAIN}`)"
       traefik.http.routers.hydra-dashboard.entrypoints: "websecure"
       traefik.http.routers.hydra-dashboard.tls.certresolver: "cloudflare"
-      traefik.http.routers.hydra-dashboard.middlewares: "secure@file"
+      traefik.http.routers.hydra-dashboard.middlewares: "secure-admin@file"
       traefik.http.routers.hydra-dashboard.service: "hydra-dashboard"
       traefik.http.routers.hydra-dashboard.priority: "1"
       traefik.http.services.hydra-dashboard.loadbalancer.server.port: "3000"
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3000"]
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000').then(r=>{process.exit(r.ok?0:1)}).catch(()=>process.exit(1))"]
       interval: 30s
       timeout: 3s
       retries: 3

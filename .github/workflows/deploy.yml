@@ -328,6 +328,10 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v6
 
+      - name: Login to GHCR (for private images)
+        if: matrix.stack == 'hydra'
+        run: echo "${{ secrets.G_PAT }}" | docker login ghcr.io -u somatczk --password-stdin
+
       - name: Deploy ${{ matrix.stack }}
         uses: ./.github/actions/deploy-services
         with:

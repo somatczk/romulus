@@ -86,10 +86,3 @@ updates:
     open-pull-requests-limit: 10
     commit-message:
       prefix: "docker"
-    groups:
-      immich-stack:
-        patterns:
-          - "ghcr.io/immich-app/*"
-      hydra-stack:
-        patterns:
-          - "ghcr.io/somatczk/hydra-*"

@@ -69,8 +69,8 @@ services:
     deploy:
       resources:
         limits:
-          memory: 4g
-          cpus: "4.0"
+          memory: 8g
+          cpus: "16.0"
     security_opt:
       - no-new-privileges:true
 

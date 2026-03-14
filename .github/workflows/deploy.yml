@@ -334,6 +334,15 @@ jobs:
           GHCR_TOKEN: ${{ secrets.G_PAT }}
         run: echo "$GHCR_TOKEN" | docker login ghcr.io -u somatczk --password-stdin
 
+      - name: Seed Hydra config from Docker image
+        if: matrix.stack == 'hydra'
+        run: |
+          IMAGE=$(grep FROM stacks/hydra/engine/Dockerfile | awk '{print $2}')
+          docker pull "$IMAGE"
+          APPDATA=/media/SSD-Storage/appdata
+          mkdir -p "$APPDATA/hydra/config/strategies"
+          docker run --rm "$IMAGE" sh -c 'tar cf - -C /app config/strategies 2>/dev/null || true' | tar xf - -C "$APPDATA/hydra/" --keep-old-files 2>/dev/null || true
+
       - name: Deploy ${{ matrix.stack }}
         uses: ./.github/actions/deploy-services
         with:

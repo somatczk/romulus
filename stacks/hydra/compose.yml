@@ -41,7 +41,7 @@ services:
       HYDRA_TELEGRAM_CHAT_ID: ${HYDRA_TELEGRAM_CHAT_ID}
       HYDRA_CORS_ORIGINS: https://trading.${DOMAIN}
     volumes:
-      - ${APPDATA}/hydra/config:/app/config:ro
+      - ${APPDATA}/hydra/config:/app/config
       - ${APPDATA}/hydra/models:/app/models:ro
       - ${APPDATA}/hydra/logs:/app/logs
     labels:
@@ -130,7 +130,7 @@ services:
       DATABASE_URL: postgresql://hydra:${HYDRA_DB_PASSWORD}@hydra-timescaledb:5432/hydra
       REDIS_URL: redis://hydra-redis:6379
     volumes:
-      - ${APPDATA}/hydra/config:/app/config:ro
+      - ${APPDATA}/hydra/config:/app/config
       - ${APPDATA}/hydra/models:/app/models:ro
       - ${APPDATA}/hydra/logs:/app/logs
     healthcheck:

@@ -27,6 +27,13 @@ authentication_backend:
 access_control:
   default_policy: deny
   rules:
+    # Static assets — bypass auth (prevents redirect storms from SPA frameworks)
+    - domain: '*.romulus.hu'
+      resources:
+        - '^/_next/.*$'
+        - '^/favicon\.ico.*$'
+      policy: bypass
+
     # Admin services — require two_factor
     - domain:
         - prometheus.romulus.hu
@@ -77,6 +84,10 @@ session:
   cookies:
     - domain: romulus.hu
       authelia_url: https://auth.romulus.hu
+      same_site: lax
+      inactivity: 6h
+      expiration: 4h
+      remember_me: 30d
 
 storage:
   local:

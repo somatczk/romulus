@@ -1,1 +1,1 @@
-FROM ghcr.io/somatczk/hydra-backtest:0.1.31
+FROM ghcr.io/somatczk/hydra-backtest:0.1.32

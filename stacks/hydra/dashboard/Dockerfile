@@ -1,1 +1,1 @@
-FROM ghcr.io/somatczk/hydra-dashboard:1.1.0
+FROM ghcr.io/somatczk/hydra-dashboard:1.2.0

@@ -1,1 +1,1 @@
-FROM ghcr.io/somatczk/hydra-engine:1.1.0
+FROM ghcr.io/somatczk/hydra-engine:1.2.0

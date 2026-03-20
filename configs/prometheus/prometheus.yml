@@ -74,4 +74,4 @@ scrape_configs:
   - job_name: hydra
     static_configs:
       - targets:
-          - hydra-engine:8080
+          - hydra-engine:8000

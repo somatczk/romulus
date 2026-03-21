@@ -42,7 +42,7 @@ services:
       HYDRA_CORS_ORIGINS: https://trading.${DOMAIN}
     volumes:
       - ${APPDATA}/hydra/config:/app/config
-      - ${APPDATA}/hydra/models:/app/models:ro
+      - ${APPDATA}/hydra/models:/app/models:rw
       - ${APPDATA}/hydra/logs:/app/logs
     labels:
       traefik.enable: "true"

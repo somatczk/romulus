@@ -235,7 +235,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "avg_over_time(hydra_daily_pnl[30d]) / stddev_over_time(hydra_daily_pnl[30d]) * sqrt(365)",
+          "expr": "avg_over_time(hydra_daily_pnl[30d]) / stddev_over_time(hydra_daily_pnl[30d]) * 19.1049731745",
           "legendFormat": "Sharpe (30d rolling)"
         }
       ],

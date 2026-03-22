@@ -70,7 +70,6 @@ services:
       resources:
         limits:
           memory: 8g
-          cpus: "16.0"
     security_opt:
       - no-new-privileges:true
 
@@ -142,7 +141,6 @@ services:
       resources:
         limits:
           memory: 8g
-          cpus: "8.0"
     security_opt:
       - no-new-privileges:true
 

@@ -1,1 +1,1 @@
-FROM lscr.io/linuxserver/sonarr:4.0.16
+FROM lscr.io/linuxserver/sonarr:4.0.17

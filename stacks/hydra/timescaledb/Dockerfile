@@ -1,1 +1,1 @@
-FROM timescale/timescaledb:2.25.2-pg16
+FROM timescale/timescaledb:2.26.0-pg16

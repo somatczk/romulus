@@ -1,1 +1,1 @@
-FROM lscr.io/linuxserver/prowlarr:2.3.0
+FROM lscr.io/linuxserver/prowlarr:2.3.5

@@ -1,1 +1,1 @@
-FROM lscr.io/linuxserver/radarr:6.0.4
+FROM lscr.io/linuxserver/radarr:6.1.1

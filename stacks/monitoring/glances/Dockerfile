@@ -1,1 +1,1 @@
-FROM nicolargo/glances:4.5.2-full
+FROM nicolargo/glances:4.5.3.2-full

@@ -1,1 +1,1 @@
-FROM authelia/authelia:4.39.16
+FROM authelia/authelia:4.39.19

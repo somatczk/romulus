@@ -1,1 +1,1 @@
-FROM adguard/adguardhome:v0.107.73
+FROM adguard/adguardhome:v0.107.74

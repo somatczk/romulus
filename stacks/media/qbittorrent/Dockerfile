@@ -1,1 +1,1 @@
-FROM lscr.io/linuxserver/qbittorrent:5.1.4
+FROM lscr.io/linuxserver/qbittorrent:5.2.0

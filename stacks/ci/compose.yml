@@ -20,7 +20,7 @@ x-runner: &runner-defaults
     ORG_NAME: ${GITHUB_ORG}
     ACCESS_TOKEN: ${GITHUB_PAT}
     RUNNER_NAME_PREFIX: zimaos
-    LABELS: self-hosted,linux,x64,zimaos,org-dsfsm
+    LABELS: self-hosted,linux,x64,zimaos,org-coordentra
     EPHEMERAL: "true"
     DISABLE_AUTO_UPDATE: "true"
     RUNNER_WORKDIR: /work
@@ -169,6 +169,30 @@ services:
     container_name: gh-runner-4
     volumes:
       - ${APPDATA}/ci/runners/runner-4:/work
+
+  gh-runner-5:
+    <<: *runner-defaults
+    container_name: gh-runner-5
+    volumes:
+      - ${APPDATA}/ci/runners/runner-5:/work
+
+  gh-runner-6:
+    <<: *runner-defaults
+    container_name: gh-runner-6
+    volumes:
+      - ${APPDATA}/ci/runners/runner-6:/work
+
+  gh-runner-7:
+    <<: *runner-defaults
+    container_name: gh-runner-7
+    volumes:
+      - ${APPDATA}/ci/runners/runner-7:/work
+
+  gh-runner-8:
+    <<: *runner-defaults
+    container_name: gh-runner-8
+    volumes:
+      - ${APPDATA}/ci/runners/runner-8:/work
 
   gh-runner-solhouse-1:
     <<: *solhouse-defaults

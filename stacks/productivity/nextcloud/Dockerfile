@@ -1,1 +1,1 @@
-FROM nextcloud:33.0.4
+FROM nextcloud:33.0.5

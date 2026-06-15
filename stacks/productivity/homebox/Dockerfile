@@ -1,1 +1,1 @@
-FROM ghcr.io/sysadminsmedia/homebox:0.25.0
+FROM ghcr.io/sysadminsmedia/homebox:0.26.2

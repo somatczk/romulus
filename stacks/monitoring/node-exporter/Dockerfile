@@ -1,1 +1,1 @@
-FROM prom/node-exporter:v1.11.1
+FROM prom/node-exporter:v1.12.0

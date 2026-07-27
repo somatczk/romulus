@@ -1,4 +1,4 @@
-FROM myoung34/github-runner:2.335.1
+FROM myoung34/github-runner:2.336.0
 
 # Node.js 20 LTS — required before pnpm/action-setup runs
 RUN apt-get update && \

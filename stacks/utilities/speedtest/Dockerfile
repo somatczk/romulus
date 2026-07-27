@@ -1,1 +1,1 @@
-FROM lscr.io/linuxserver/speedtest-tracker:1.14.5
+FROM lscr.io/linuxserver/speedtest-tracker:1.14.6

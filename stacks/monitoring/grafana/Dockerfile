@@ -1,1 +1,1 @@
-FROM grafana/grafana:13.1.0
+FROM grafana/grafana:13.1.1

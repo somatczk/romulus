@@ -1,1 +1,1 @@
-FROM ghcr.io/paperless-ngx/paperless-ngx:2.20.15
+FROM ghcr.io/paperless-ngx/paperless-ngx:3.0.3

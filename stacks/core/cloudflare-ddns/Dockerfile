@@ -1,1 +1,1 @@
-FROM favonia/cloudflare-ddns:1.16.2
+FROM favonia/cloudflare-ddns:1.17.0

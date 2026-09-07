@@ -1,1 +1,1 @@
-FROM ghcr.io/home-assistant/home-assistant:2026.8.3
+FROM ghcr.io/home-assistant/home-assistant:2026.9.1

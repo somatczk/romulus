@@ -1,1 +1,1 @@
-FROM crowdsecurity/crowdsec:v1.7.8
+FROM crowdsecurity/crowdsec:v1.8.1

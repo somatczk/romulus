@@ -1,1 +1,1 @@
-FROM amir20/dozzle:v11.0.1
+FROM amir20/dozzle:v11.1.0

@@ -1,1 +1,1 @@
-FROM jellyfin/jellyfin:12.0.20260908-012347
+FROM jellyfin/jellyfin:12.1.20260915-010956

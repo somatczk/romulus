@@ -1,1 +1,1 @@
-FROM ghcr.io/immich-app/immich-machine-learning:v3.2.0
+FROM ghcr.io/immich-app/immich-machine-learning:v3.2.2

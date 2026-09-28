@@ -1,1 +1,1 @@
-FROM lscr.io/linuxserver/bazarr:1.6.1
+FROM lscr.io/linuxserver/bazarr:1.6.2

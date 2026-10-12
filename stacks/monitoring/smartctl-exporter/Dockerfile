@@ -1,1 +1,1 @@
-FROM prometheuscommunity/smartctl-exporter:v0.14.0
+FROM prometheuscommunity/smartctl-exporter:v0.15.0

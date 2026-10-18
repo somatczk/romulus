@@ -10,14 +10,14 @@ template:
     initContainers:
       # local-path volumes ignore fsGroup; hand the cache root to the runner user.
       - name: cache-perms
-        image: ghcr.io/somatczk/arc-runner:sha-693d5d1fff0a05a48476cbbcbb7834578771d891@sha256:b2e28545cbbcb8100fd3325c02c2470311e507c0889615c5847d303d1bffe541
+        image: ghcr.io/somatczk/arc-runner:sha-286c8bab8b97e0fba42bbe267fbe8ed60cadd4e4@sha256:ba947d0288add4e8299f141870894ed457ba2ee33916b5aeb203567854beeb9f
         command: ["sh", "-c", "chown 1001:123 /cache && chmod 2775 /cache"]
         securityContext:
           runAsUser: 0
         volumeMounts:
           - {name: cache, mountPath: /cache}
       - name: init-dind-externals
-        image: ghcr.io/somatczk/arc-runner:sha-693d5d1fff0a05a48476cbbcbb7834578771d891@sha256:b2e28545cbbcb8100fd3325c02c2470311e507c0889615c5847d303d1bffe541
+        image: ghcr.io/somatczk/arc-runner:sha-286c8bab8b97e0fba42bbe267fbe8ed60cadd4e4@sha256:ba947d0288add4e8299f141870894ed457ba2ee33916b5aeb203567854beeb9f
         command: ["cp", "-r", "/home/runner/externals/.", "/home/runner/tmpDir/"]
         volumeMounts:
           - {name: dind-externals, mountPath: /home/runner/tmpDir}
@@ -51,7 +51,7 @@ template:
           - {name: dind-storage, mountPath: /var/lib/docker}
     containers:
       - name: runner
-        image: ghcr.io/somatczk/arc-runner:sha-693d5d1fff0a05a48476cbbcbb7834578771d891@sha256:b2e28545cbbcb8100fd3325c02c2470311e507c0889615c5847d303d1bffe541
+        image: ghcr.io/somatczk/arc-runner:sha-286c8bab8b97e0fba42bbe267fbe8ed60cadd4e4@sha256:ba947d0288add4e8299f141870894ed457ba2ee33916b5aeb203567854beeb9f
         command: ["/home/runner/run.sh"]
         env:
           - {name: DOCKER_HOST, value: unix:///var/run/docker.sock}

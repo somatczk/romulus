@@ -29,7 +29,9 @@ spec:
     name: onepassword-flux
   target:
     name: romulus-tenants-deploy-key
-    creationPolicy: Owner
+    # Orphan creates the secret or takes over one made by hand (bootstrap, or when
+    # the 1Password service account is rate limited)
+    creationPolicy: Orphan
   data:
     - secretKey: identity
       remoteRef: {key: romulus-tenants-deploy-key/identity}

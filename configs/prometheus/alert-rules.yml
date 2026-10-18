@@ -2,7 +2,7 @@ groups:
   - name: disk
     rules:
       - alert: DiskUsageWarning
-        expr: (1 - node_filesystem_avail_bytes{mountpoint=~"/|/media/SSD-Storage|/media/HDD-Storage",fstype!="tmpfs"} / node_filesystem_size_bytes) * 100 > 80
+        expr: (1 - node_filesystem_avail_bytes{mountpoint=~"/|/media/HDD-Storage",fstype!="tmpfs"} / node_filesystem_size_bytes) * 100 > 80
         for: 5m
         labels:
           severity: warning
@@ -11,7 +11,7 @@ groups:
           description: "{{ $labels.mountpoint }} on {{ $labels.instance }} is at {{ printf \"%.1f\" $value }}%."
 
       - alert: DiskUsageCritical
-        expr: (1 - node_filesystem_avail_bytes{mountpoint=~"/|/media/SSD-Storage|/media/HDD-Storage",fstype!="tmpfs"} / node_filesystem_size_bytes) * 100 > 90
+        expr: (1 - node_filesystem_avail_bytes{mountpoint=~"/|/media/HDD-Storage",fstype!="tmpfs"} / node_filesystem_size_bytes) * 100 > 90
         for: 2m
         labels:
           severity: critical

@@ -50,8 +50,9 @@ PROM
 
 case "${DRIVE}" in
     ssd)
-        SUBVOLUME="/media/SSD-Storage"
-        SNAPSHOT_DIR="/media/SSD-Storage/.snapshots"
+        # app data is its own subvolume; the VM disk (@vms) is rebuildable and not snapshotted
+        SUBVOLUME="/media/SSD-Storage/appdata"
+        SNAPSHOT_DIR="/mnt/btrfs-ssd/.snapshots/appdata"
         KEEP=24
         ;;
     hdd)

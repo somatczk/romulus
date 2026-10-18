@@ -87,7 +87,7 @@
       "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "orientation": "auto", "showThresholdLabels": false, "showThresholdMarkers": true, "sizing": "auto" },
       "title": "SSD",
       "type": "gauge",
-      "targets": [{ "expr": "100 - (node_filesystem_avail_bytes{mountpoint=\"/media/SSD-Storage\"} / node_filesystem_size_bytes{mountpoint=\"/media/SSD-Storage\"} * 100)", "legendFormat": "SSD" }]
+      "targets": [{ "expr": "100 - (node_filesystem_avail_bytes{mountpoint=\"/\"} / node_filesystem_size_bytes{mountpoint=\"/\"} * 100)", "legendFormat": "SSD" }]
     },
     {
       "datasource": { "type": "prometheus" },
@@ -604,7 +604,7 @@
           "renameByName": { "alertname": "Alert", "severity": "Severity", "instance": "Instance" }
         }}
       ]
-    }
+    },
     {
       "datasource": { "type": "prometheus" },
       "fieldConfig": {

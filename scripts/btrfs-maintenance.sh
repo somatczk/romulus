@@ -15,7 +15,8 @@ fi
 
 ACTION="${1:-}"
 NTFY_URL="https://notify.${DOMAIN}/maintenance"
-SSD="/media/SSD-Storage"
+# whole-filesystem mount, scrub and balance cover every subvolume
+SSD="/mnt/btrfs-ssd"
 HDD="/media/HDD-Storage"
 METRICS_DIR="/var/lib/node_exporter/textfile_collector"
 START_TIME=$(date +%s)

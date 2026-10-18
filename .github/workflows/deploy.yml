@@ -162,6 +162,8 @@ jobs:
           PAPERLESS_DB_PASSWORD=${{ secrets.PAPERLESS_DB_PASSWORD }}
           PAPERLESS_SECRET_KEY=${{ secrets.PAPERLESS_SECRET_KEY }}
           PAPERLESS_ADMIN_PASSWORD=${{ secrets.PAPERLESS_ADMIN_PASSWORD }}
+          # --- Homebox ---
+          HBOX_AUTH_API_KEY_PEPPER=${{ secrets.HOMEBOX_API_KEY_PEPPER }}
           # --- Hydra Trading ---
           HYDRA_DB_PASSWORD=${{ secrets.HYDRA_DB_PASSWORD }}
           BINANCE_API_KEY=${{ secrets.BINANCE_API_KEY }}

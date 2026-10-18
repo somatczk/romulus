@@ -121,3 +121,4 @@ echo -e "${YELLOW}  To persist across reboots, add to root's crontab:${NC}"
 echo "    sudo crontab -e"
 echo "    @reboot $(readlink -f "$0")"
 echo ""
+/DATA/stacks/scripts/hardening-firewall.sh

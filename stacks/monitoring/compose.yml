@@ -198,7 +198,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 128M
+          memory: 1G
     security_opt:
       - no-new-privileges:true
 

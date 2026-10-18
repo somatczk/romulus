@@ -135,9 +135,6 @@ jobs:
           # --- Database Passwords ---
           NEXTCLOUD_DB_PASSWORD=${{ secrets.NEXTCLOUD_DB_PASSWORD }}
           IMMICH_DB_PASSWORD=${{ secrets.IMMICH_DB_PASSWORD }}
-          # --- GitHub (CI/CD) ---
-          GITHUB_PAT=${{ secrets.G_PAT }}
-          GITHUB_ORG=${{ secrets.G_ORG }}
           # --- Redis ---
           NEXTCLOUD_REDIS_PASSWORD=${{ secrets.NEXTCLOUD_REDIS_PASSWORD }}
           # --- Backup ---
@@ -180,6 +177,15 @@ jobs:
           HYDRA_TELEGRAM_CHAT_ID=${{ secrets.HYDRA_TELEGRAM_CHAT_ID }}
           EOF
 
+      # Runners get only their registration token: never the shared homelab .env.
+      - name: Generate ci.env
+        run: |
+          cat > stacks/ci/ci.env <<'EOF'
+          GITHUB_PAT=${{ secrets.G_PAT }}
+          GITHUB_ORG=vetoo-hq
+          GITHUB_ORG_COORDENTRA=coordentra
+          EOF
+
       - name: Rsync to /DATA/stacks/
         run: |
           rsync -a --delete \
@@ -188,6 +194,7 @@ jobs:
             --exclude 'deploy.sh' \
             --exclude 'configs/authelia/users_database.yml' \
             ./ /DATA/stacks/
+          chmod 600 /DATA/stacks/stacks/.env /DATA/stacks/stacks/ci/ci.env
 
       - name: Ensure Docker Networks
         run: |

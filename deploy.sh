@@ -439,7 +439,7 @@ done
 log "Deployment complete!"
 echo ""
 echo "Next steps:"
-echo "  1. Update .env with real secrets (CF_API_TOKEN, GITHUB_PAT, etc.)"
+echo "  1. Update .env with real secrets (CF_API_TOKEN, etc.) and stacks/ci/ci.env"
 echo "  2. Configure AdGuard Home at https://dns.romulus.hu (first-run wizard)"
 echo "  3. Set up Nextcloud at https://cloud.romulus.hu"
 echo "  4. Configure Immich at https://photos.romulus.hu"

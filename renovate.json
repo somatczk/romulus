@@ -1,0 +1,18 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":disableDependencyDashboard"],
+  "enabledManagers": ["flux"],
+  "flux": { "managerFilePatterns": ["/^(kubernetes|clusters)/.+\\.ya?ml$/"] },
+  "minimumReleaseAge": "7 days",
+  "schedule": ["before 6am on monday"],
+  "timezone": "Europe/Budapest",
+  "labels": ["dependencies", "kubernetes"],
+  "commitMessagePrefix": "k8s:",
+  "packageRules": [
+    {
+      "description": "controller and scale sets must run the same ARC version",
+      "matchPackageNames": ["/^gha-runner-scale-set/"],
+      "groupName": "arc"
+    }
+  ]
+}

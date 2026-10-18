@@ -1,5 +1,6 @@
 # ARC runner image: GitHub's official runner plus the toolchain the org workflows expect
 # (Node 24, Corretto 25, Maven). Docker comes from the dind sidecar via DOCKER_HOST.
+# libatomic1: setup-node downloads Node builds (26+) that link against it.
 FROM ghcr.io/actions/actions-runner:2.338.0@sha256:4ffadc0002b2581327e06101fc8c06cd189232baf79fe561fac9caeb76f5e807
 
 USER root
@@ -8,7 +9,7 @@ USER root
 ARG NODESOURCE_FPR=6F71F525282841EEDAF851B42F59B5F99B1BE0B4
 ARG CORRETTO_FPR=6DC3636DAE534049C8B94623A122542AB04F24E3
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends curl gpg ca-certificates git jq unzip zip rsync && \
+    apt-get install -y --no-install-recommends curl gpg ca-certificates git jq unzip zip rsync libatomic1 && \
     curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | \
         gpg --dearmor -o /usr/share/keyrings/nodesource.gpg && \
     curl -fsSL https://apt.corretto.aws/corretto.key | gpg --dearmor -o /usr/share/keyrings/corretto.gpg && \

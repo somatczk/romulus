@@ -5,6 +5,8 @@ services:
     restart: unless-stopped
     networks:
       - monitoring
+      # monitoring is internal; telegram needs egress
+      - proxy
     environment:
       TZ: ${TZ}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}

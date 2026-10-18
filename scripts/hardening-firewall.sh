@@ -8,6 +8,11 @@
 #     ephemeral published ports (Testcontainers) and DNS, and never LAN/overlay ranges.
 # v6: inbound default-deny except LAN, link-local, ULA, overlays and public services.
 set -u
+export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# One run at a time: cron, boot and deploys share the temporary chains.
+exec 9>/run/hardening-firewall.lock
+flock -w 60 9 || { echo "hardening-firewall: lock busy" >&2; exit 1; }
 
 IPT="iptables -w"
 IP6T="ip6tables -w"
@@ -105,7 +110,7 @@ delete table inet romulus_vm_guard
 table inet romulus_vm_guard {
   set blocked4 {
     type ipv4_addr; flags interval
-    elements = { 192.168.0.0/16, 172.16.0.0/12, 100.64.0.0/10, 169.254.0.0/16, 10.10.0.0/16 }
+    elements = { 0.0.0.0/8, 127.0.0.0/8, 192.168.0.0/16, 172.16.0.0/12, 100.64.0.0/10, 169.254.0.0/16, 10.10.0.0/16 }
   }
   chain forward {
     type filter hook forward priority -10; policy accept;

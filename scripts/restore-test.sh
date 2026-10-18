@@ -67,6 +67,15 @@ log "Starting monthly restore test..."
 log "Restore directory: ${RESTORE_DIR}"
 
 # Restore latest snapshot
+# The restore lands on the backup HDD: refuse if it would not fit with 10% to spare.
+NEED=$(restic stats latest --mode restore-size --json | jq -r .total_size)
+FREE=$(( $(df --output=avail -B1 "${HDD}" | tail -1) ))
+if (( NEED + NEED / 10 > FREE )); then
+    log "ERROR: restore needs ${NEED} bytes, ${FREE} free on ${HDD}"
+    notify "Restore test skipped" "Not enough space on ${HDD}: need ${NEED}, free ${FREE}" "high"
+    exit 1
+fi
+
 log "Restoring latest snapshot..."
 restic restore latest --target "${RESTORE_DIR}" --verbose 2>&1
 log "Restore complete"

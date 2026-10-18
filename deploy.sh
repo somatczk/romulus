@@ -283,7 +283,7 @@ do_productivity() {
 
 do_ci() {
     log "Starting CI stack..."
-    ssh_cmd "cd /DATA/stacks/stacks && docker compose --env-file .env -f ci/compose.yml up -d --build --pull always"
+    ssh_cmd "cd /DATA/stacks/stacks && docker compose --env-file .env --env-file ci/ci.env -f ci/compose.yml up -d --remove-orphans --build --pull always"
     ok "CI stack running"
 }
 

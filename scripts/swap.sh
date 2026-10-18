@@ -28,28 +28,11 @@ else
     echo "[INFO] Swap enabled."
 fi
 
-# --- Persist via a unit ordered after the /DATA bind mount ---
-# An fstab entry here forms an ordering cycle with DATA.mount; systemd then drops the
-# /DATA mount at boot (no home dir, no SSH keys, containers start without their data).
-sed -i "\#^${SWAPFILE} #d" /etc/fstab
-cat > /etc/systemd/system/data-swapfile.service <<UNIT
-[Unit]
-Description=Swap on ${SWAPFILE} (after the /DATA bind mount)
-Requires=DATA.mount
-After=DATA.mount
-
-[Service]
-Type=oneshot
-RemainAfterExit=yes
-ExecStart=/sbin/swapon ${SWAPFILE}
-ExecStop=/sbin/swapoff ${SWAPFILE}
-
-[Install]
-WantedBy=multi-user.target
-UNIT
-systemctl daemon-reload
-systemctl enable data-swapfile.service
-echo "[INFO] Swap persisted via data-swapfile.service."
+# --- Persist in /etc/fstab (/DATA is a regular fstab mount on Ubuntu, so no ordering cycle) ---
+if ! grep -q "^$SWAPFILE " /etc/fstab; then
+    echo "$SWAPFILE none swap sw 0 0" >> /etc/fstab
+    echo "[INFO] Added swap entry to /etc/fstab."
+fi
 
 # --- Kernel tuning ---
 SYSCTL_FILE="/etc/sysctl.d/99-swap.conf"

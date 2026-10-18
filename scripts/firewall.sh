@@ -2,13 +2,10 @@
 # =============================================================================
 # ZimaOS - iptables Firewall Rules
 # =============================================================================
-# Configures host-level firewall. Run once, then persist with the crontab entry
-# shown at the bottom of this script.
+# Configures host-level firewall. Runs at boot from homelab-firewall.service (after Docker),
+# installed by install-crons.sh.
 #
 # Usage: sudo bash firewall.sh
-#
-# To persist across reboots, add to root's crontab:
-#   @reboot /path/to/zimaos-config/scripts/firewall.sh
 # =============================================================================
 set -euo pipefail
 
@@ -107,9 +104,7 @@ echo ""
 echo "  Current INPUT rules:"
 iptables -L INPUT -n -v --line-numbers
 echo ""
-echo -e "${YELLOW}  To persist across reboots, add to root's crontab:${NC}"
-echo "    sudo crontab -e"
-echo "    @reboot $(readlink -f "$0")"
+echo -e "${YELLOW}  Persisted by homelab-firewall.service (scripts/install-crons.sh).${NC}"
 echo ""
 # The INPUT flush above drops Tailscale's hook; restore it if tailscaled is running.
 iptables -N ts-input 2>/dev/null && iptables -X ts-input || iptables -C INPUT -j ts-input 2>/dev/null || iptables -I INPUT 1 -j ts-input

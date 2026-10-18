@@ -58,6 +58,8 @@ runs:
       id: yaml-validation
       if: inputs.validate-yaml == 'true'
       shell: bash
+      env:
+        CONFIG_PATH: ${{ inputs.config-path }}
       run: |
         echo "Validating YAML files..."
 
@@ -74,7 +76,7 @@ runs:
             echo "  Invalid YAML"
             YAML_ERRORS=$((YAML_ERRORS + 1))
           fi
-        done < <(find "${{ inputs.config-path }}" -name "*.yml" -o -name "*.yaml" 2>/dev/null)
+        done < <(find "$CONFIG_PATH" -name "*.yml" -o -name "*.yaml" 2>/dev/null)
 
         # Validate stacks compose files
         for compose_file in stacks/*/compose.yml; do
@@ -108,6 +110,8 @@ runs:
       id: shell-validation
       if: inputs.validate-shell == 'true'
       shell: bash
+      env:
+        SCRIPTS_PATH: ${{ inputs.scripts-path }}
       run: |
         echo "Validating shell scripts..."
 
@@ -123,7 +127,7 @@ runs:
             echo "  Invalid shell script"
             SHELL_ERRORS=$((SHELL_ERRORS + 1))
           fi
-        done < <(find "${{ inputs.scripts-path }}" -name "*.sh" 2>/dev/null)
+        done < <(find "$SCRIPTS_PATH" -name "*.sh" 2>/dev/null)
 
         if [[ "$SHELL_FILES_FOUND" == "true" ]]; then
           if [[ $SHELL_ERRORS -eq 0 ]]; then

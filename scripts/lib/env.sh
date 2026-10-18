@@ -2,12 +2,15 @@
 # Sourced by the host scripts: loads stacks/host.env, then exports the named secrets
 # from the romulus-deploy vault, e.g. `source lib/env.sh RESTIC_PASSWORD`.
 # Secrets need root (the service account token is root-only) and the op CLI.
+# Pass `--` when no secrets are needed: a bare `source` hands over the caller's own
+# arguments (e.g. `btrfs-snapshot.sh ssd`), which would be read as secret names.
 _repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 set -a
 # shellcheck source=../../stacks/host.env
 source "${_repo}/stacks/host.env"
 set +a
 
+[[ ${1:-} == -- ]] && shift
 if (( $# )); then
     declare -A _item=(
         [TELEGRAM_BOT_TOKEN]=shared [TELEGRAM_CHAT_ID]=shared

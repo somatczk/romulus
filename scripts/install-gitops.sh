@@ -64,16 +64,27 @@ op read op://romulus-deploy/ci/GITHUB_PAT | docker --config "$DOCO/docker" login
 unset OP_SERVICE_ACCOUNT_TOKEN
 
 echo "== docker networks"
-for net in proxy socket media db-nextcloud db-immich monitoring db-paperless ai hydra; do
-    docker network inspect "$net" >/dev/null 2>&1 || docker network create "$net"
-done
-# the firewall expects ci internal on this subnet; never reuse a stale one
-if docker network inspect ci >/dev/null 2>&1; then
-    got=$(docker network inspect ci --format '{{.Internal}} {{range .IPAM.Config}}{{.Subnet}}{{end}}')
-    [[ $got == "true 10.10.4.0/24" ]] || { echo "network ci is '$got', expected 'true 10.10.4.0/24'"; exit 1; }
-else
-    docker network create --internal --subnet 10.10.4.0/24 ci
-fi
+# name, internal, subnet: the firewall (hardening-firewall.sh) keys on these subnets
+while read -r net internal subnet; do
+    if docker network inspect "$net" >/dev/null 2>&1; then
+        got=$(docker network inspect "$net" --format '{{.Internal}} {{range .IPAM.Config}}{{.Subnet}}{{end}}')
+        [[ $got == "$internal $subnet" ]] || { echo "network $net is '$got', expected '$internal $subnet'"; exit 1; }
+    else
+        flag=(); [[ $internal == true ]] && flag=(--internal)
+        docker network create "${flag[@]}" --subnet "$subnet" "$net"
+    fi
+done <<'NETS'
+proxy false 10.10.5.0/24
+monitoring true 10.10.1.0/24
+db-immich true 10.10.2.0/24
+db-nextcloud true 10.10.3.0/24
+ci true 10.10.4.0/24
+media true 10.10.6.0/24
+socket true 10.10.7.0/24
+db-paperless true 10.10.12.0/24
+hydra false 10.10.14.0/24
+ai false 10.10.15.0/24
+NETS
 
 if [[ -d $STACKS.new ]]; then
     echo "== swap $STACKS (old tree kept at $STACKS.pre-gitops for rollback)"

@@ -38,6 +38,10 @@ updates:
       day: monday
       time: "06:00"
       timezone: Europe/Budapest
+    # Postgres majors need pg_upgrade on the data dir, not an image bump.
+    ignore:
+      - dependency-name: postgres
+        update-types: [version-update:semver-major]
     labels: [dependencies, docker]
     open-pull-requests-limit: 10
     commit-message:

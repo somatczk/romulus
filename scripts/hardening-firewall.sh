@@ -87,7 +87,6 @@ v6() {
     echo "-s fe80::/10 -j ACCEPT"
     echo "-s fc00::/7 -j ACCEPT"
     for p in $lan; do echo "-s $p -j ACCEPT"; done
-    echo "-p udp --dport 9993 -j ACCEPT"
     echo "-p udp --dport 41641 -j ACCEPT"
     echo "-p tcp --dport 443 -j ACCEPT"
     echo "-p udp --dport 9987 -j ACCEPT"

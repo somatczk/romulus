@@ -139,7 +139,7 @@ services:
     environment:
       TS_STATE_DIR: /var/lib/tailscale
       TS_USERSPACE: "false"
-      TS_HOSTNAME: zimaos-ci
+      TS_HOSTNAME: romulus
       TS_AUTH_ONCE: "true"
       TS_EXTRA_ARGS: "--accept-routes"
     volumes:

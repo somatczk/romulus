@@ -63,28 +63,17 @@ log_info "Accepting loopback traffic."
 iptables -A INPUT -s 192.168.0.0/24 -j ACCEPT
 log_info "Accepting LAN traffic (192.168.0.0/24)."
 
-# Allow ZeroTier (172.22.0.0/16)
-iptables -A INPUT -s 172.22.0.0/16 -j ACCEPT
-log_info "Accepting ZeroTier traffic (172.22.0.0/16)."
-
 # Allow Docker networks (10.10.0.0/16)
 iptables -A INPUT -s 10.10.0.0/16 -j ACCEPT
 log_info "Accepting Docker network traffic (10.10.0.0/16)."
 
-# SSH rate limiting (max 4 new connections per 60 seconds)
-# No xt_recent on the ZimaOS kernel: rate limiting is left to sshd (MaxAuthTries) and LAN/VPN-only access.
-# Allow SSH from LAN and ZeroTier only
+# SSH from the LAN only (Tailscale is accepted via tailscale0); keys only, MaxAuthTries 3.
 iptables -A INPUT -p tcp --dport 2222 -s 192.168.0.0/24 -j ACCEPT
-iptables -A INPUT -p tcp --dport 2222 -s 172.22.0.0/16 -j ACCEPT
-log_info "Accepting SSH (tcp/2222) from LAN + VPN only (rate-limited)."
+log_info "Accepting SSH (tcp/2222) from LAN."
 
 # Allow HTTPS on port 443 (Traefik / Cloudflare DDNS)
 iptables -A INPUT -p tcp --dport 443 -j ACCEPT
 log_info "Accepting HTTPS (tcp/443)."
-
-# Allow ZeroTier UDP port
-iptables -A INPUT -p udp --dport 9993 -j ACCEPT
-log_info "Accepting ZeroTier (udp/9993)."
 
 # Allow TeamSpeak 3 Voice (UDP)
 iptables -A INPUT -p udp --dport 9987 -j ACCEPT

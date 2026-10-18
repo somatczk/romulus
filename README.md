@@ -39,6 +39,7 @@ Pull-based. [doco-cd](https://doco.cd) on the host polls `master` and deploys ev
 - **Host files:** the checkout on the host is reset to `origin/master` by a systemd timer, which also re-applies the crons and the deployer.
 - **Notifications:** deploy results go to ntfy and Telegram. Prometheus alerts route through Alertmanager to Telegram, with ntfy as fallback.
 - **Rollback:** `git revert` on `master`.
+- **Rotating a secret:** change it in 1Password, then restart doco-cd; resolved secrets are cached for a day to stay under the 1Password rate limits.
 
 Host setup is one idempotent script, `scripts/install-gitops.sh` (packages, Docker networks, checkout, deployer, crons). A fresh host needs its storage restored from backup, a 1Password service account token, and that script.
 

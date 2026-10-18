@@ -28,8 +28,8 @@ else
     echo "[INFO] Swap enabled."
 fi
 
-# --- Persist in /etc/fstab ---
-if ! grep -q "$SWAPFILE" /etc/fstab; then
+# --- Persist in /etc/fstab (/DATA is a regular fstab mount on Ubuntu, so no ordering cycle) ---
+if ! grep -q "^$SWAPFILE " /etc/fstab; then
     echo "$SWAPFILE none swap sw 0 0" >> /etc/fstab
     echo "[INFO] Added swap entry to /etc/fstab."
 fi

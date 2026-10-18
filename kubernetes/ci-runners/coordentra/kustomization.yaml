@@ -1,0 +1,9 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: arc-coordentra
+resources:
+  - namespace.yaml
+  - github-app.yaml
+  - scale-sets.yaml
+components:
+  - ../base

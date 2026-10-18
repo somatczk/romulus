@@ -1,118 +1,80 @@
 networks:
   ci:
     external: true
+  # Subnets pinned: scripts/hardening-firewall.sh treats unlisted pool subnets as CI.
   ci-socket:
     driver: bridge
-  proxy:
-    external: true
+    ipam:
+      config:
+        - subnet: 10.10.10.0/24
+  # internet egress for buildkitd + mirror only (ci is internal)
+  ci-egress:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.13.0/24
 
-x-runner: &runner-defaults
+# Shared runner env. RUNNER_WORKDIR is set PER SERVICE to a host-aligned path
+# (/DATA/ci/runners/<name>, mounted at the identical path inside the container).
+# Required because the host root is a read-only squashfs: docker:// container
+# actions run as sibling containers via the socket proxy, so their bind-mount
+# source paths must be real host paths. An in-container-only /work cannot be
+# created on the read-only host root -> "mkdir /work: read-only file system".
+x-env-common: &env-common
+  DOCKER_HOST: tcp://ci-socket-proxy:2375
+  DOCKER_CONFIG: /tmp/.docker
+  TESTCONTAINERS_HOST_OVERRIDE: host.docker.internal
+  # Interpolated, never env_file: the entrypoint unsets ACCESS_TOKEN before jobs run, any
+  # other variable would reach job steps. Run with: docker compose --env-file ci.env up -d
+  ACCESS_TOKEN: ${GITHUB_PAT:?run docker compose with --env-file ci.env}
+  TZ: Europe/Budapest
+  EPHEMERAL: "true"
+  DISABLE_AUTO_UPDATE: "true"
+  npm_config_store_dir: /cache/pnpm
+  MAVEN_OPTS: -Dmaven.repo.local=/cache/m2
+  RUNNER_TOOL_CACHE: /cache/toolcache
+  AGENT_TOOLSDIRECTORY: /cache/toolcache
+  # no CPU ceiling on tiered runners: node sees all 32 host cores, so cap
+  # vitest pools or fork fan-out OOMs the 6G memcg
+  VITEST_MAX_FORKS: 4
+  TURBO_CONCURRENCY: 4
+  VITEST_MAX_THREADS: 4
+
+x-hydra-env: &hydra-env
+  <<: *env-common
+  RUNNER_SCOPE: repo
+  REPO_URL: https://github.com/somatczk/hydra
+  RUNNER_NAME_PREFIX: zimaos-hydra
+  LABELS: self-hosted,linux,x64,zimaos,hydra
+
+# romulus runners deploy the homelab: deploy.yml rsyncs into /DATA/stacks and runs compose
+# against it, so the host path must be mounted at the identical path.
+x-romulus-env: &romulus-env
+  <<: *env-common
+  RUNNER_SCOPE: repo
+  REPO_URL: https://github.com/somatczk/romulus
+  RUNNER_NAME_PREFIX: zimaos-romulus
+  LABELS: self-hosted,linux,x64,zimaos,romulus
+
+x-runner-base: &runner-base
   build: ./gh-runner
-  env_file: ../.env
+  image: ci-gh-runner:current
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
   networks:
     - ci
     - ci-socket
-    - proxy
-  environment:
-    DOCKER_HOST: tcp://ci-socket-proxy:2375
-    DOCKER_CONFIG: /tmp/.docker
-    RUNNER_SCOPE: org
-    ORG_NAME: ${GITHUB_ORG}
-    ACCESS_TOKEN: ${GITHUB_PAT}
-    RUNNER_NAME_PREFIX: zimaos
-    LABELS: self-hosted,linux,x64,zimaos,org-coordentra
-    EPHEMERAL: "true"
-    DISABLE_AUTO_UPDATE: "true"
-    RUNNER_WORKDIR: /work
+  security_opt:
+    - no-new-privileges:true
+  restart: unless-stopped
+
+x-runner-repo: &runner-repo
+  <<: *runner-base
   deploy:
     resources:
       limits:
         memory: 6G
         cpus: "4.0"
-  security_opt:
-    - no-new-privileges:true
-  restart: unless-stopped
-
-x-solhouse-runner: &solhouse-defaults
-  build: ./gh-runner
-  env_file: ../.env
-  networks:
-    - ci
-    - ci-socket
-    - proxy
-  environment:
-    DOCKER_HOST: tcp://ci-socket-proxy:2375
-    DOCKER_CONFIG: /tmp/.docker
-    RUNNER_SCOPE: repo
-    REPO_URL: https://github.com/somatczk/solhouse-nextjs
-    ACCESS_TOKEN: ${GITHUB_PAT}
-    RUNNER_NAME_PREFIX: zimaos-solhouse
-    LABELS: self-hosted,linux,x64,zimaos,solhouse
-    EPHEMERAL: "true"
-    DISABLE_AUTO_UPDATE: "true"
-    RUNNER_WORKDIR: /work
-  deploy:
-    resources:
-      limits:
-        memory: 6G
-        cpus: "4.0"
-  security_opt:
-    - no-new-privileges:true
-  restart: unless-stopped
-
-x-hydra-runner: &hydra-defaults
-  build: ./gh-runner
-  env_file: ../.env
-  networks:
-    - ci
-    - ci-socket
-    - proxy
-  environment:
-    DOCKER_HOST: tcp://ci-socket-proxy:2375
-    DOCKER_CONFIG: /tmp/.docker
-    RUNNER_SCOPE: repo
-    REPO_URL: https://github.com/somatczk/hydra
-    ACCESS_TOKEN: ${GITHUB_PAT}
-    RUNNER_NAME_PREFIX: zimaos-hydra
-    LABELS: self-hosted,linux,x64,zimaos,hydra
-    EPHEMERAL: "true"
-    DISABLE_AUTO_UPDATE: "true"
-    RUNNER_WORKDIR: /work
-  deploy:
-    resources:
-      limits:
-        memory: 6G
-        cpus: "4.0"
-  security_opt:
-    - no-new-privileges:true
-  restart: unless-stopped
-
-x-romulus-runner: &romulus-defaults
-  build: ./gh-runner
-  env_file: ../.env
-  networks:
-    - ci
-    - ci-socket
-    - proxy
-  environment:
-    DOCKER_HOST: tcp://ci-socket-proxy:2375
-    DOCKER_CONFIG: /tmp/.docker
-    RUNNER_SCOPE: repo
-    REPO_URL: https://github.com/somatczk/romulus
-    ACCESS_TOKEN: ${GITHUB_PAT}
-    RUNNER_NAME_PREFIX: zimaos-romulus
-    LABELS: self-hosted,linux,x64,zimaos,romulus
-    EPHEMERAL: "true"
-    DISABLE_AUTO_UPDATE: "true"
-    RUNNER_WORKDIR: /work
-  deploy:
-    resources:
-      limits:
-        memory: 6G
-        cpus: "4.0"
-  security_opt:
-    - no-new-privileges:true
-  restart: unless-stopped
 
 services:
   ci-socket-proxy:
@@ -146,126 +108,133 @@ services:
     security_opt:
       - no-new-privileges:true
 
-  gh-runner-1:
-    <<: *runner-defaults
-    container_name: gh-runner-1
+  # Shared BuildKit daemon: one persistent layer cache for all CI builds.
+  ci-buildkitd:
+    image: moby/buildkit:v0.33.1@sha256:cec9f139f45e93c5c69c60f8b07cfad9f43f4ef6b6a6cd917527fea5ff2e3dea
+    container_name: ci-buildkitd
+    privileged: true
+    command: ["--addr", "tcp://0.0.0.0:1234"]
+    networks:
+      - ci
+      - ci-egress
     volumes:
-      - ${APPDATA}/ci/runners/runner-1:/work
+      - /DATA/ci/buildkit:/var/lib/buildkit
+      - ./buildkitd/buildkitd.toml:/etc/buildkit/buildkitd.toml:ro
+    cpu_shares: 768
+    deploy:
+      resources:
+        limits:
+          memory: 16G
+    restart: unless-stopped
 
-  gh-runner-2:
-    <<: *runner-defaults
-    container_name: gh-runner-2
+  # Docker Hub pull-through cache (dockerd + buildkitd); weekly GC.
+  ci-registry-mirror:
+    image: registry:2.8.3@sha256:a3d8aaa63ed8681a604f1dea0aa03f100d5895b6a58ace528858a7b332415373
+    container_name: ci-registry-mirror
+    restart: unless-stopped
+    networks:
+      - ci
+      - ci-egress
+    ports:
+      - "127.0.0.1:5001:5000"
+    environment:
+      REGISTRY_PROXY_REMOTEURL: https://registry-1.docker.io
+      REGISTRY_STORAGE_DELETE_ENABLED: "true"
     volumes:
-      - ${APPDATA}/ci/runners/runner-2:/work
-
-  gh-runner-3:
-    <<: *runner-defaults
-    container_name: gh-runner-3
-    volumes:
-      - ${APPDATA}/ci/runners/runner-3:/work
-
-  gh-runner-4:
-    <<: *runner-defaults
-    container_name: gh-runner-4
-    volumes:
-      - ${APPDATA}/ci/runners/runner-4:/work
-
-  gh-runner-5:
-    <<: *runner-defaults
-    container_name: gh-runner-5
-    volumes:
-      - ${APPDATA}/ci/runners/runner-5:/work
-
-  gh-runner-6:
-    <<: *runner-defaults
-    container_name: gh-runner-6
-    volumes:
-      - ${APPDATA}/ci/runners/runner-6:/work
-
-  gh-runner-7:
-    <<: *runner-defaults
-    container_name: gh-runner-7
-    volumes:
-      - ${APPDATA}/ci/runners/runner-7:/work
-
-  gh-runner-8:
-    <<: *runner-defaults
-    container_name: gh-runner-8
-    volumes:
-      - ${APPDATA}/ci/runners/runner-8:/work
-
-  gh-runner-solhouse-1:
-    <<: *solhouse-defaults
-    container_name: gh-runner-solhouse-1
-    volumes:
-      - ${APPDATA}/ci/runners/runner-solhouse-1:/work
-
-  gh-runner-solhouse-2:
-    <<: *solhouse-defaults
-    container_name: gh-runner-solhouse-2
-    volumes:
-      - ${APPDATA}/ci/runners/runner-solhouse-2:/work
-
-  gh-runner-solhouse-3:
-    <<: *solhouse-defaults
-    container_name: gh-runner-solhouse-3
-    volumes:
-      - ${APPDATA}/ci/runners/runner-solhouse-3:/work
-
-  gh-runner-solhouse-4:
-    <<: *solhouse-defaults
-    container_name: gh-runner-solhouse-4
-    volumes:
-      - ${APPDATA}/ci/runners/runner-solhouse-4:/work
+      - /DATA/ci/registry-mirror:/var/lib/registry
+    deploy:
+      resources:
+        limits:
+          memory: 512m
 
   gh-runner-hydra-1:
-    <<: *hydra-defaults
+    <<: *runner-repo
     container_name: gh-runner-hydra-1
+    environment:
+      <<: *hydra-env
+      RUNNER_WORKDIR: /DATA/ci/runners/runner-hydra-1
     volumes:
-      - ${APPDATA}/ci/runners/runner-hydra-1:/work
+      - /DATA/ci/runners/runner-hydra-1:/DATA/ci/runners/runner-hydra-1
+      - /DATA/ci/cache:/cache
+      - /DATA/ci/cache:/DATA/ci/cache
 
   gh-runner-hydra-2:
-    <<: *hydra-defaults
+    <<: *runner-repo
     container_name: gh-runner-hydra-2
+    environment:
+      <<: *hydra-env
+      RUNNER_WORKDIR: /DATA/ci/runners/runner-hydra-2
     volumes:
-      - ${APPDATA}/ci/runners/runner-hydra-2:/work
+      - /DATA/ci/runners/runner-hydra-2:/DATA/ci/runners/runner-hydra-2
+      - /DATA/ci/cache:/cache
+      - /DATA/ci/cache:/DATA/ci/cache
 
   gh-runner-hydra-3:
-    <<: *hydra-defaults
+    <<: *runner-repo
     container_name: gh-runner-hydra-3
+    environment:
+      <<: *hydra-env
+      RUNNER_WORKDIR: /DATA/ci/runners/runner-hydra-3
     volumes:
-      - ${APPDATA}/ci/runners/runner-hydra-3:/work
+      - /DATA/ci/runners/runner-hydra-3:/DATA/ci/runners/runner-hydra-3
+      - /DATA/ci/cache:/cache
+      - /DATA/ci/cache:/DATA/ci/cache
 
   gh-runner-hydra-4:
-    <<: *hydra-defaults
+    <<: *runner-repo
     container_name: gh-runner-hydra-4
+    environment:
+      <<: *hydra-env
+      RUNNER_WORKDIR: /DATA/ci/runners/runner-hydra-4
     volumes:
-      - ${APPDATA}/ci/runners/runner-hydra-4:/work
+      - /DATA/ci/runners/runner-hydra-4:/DATA/ci/runners/runner-hydra-4
+      - /DATA/ci/cache:/cache
+      - /DATA/ci/cache:/DATA/ci/cache
 
   gh-runner-romulus-1:
-    <<: *romulus-defaults
+    <<: *runner-repo
     container_name: gh-runner-romulus-1
+    environment:
+      <<: *romulus-env
+      RUNNER_WORKDIR: /DATA/ci/runners/runner-romulus-1
     volumes:
-      - ${APPDATA}/ci/runners/runner-romulus-1:/work
+      - /DATA/ci/runners/runner-romulus-1:/DATA/ci/runners/runner-romulus-1
       - /DATA/stacks:/DATA/stacks
+      - /DATA/ci/cache:/cache
+      - /DATA/ci/cache:/DATA/ci/cache
 
   gh-runner-romulus-2:
-    <<: *romulus-defaults
+    <<: *runner-repo
     container_name: gh-runner-romulus-2
+    environment:
+      <<: *romulus-env
+      RUNNER_WORKDIR: /DATA/ci/runners/runner-romulus-2
     volumes:
-      - ${APPDATA}/ci/runners/runner-romulus-2:/work
+      - /DATA/ci/runners/runner-romulus-2:/DATA/ci/runners/runner-romulus-2
       - /DATA/stacks:/DATA/stacks
+      - /DATA/ci/cache:/cache
+      - /DATA/ci/cache:/DATA/ci/cache
 
   gh-runner-romulus-3:
-    <<: *romulus-defaults
+    <<: *runner-repo
     container_name: gh-runner-romulus-3
+    environment:
+      <<: *romulus-env
+      RUNNER_WORKDIR: /DATA/ci/runners/runner-romulus-3
     volumes:
-      - ${APPDATA}/ci/runners/runner-romulus-3:/work
+      - /DATA/ci/runners/runner-romulus-3:/DATA/ci/runners/runner-romulus-3
       - /DATA/stacks:/DATA/stacks
+      - /DATA/ci/cache:/cache
+      - /DATA/ci/cache:/DATA/ci/cache
 
   gh-runner-romulus-4:
-    <<: *romulus-defaults
+    <<: *runner-repo
     container_name: gh-runner-romulus-4
+    environment:
+      <<: *romulus-env
+      RUNNER_WORKDIR: /DATA/ci/runners/runner-romulus-4
     volumes:
-      - ${APPDATA}/ci/runners/runner-romulus-4:/work
+      - /DATA/ci/runners/runner-romulus-4:/DATA/ci/runners/runner-romulus-4
       - /DATA/stacks:/DATA/stacks
+      - /DATA/ci/cache:/cache
+      - /DATA/ci/cache:/DATA/ci/cache

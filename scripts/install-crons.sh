@@ -12,7 +12,7 @@ log() {
 
 # Define cron entries
 CRON_ENTRIES=(
-    "@reboot mkdir -p /var/log/homelab && ${SCRIPTS_DIR}/firewall.sh"
+    "*/5 * * * * ${SCRIPTS_DIR}/hardening-firewall.sh >> /var/log/homelab/firewall.log 2>&1"
     "0 3 * * * ${SCRIPTS_DIR}/backup.sh >> /var/log/homelab/backup.log 2>&1"
     "0 * * * * ${SCRIPTS_DIR}/btrfs-snapshot.sh ssd >> /var/log/homelab/snapshot-ssd.log 2>&1"
     "0 4 * * * ${SCRIPTS_DIR}/btrfs-snapshot.sh hdd >> /var/log/homelab/snapshot-hdd.log 2>&1"
@@ -25,6 +25,11 @@ CRON_ENTRIES=(
 
 # Create log directory
 mkdir -p /var/log/homelab
+
+# Boot-time firewall runs from systemd so it is ordered after Docker (cron @reboot is not).
+install -m 644 "${SCRIPTS_DIR}/systemd/homelab-firewall.service" /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable homelab-firewall.service
 
 # Backup existing crontab
 EXISTING_CRON=$(crontab -l 2>/dev/null || true)
@@ -57,7 +62,8 @@ log "Crontab installed successfully. Current entries:"
 crontab -l
 log ""
 log "Schedule summary:"
-log "  @reboot     - Firewall rules"
+log "  boot        - Firewall rules (homelab-firewall.service)"
+log "  */5 min     - Firewall hardening re-apply"
 log "  3:00 daily  - Full backup (DB dumps + restic)"
 log "  Hourly      - BTRFS SSD snapshots"
 log "  4:00 daily  - BTRFS HDD snapshots"

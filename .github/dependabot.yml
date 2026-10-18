@@ -8,81 +8,64 @@ registries:
     password: ${{secrets.G_PAT}}
 
 updates:
+  # Workflows and the composite actions under .github/actions.
   - package-ecosystem: github-actions
-    directory: /
-    schedule:
-      interval: weekly
-
-  - package-ecosystem: docker
-    registries:
-      - ghcr
     directories:
-      - /stacks/ci/socket-proxy
-      - /stacks/ci/gh-runner
-      - /stacks/core/socket-proxy
-      - /stacks/core/traefik
-      - /stacks/core/cloudflare-ddns
-      - /stacks/core/adguard
-      - /stacks/dashboard/homepage
-      - /stacks/media/jellyfin
-      - /stacks/media/sonarr
-      - /stacks/media/radarr
-      - /stacks/media/flaresolverr
-      - /stacks/media/prowlarr
-      - /stacks/media/bazarr
-      - /stacks/media/lidarr
-      - /stacks/media/qbittorrent
-      - /stacks/media/jellyseerr
-      - /stacks/monitoring/prometheus
-      - /stacks/monitoring/grafana
-      - /stacks/monitoring/loki
-      - /stacks/monitoring/promtail
-      - /stacks/monitoring/node-exporter
-      - /stacks/monitoring/cadvisor
-      - /stacks/monitoring/nvidia-gpu-exporter
-      - /stacks/monitoring/restic-exporter
-      - /stacks/monitoring/uptime-kuma
-      - /stacks/monitoring/glances
-      - /stacks/monitoring/smartctl-exporter
-      - /stacks/notifications/ntfy
-      - /stacks/productivity/postgres
-      - /stacks/productivity/redis
-      - /stacks/productivity/nextcloud
-      - /stacks/productivity/immich-db
-      - /stacks/productivity/immich-server
-      - /stacks/productivity/immich-ml
-      - /stacks/productivity/homeassistant
-      - /stacks/productivity/paperless
-      - /stacks/productivity/actual-budget
-      - /stacks/productivity/homebox
-      - /stacks/security/authelia
-      - /stacks/security/crowdsec
-      - /stacks/security/crowdsec-bouncer
-      - /stacks/utilities/watchtower
-      - /stacks/utilities/dozzle
-      - /stacks/utilities/speedtest-exporter
-      - /stacks/utilities/speedtest
-      - /stacks/utilities/portainer
-      - /stacks/utilities/teamspeak-db
-      - /stacks/utilities/teamspeak
-      - /stacks/utilities/autoheal
-      - /stacks/ai/socket-proxy
-      - /stacks/ai/ollama
-      - /stacks/ai/openclaw
-      - /stacks/ai/open-webui
-      - /stacks/hydra/engine
-      - /stacks/hydra/dashboard
-      - /stacks/hydra/backtest-worker
-      - /stacks/hydra/timescaledb
-      - /stacks/hydra/redis
+      - /
+      - /.github/actions/*
     schedule:
       interval: weekly
       day: monday
       time: "06:00"
       timezone: Europe/Budapest
-    labels:
-      - dependencies
-      - docker
+    # Majors stay separate so auto-merge can hold them back.
+    groups:
+      actions:
+        patterns: ["*"]
+        update-types: [minor, patch]
+    labels: [dependencies, github-actions]
+    commit-message:
+      prefix: "ci"
+
+  # One single-line Dockerfile per service (stacks/<stack>/<service>) plus built images.
+  - package-ecosystem: docker
+    registries: [ghcr]
+    directories:
+      - /stacks/*/*
+      - /images/*
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Budapest
+    labels: [dependencies, docker]
     open-pull-requests-limit: 10
     commit-message:
       prefix: "docker"
+
+  # Images referenced directly from compose files.
+  - package-ecosystem: docker-compose
+    directories:
+      - /stacks/*
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Budapest
+    labels: [dependencies, docker]
+    commit-message:
+      prefix: "docker"
+
+  # Container images in the Flux-managed Kubernetes manifests and Helm values.
+  # Chart versions in HelmReleases are not covered by Dependabot; bump them by hand.
+  - package-ecosystem: docker
+    directories:
+      - /kubernetes/**
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Budapest
+    labels: [dependencies, kubernetes]
+    commit-message:
+      prefix: "k8s"

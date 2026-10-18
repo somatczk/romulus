@@ -1,0 +1,42 @@
+# Per-org dependency cache (pnpm store, Maven repo, tool cache). RWO works because the
+# cluster is a single node; every runner pod of the org mounts it concurrently.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: runner-cache
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 80Gi
+---
+# Weekly: drop cache files untouched for 14 days (relatime keeps atime useful).
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: runner-cache-prune
+spec:
+  schedule: "0 4 * * 0"
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          automountServiceAccountToken: false
+          restartPolicy: OnFailure
+          securityContext:
+            runAsUser: 1001
+            runAsGroup: 123
+          containers:
+            - name: prune
+              image: busybox:1.37.0@sha256:bdf57e528e45e4433820e045b29b4597825a1c9e38353532d90a01445013f82e
+              command: ["sh", "-c", "find /cache -xdev -type f -atime +14 -delete; find /cache -xdev -mindepth 1 -type d -empty -delete"]
+              resources:
+                requests: {cpu: 50m, memory: 32Mi}
+                limits: {memory: 256Mi}
+              volumeMounts:
+                - {name: cache, mountPath: /cache}
+          volumes:
+            - name: cache
+              persistentVolumeClaim: {claimName: runner-cache}

@@ -1,0 +1,13 @@
+[Unit]
+Description=Homelab firewall + CI isolation (after Docker so its networks exist)
+Requires=DATA.mount
+After=DATA.mount docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/DATA/stacks/scripts/firewall.sh
+
+[Install]
+WantedBy=multi-user.target

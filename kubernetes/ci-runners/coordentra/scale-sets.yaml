@@ -1,0 +1,55 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: coordentra-heavy
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: gha-runner-scale-set
+      version: 0.15.0
+      sourceRef:
+        kind: HelmRepository
+        name: arc
+        namespace: arc-systems
+  install:
+    remediation: {retries: 3}
+  upgrade:
+    remediation: {retries: 3}
+  valuesFrom:
+    - kind: ConfigMap
+      name: runner-values-heavy
+      valuesKey: values.yaml
+  values:
+    githubConfigUrl: https://github.com/coordentra
+    runnerScaleSetName: coordentra-heavy
+    scaleSetLabels: [self-hosted, linux, x64, zimaos, org-coordentra, heavy]
+    maxRunners: 1
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: coordentra-light
+spec:
+  interval: 1h
+  chart:
+    spec:
+      chart: gha-runner-scale-set
+      version: 0.15.0
+      sourceRef:
+        kind: HelmRepository
+        name: arc
+        namespace: arc-systems
+  install:
+    remediation: {retries: 3}
+  upgrade:
+    remediation: {retries: 3}
+  valuesFrom:
+    - kind: ConfigMap
+      name: runner-values-light
+      valuesKey: values.yaml
+  values:
+    githubConfigUrl: https://github.com/coordentra
+    runnerScaleSetName: coordentra-light
+    scaleSetLabels: [self-hosted, linux, x64, zimaos, org-coordentra, light]
+    maxRunners: 2

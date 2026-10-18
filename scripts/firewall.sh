@@ -2,13 +2,10 @@
 # =============================================================================
 # ZimaOS - iptables Firewall Rules
 # =============================================================================
-# Configures host-level firewall. Run once, then persist with the crontab entry
-# shown at the bottom of this script.
+# Configures host-level firewall. Runs at boot from homelab-firewall.service (after Docker),
+# installed by install-crons.sh.
 #
 # Usage: sudo bash firewall.sh
-#
-# To persist across reboots, add to root's crontab:
-#   @reboot /path/to/zimaos-config/scripts/firewall.sh
 # =============================================================================
 set -euo pipefail
 
@@ -39,14 +36,12 @@ fi
 log_info "Flushing existing iptables rules..."
 iptables -F INPUT
 iptables -F OUTPUT
-iptables -F FORWARD
 
 # =============================================================================
 # Set default policies
 # =============================================================================
 log_info "Setting default policies..."
 iptables -P INPUT DROP
-iptables -P FORWARD ACCEPT
 iptables -P OUTPUT ACCEPT
 
 # =============================================================================
@@ -65,29 +60,21 @@ log_info "Accepting loopback traffic."
 iptables -A INPUT -s 192.168.0.0/24 -j ACCEPT
 log_info "Accepting LAN traffic (192.168.0.0/24)."
 
-# Allow ZeroTier (172.22.0.0/16)
-iptables -A INPUT -s 172.22.0.0/16 -j ACCEPT
-log_info "Accepting ZeroTier traffic (172.22.0.0/16)."
+# libvirt VM bridge: DHCP + DNS from libvirt's dnsmasq only (the VM itself is fenced in hardening-firewall.sh).
+iptables -A INPUT -i virbr0 -p udp -m multiport --dports 53,67 -j ACCEPT
+iptables -A INPUT -i virbr0 -p tcp --dport 53 -j ACCEPT
 
 # Allow Docker networks (10.10.0.0/16)
 iptables -A INPUT -s 10.10.0.0/16 -j ACCEPT
 log_info "Accepting Docker network traffic (10.10.0.0/16)."
 
-# SSH rate limiting (max 4 new connections per 60 seconds)
-iptables -A INPUT -p tcp --dport 2222 -m state --state NEW -m recent --set --name SSH
-iptables -A INPUT -p tcp --dport 2222 -m state --state NEW -m recent --update --seconds 60 --hitcount 4 --name SSH -j DROP
-# Allow SSH from LAN and ZeroTier only
+# SSH from the LAN only (Tailscale is accepted via tailscale0); keys only, MaxAuthTries 3.
 iptables -A INPUT -p tcp --dport 2222 -s 192.168.0.0/24 -j ACCEPT
-iptables -A INPUT -p tcp --dport 2222 -s 172.22.0.0/16 -j ACCEPT
-log_info "Accepting SSH (tcp/2222) from LAN + VPN only (rate-limited)."
+log_info "Accepting SSH (tcp/2222) from LAN."
 
 # Allow HTTPS on port 443 (Traefik / Cloudflare DDNS)
 iptables -A INPUT -p tcp --dport 443 -j ACCEPT
 log_info "Accepting HTTPS (tcp/443)."
-
-# Allow ZeroTier UDP port
-iptables -A INPUT -p udp --dport 9993 -j ACCEPT
-log_info "Accepting ZeroTier (udp/9993)."
 
 # Allow TeamSpeak 3 Voice (UDP)
 iptables -A INPUT -p udp --dport 9987 -j ACCEPT
@@ -117,7 +104,11 @@ echo ""
 echo "  Current INPUT rules:"
 iptables -L INPUT -n -v --line-numbers
 echo ""
-echo -e "${YELLOW}  To persist across reboots, add to root's crontab:${NC}"
-echo "    sudo crontab -e"
-echo "    @reboot $(readlink -f "$0")"
+echo -e "${YELLOW}  Persisted by homelab-firewall.service (scripts/install-crons.sh).${NC}"
 echo ""
+# The INPUT flush above drops Tailscale's hook; restore it if tailscaled is running.
+iptables -N ts-input 2>/dev/null && iptables -X ts-input || iptables -C INPUT -j ts-input 2>/dev/null || iptables -I INPUT 1 -j ts-input
+# Tailscale on nftables (Ubuntu) has no ts-input hook; tailnet ACLs gate what reaches tailscale0.
+iptables -C INPUT -i tailscale0 -j ACCEPT 2>/dev/null || iptables -I INPUT 2 -i tailscale0 -j ACCEPT
+# FORWARD is Docker's; CI isolation + IPv6 live in hardening-firewall.sh (also re-run by cron).
+"$(dirname "$(readlink -f "$0")")/hardening-firewall.sh" || true

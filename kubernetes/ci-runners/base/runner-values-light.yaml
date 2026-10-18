@@ -1,0 +1,77 @@
+# Light tier. Keep in sync with runner-values-heavy.yaml: only resources and sizes differ
+# (Helm replaces lists wholesale, so a shared base cannot be patched per tier).
+# Each HelmRelease adds URL, name, labels and max runners.
+githubConfigSecret: arc-github-app
+minRunners: 0
+template:
+  spec:
+    automountServiceAccountToken: false
+    terminationGracePeriodSeconds: 120
+    initContainers:
+      # local-path volumes ignore fsGroup; hand the cache root to the runner user.
+      - name: cache-perms
+        image: ghcr.io/somatczk/arc-runner:sha-693d5d1fff0a05a48476cbbcbb7834578771d891@sha256:b2e28545cbbcb8100fd3325c02c2470311e507c0889615c5847d303d1bffe541
+        command: ["sh", "-c", "chown 1001:123 /cache && chmod 2775 /cache"]
+        securityContext:
+          runAsUser: 0
+        volumeMounts:
+          - {name: cache, mountPath: /cache}
+      - name: init-dind-externals
+        image: ghcr.io/somatczk/arc-runner:sha-693d5d1fff0a05a48476cbbcbb7834578771d891@sha256:b2e28545cbbcb8100fd3325c02c2470311e507c0889615c5847d303d1bffe541
+        command: ["cp", "-r", "/home/runner/externals/.", "/home/runner/tmpDir/"]
+        volumeMounts:
+          - {name: dind-externals, mountPath: /home/runner/tmpDir}
+      # Per-pod Docker daemon (native sidecar). Privileged: a job can reach the node, so
+      # every org on this cluster shares one trust boundary (see README, CI platform).
+      - name: dind
+        image: docker:29.9.1-dind@sha256:3e5756e2b6dad6a5f1f5deacf0a19f9eaa2581b76ae092b2d4a118162e1d4d4e
+        restartPolicy: Always
+        args:
+          - dockerd
+          - --host=unix:///var/run/docker.sock
+          - --group=$(DOCKER_GROUP_GID)
+          - --registry-mirror=http://registry-mirror.ci-shared.svc.cluster.local:5000
+          - --insecure-registry=registry-mirror.ci-shared.svc.cluster.local:5000
+        env:
+          - {name: DOCKER_GROUP_GID, value: "123"}
+        securityContext:
+          privileged: true
+        resources:
+          requests: {cpu: 250m, memory: 512Mi}
+          limits: {cpu: "4", memory: 3Gi}
+        startupProbe:
+          exec:
+            command: ["docker", "info"]
+          periodSeconds: 2
+          failureThreshold: 60
+        volumeMounts:
+          - {name: work, mountPath: /home/runner/_work}
+          - {name: dind-sock, mountPath: /var/run}
+          - {name: dind-externals, mountPath: /home/runner/externals}
+          - {name: dind-storage, mountPath: /var/lib/docker}
+    containers:
+      - name: runner
+        image: ghcr.io/somatczk/arc-runner:sha-693d5d1fff0a05a48476cbbcbb7834578771d891@sha256:b2e28545cbbcb8100fd3325c02c2470311e507c0889615c5847d303d1bffe541
+        command: ["/home/runner/run.sh"]
+        env:
+          - {name: DOCKER_HOST, value: unix:///var/run/docker.sock}
+          - {name: RUNNER_WAIT_FOR_DOCKER_IN_SECONDS, value: "120"}
+          # Same knobs the compose runners exported; node sees every VM core.
+          - {name: VITEST_MAX_FORKS, value: "4"}
+          - {name: VITEST_MAX_THREADS, value: "4"}
+          - {name: TURBO_CONCURRENCY, value: "4"}
+        resources:
+          requests: {cpu: "500m", memory: 1536Mi}
+          limits: {memory: 4Gi}
+        volumeMounts:
+          - {name: work, mountPath: /home/runner/_work}
+          - {name: dind-sock, mountPath: /var/run}
+          - {name: cache, mountPath: /cache}
+    volumes:
+      - {name: work, emptyDir: {sizeLimit: 10Gi}}
+      - {name: dind-sock, emptyDir: {}}
+      - {name: dind-externals, emptyDir: {}}
+      - {name: dind-storage, emptyDir: {sizeLimit: 20Gi}}
+      - name: cache
+        persistentVolumeClaim:
+          claimName: runner-cache

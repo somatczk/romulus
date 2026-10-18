@@ -283,7 +283,7 @@ do_productivity() {
 
 do_ci() {
     log "Starting CI stack..."
-    ssh_cmd "cd /DATA/stacks/stacks && docker compose --env-file .env -f ci/compose.yml up -d --build --pull always"
+    ssh_cmd "cd /DATA/stacks/stacks && docker compose --env-file .env --env-file ci/ci.env -f ci/compose.yml up -d --remove-orphans --build --pull always"
     ok "CI stack running"
 }
 
@@ -439,7 +439,7 @@ done
 log "Deployment complete!"
 echo ""
 echo "Next steps:"
-echo "  1. Update .env with real secrets (CF_API_TOKEN, GITHUB_PAT, etc.)"
+echo "  1. Update .env with real secrets (CF_API_TOKEN, etc.) and stacks/ci/ci.env"
 echo "  2. Configure AdGuard Home at https://dns.romulus.hu (first-run wizard)"
 echo "  3. Set up Nextcloud at https://cloud.romulus.hu"
 echo "  4. Configure Immich at https://photos.romulus.hu"

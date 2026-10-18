@@ -1,0 +1,88 @@
+# Docker Hub pull-through cache shared by every runner's dind daemon (read-only proxy).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ci-shared
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: registry-mirror
+  namespace: ci-shared
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 40Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: registry-mirror
+  namespace: ci-shared
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels: {app: registry-mirror}
+  template:
+    metadata:
+      labels: {app: registry-mirror}
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: registry
+          image: registry:2.8.3@sha256:a3d8aaa63ed8681a604f1dea0aa03f100d5895b6a58ace528858a7b332415373
+          env:
+            - {name: REGISTRY_PROXY_REMOTEURL, value: https://registry-1.docker.io}
+            - {name: REGISTRY_STORAGE_DELETE_ENABLED, value: "true"}
+          ports:
+            - containerPort: 5000
+          readinessProbe:
+            httpGet: {path: /v2/, port: 5000}
+          resources:
+            requests: {cpu: 50m, memory: 64Mi}
+            limits: {memory: 512Mi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities: {drop: [ALL]}
+          volumeMounts:
+            - {name: data, mountPath: /var/lib/registry}
+      volumes:
+        - name: data
+          persistentVolumeClaim: {claimName: registry-mirror}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: registry-mirror
+  namespace: ci-shared
+spec:
+  selector: {app: registry-mirror}
+  ports:
+    - port: 5000
+      targetPort: 5000
+---
+# Only the runner namespaces may pull through the mirror.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: runners-only
+  namespace: ci-shared
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchExpressions:
+              - {key: kubernetes.io/metadata.name, operator: In, values: [arc-vetoo, arc-coordentra, arc-somatczk]}
+      ports:
+        - {protocol: TCP, port: 5000}

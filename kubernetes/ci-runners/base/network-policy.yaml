@@ -1,0 +1,35 @@
+# Ingress: only pods of the same org namespace.
+# Egress: same namespace, cluster DNS, the shared registry mirror and the internet; never the
+# pod/service CIDRs of other orgs, the node or the API server.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: org-isolation
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from:
+        - podSelector: {}
+  egress:
+    - to:
+        - podSelector: {}
+    - to:
+        - namespaceSelector:
+            matchLabels: {kubernetes.io/metadata.name: kube-system}
+          podSelector:
+            matchLabels: {k8s-app: kube-dns}
+      ports:
+        - {protocol: UDP, port: 53}
+        - {protocol: TCP, port: 53}
+    - to:
+        - namespaceSelector:
+            matchLabels: {kubernetes.io/metadata.name: ci-shared}
+          podSelector:
+            matchLabels: {app: registry-mirror}
+      ports:
+        - {protocol: TCP, port: 5000}
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except: [10.42.0.0/16, 10.43.0.0/16, 192.168.122.0/24]

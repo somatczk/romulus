@@ -15,30 +15,36 @@ runs:
   steps:
     - name: Deploy Stack
       shell: bash
+      env:
+        STACK: ${{ inputs.stack }}
+        FORCE: ${{ inputs.force_recreate_services }}
       run: |
         cd /DATA/stacks/stacks
+        # Stack-private secrets (ci/ci.env) feed interpolation without joining the shared .env.
+        ENV_FILES=(--env-file .env)
+        [ -f "$STACK/ci.env" ] && ENV_FILES+=(--env-file "$STACK/ci.env")
 
         # Check if compose.yml exists or is disabled
-        if [ ! -f "${{ inputs.stack }}/compose.yml" ]; then
-          if [ -f "${{ inputs.stack }}/compose.yml.disabled" ]; then
-            echo "::warning::Stack ${{ inputs.stack }} is disabled - stopping any running containers"
+        if [ ! -f "$STACK/compose.yml" ]; then
+          if [ -f "$STACK/compose.yml.disabled" ]; then
+            echo "::warning::Stack $STACK is disabled - stopping any running containers"
             # Stop any running containers from this stack
-            docker compose --env-file .env -f ${{ inputs.stack }}/compose.yml.disabled down 2>/dev/null || true
+            docker compose "${ENV_FILES[@]}" -f "$STACK/compose.yml".disabled down 2>/dev/null || true
             exit 0
           else
-            echo "::error::No compose.yml found for stack ${{ inputs.stack }}"
+            echo "::error::No compose.yml found for stack $STACK"
             exit 1
           fi
         fi
 
-        if [ -n "${{ inputs.force_recreate_services }}" ]; then
-          echo "Force-recreating: ${{ inputs.force_recreate_services }}"
-          docker compose --env-file .env -f ${{ inputs.stack }}/compose.yml \
-            up -d --build --pull always --force-recreate ${{ inputs.force_recreate_services }}
+        if [ -n "$FORCE" ]; then
+          echo "Force-recreating: $FORCE"
+          docker compose "${ENV_FILES[@]}" -f "$STACK/compose.yml" \
+            up -d --build --pull always --force-recreate $FORCE
         fi
 
-        echo "Deploying stack: ${{ inputs.stack }}"
-        docker compose --env-file .env -f ${{ inputs.stack }}/compose.yml \
+        echo "Deploying stack: $STACK"
+        docker compose "${ENV_FILES[@]}" -f "$STACK/compose.yml" \
           up -d --build --pull always --remove-orphans
 
     - name: Check Stack Health

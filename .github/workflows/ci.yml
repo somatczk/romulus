@@ -3,36 +3,40 @@ name: CI
 on:
   pull_request:
     branches: [master]
-    paths:
-      - 'stacks/**'
-      - 'configs/**'
-      - '.github/**'
 
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   validate-config:
     name: Validate Configuration
-    runs-on: [self-hosted, romulus]
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Validate Config
         uses: ./.github/actions/validate-config
 
   validate-dockerfiles:
     name: Validate Dockerfiles
-    runs-on: [self-hosted, romulus]
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Lint Dockerfiles
         run: |
           ERRORS=0
-          for dockerfile in $(find stacks -name Dockerfile); do
+          while IFS= read -r dockerfile; do
             echo "Checking: $dockerfile"
 
             # Must be exactly one FROM line
@@ -53,13 +57,13 @@ jobs:
 
             # Must not use unpinned tags
             if [[ "$tag" == "latest" || "$tag" == "stable" || "$tag" == "release" ]]; then
-              echo "  ERROR: Unpinned tag '$tag' — must use a specific version"
+              echo "  ERROR: Unpinned tag '$tag', must use a specific version"
               ERRORS=$((ERRORS + 1))
               continue
             fi
 
             echo "  OK (tag: $tag)"
-          done
+          done < <(find stacks -name Dockerfile)
 
           if [[ $ERRORS -gt 0 ]]; then
             echo ""
@@ -71,66 +75,99 @@ jobs:
 
   verify-images:
     name: Verify Changed Images
-    runs-on: [self-hosted, romulus]
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # the diff below needs the merge base
+          fetch-depth: 0
+          persist-credentials: false
 
       - name: Get changed Dockerfiles
         id: changed
+        env:
+          BASE_REF: ${{ github.base_ref }}
         run: |
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            FILES=$(git diff --name-only --diff-filter=ACMR origin/${{ github.base_ref }}...HEAD -- 'stacks/*/Dockerfile' 'stacks/*/*/Dockerfile' || true)
-          else
-            FILES=$(find stacks -name Dockerfile)
-          fi
-          echo "files<<EOF" >> $GITHUB_OUTPUT
-          echo "$FILES" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-          if [[ -z "$FILES" ]]; then
-            echo "No Dockerfile changes detected"
-          else
-            echo "Changed Dockerfiles:"
+          FILES=$(git diff --name-only --diff-filter=ACMR "origin/$BASE_REF...HEAD" -- 'stacks/*/Dockerfile' 'stacks/*/*/Dockerfile' 'images/*/Dockerfile')
+          {
+            echo "files<<EOF"
             echo "$FILES"
-          fi
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+          echo "${FILES:-No Dockerfile changes detected}"
 
       - name: Login to GHCR
+        if: steps.changed.outputs.files != ''
         env:
           GHCR_TOKEN: ${{ secrets.G_PAT }}
         run: echo "$GHCR_TOKEN" | docker login ghcr.io -u somatczk --password-stdin
 
       - name: Verify images exist
         if: steps.changed.outputs.files != ''
+        env:
+          FILES: ${{ steps.changed.outputs.files }}
         run: |
           ERRORS=0
-          PULLED_IMAGES=()
-
           while IFS= read -r dockerfile; do
-            [[ -z "$dockerfile" ]] && continue
-            [[ ! -f "$dockerfile" ]] && continue
+            [[ -f "$dockerfile" ]] || continue
+            while read -r image; do
+              if docker buildx imagetools inspect "$image" >/dev/null; then
+                echo "OK    $image ($dockerfile)"
+              else
+                echo "ERROR $image ($dockerfile)"
+                ERRORS=$((ERRORS + 1))
+              fi
+            done < <(awk '/^FROM /{print $2}' "$dockerfile")
+          done <<< "$FILES"
+          [[ $ERRORS -eq 0 ]] || { echo "Failed to verify $ERRORS image(s)"; exit 1; }
 
-            image=$(grep '^FROM ' "$dockerfile" | head -1 | awk '{print $2}')
-            echo "Verifying: $image (from $dockerfile)"
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    env:
+      ACTIONLINT: 1.7.12
+      ACTIONLINT_SHA: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+      KUBECONFORM: 0.8.0
+      KUBECONFORM_SHA: 9bc2bffbf71f261128533edaf912153948b7ff238f9a531ae6d34466ec287883
+      GITLEAKS: 8.30.1
+      GITLEAKS_SHA: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+      ZIZMOR: 1.31.1
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
 
-            if docker pull "$image" --quiet; then
-              echo "  OK"
-              PULLED_IMAGES+=("$image")
-            else
-              echo "  ERROR: Failed to pull $image"
-              ERRORS=$((ERRORS + 1))
-            fi
-          done <<< "${{ steps.changed.outputs.files }}"
+      - name: Install tools
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/bin"; cd "$RUNNER_TEMP"
+          fetch() { curl -fsSLo "$1" "$2" && echo "$3  $1" | sha256sum -c - && tar -xzf "$1" -C bin "$4"; }
+          fetch al.tgz "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT}/actionlint_${ACTIONLINT}_linux_amd64.tar.gz" "$ACTIONLINT_SHA" actionlint
+          fetch kc.tgz "https://github.com/yannh/kubeconform/releases/download/v${KUBECONFORM}/kubeconform-linux-amd64.tar.gz" "$KUBECONFORM_SHA" kubeconform
+          fetch gl.tgz "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS}/gitleaks_${GITLEAKS}_linux_x64.tar.gz" "$GITLEAKS_SHA" gitleaks
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
 
-          # Cleanup pulled images
-          for img in "${PULLED_IMAGES[@]}"; do
-            docker rmi "$img" > /dev/null 2>&1 || true
+      - name: actionlint
+        run: actionlint
+
+      - name: zizmor
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: pipx run "zizmor==${ZIZMOR}" --min-severity medium .github/
+
+      - name: kubeconform
+        run: |
+          for d in clusters/romulus kubernetes/infrastructure kubernetes/ci-runners; do
+            echo "== $d"
+            kubectl kustomize "$d" | kubeconform -strict -summary -skip CustomResourceDefinition \
+              -schema-location default \
+              -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
           done
 
-          if [[ $ERRORS -gt 0 ]]; then
-            echo ""
-            echo "Failed to verify $ERRORS image(s)"
-            exit 1
-          fi
-          echo ""
-          echo "All images verified successfully"
+      - name: gitleaks
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: gitleaks git --no-banner --redact --log-opts="origin/$BASE_REF..HEAD" .

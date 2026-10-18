@@ -49,19 +49,21 @@ runs:
 
     - name: Check Stack Health
       shell: bash
+      env:
+        STACK: ${{ inputs.stack }}
       run: |
         cd /DATA/stacks/stacks
         
         # Skip health check for disabled stacks
-        if [ ! -f "${{ inputs.stack }}/compose.yml" ]; then
-          if [ -f "${{ inputs.stack }}/compose.yml.disabled" ]; then
-            echo "Skipping health check for disabled stack ${{ inputs.stack }}"
+        if [ ! -f "$STACK/compose.yml" ]; then
+          if [ -f "$STACK/compose.yml.disabled" ]; then
+            echo "Skipping health check for disabled stack $STACK"
           fi
           exit 0
         fi
         
         sleep 15
-        docker compose -f ${{ inputs.stack }}/compose.yml ps --format json 2>/dev/null | \
+        docker compose -f "$STACK/compose.yml" ps --format json 2>/dev/null | \
           jq -r 'select(.Health == "unhealthy") | .Name' 2>/dev/null | while read -r name; do
             if [ -n "$name" ]; then
               echo "::warning::Unhealthy: $name"

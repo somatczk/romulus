@@ -1,7 +1,8 @@
 name: Dependabot Auto-Merge
 
 on:
-  workflow_run:
+  # runs in base context and never checks out PR code; inputs go through env
+  workflow_run: # zizmor: ignore[dangerous-triggers]
     workflows: [CI]
     types: [completed]
 

@@ -3,7 +3,7 @@
 # name must stay equal to the existing compose project name, doco-cd adopts by name.
 # Secrets come from the romulus-deploy vault; host.env holds the non-secret settings.
 # Cutover is staged: stacks not listed here keep running as they are, untouched.
-# Next: monitoring, media, productivity, utilities, hydra, ci.
+# Next: productivity, hydra, ci.
 name: core
 working_dir: stacks/core
 env_files:
@@ -30,3 +30,28 @@ name: dashboard
 working_dir: stacks/dashboard
 env_files:
   - ../host.env
+---
+name: monitoring
+working_dir: stacks/monitoring
+env_files:
+  - ../host.env
+external_secrets:
+  GRAFANA_ADMIN_PASSWORD: op://romulus-deploy/monitoring/GRAFANA_ADMIN_PASSWORD
+  RESTIC_PASSWORD: op://romulus-deploy/backup/RESTIC_PASSWORD
+  TELEGRAM_BOT_TOKEN: op://romulus-deploy/shared/TELEGRAM_BOT_TOKEN
+  TELEGRAM_CHAT_ID: op://romulus-deploy/shared/TELEGRAM_CHAT_ID
+---
+name: media
+working_dir: stacks/media
+env_files:
+  - ../host.env
+external_secrets:
+  QBIT_WEBUI_PASSWORD: op://romulus-deploy/media/QBIT_WEBUI_PASSWORD
+---
+name: utilities
+working_dir: stacks/utilities
+env_files:
+  - ../host.env
+external_secrets:
+  SPEEDTEST_APP_KEY: op://romulus-deploy/utilities/SPEEDTEST_APP_KEY
+  TEAMSPEAK_DB_PASSWORD: op://romulus-deploy/utilities/TEAMSPEAK_DB_PASSWORD

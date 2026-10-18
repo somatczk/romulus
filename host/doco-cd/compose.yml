@@ -34,8 +34,6 @@ services:
       - /DATA/doco-cd/data:/data
       - /DATA/doco-cd/op-token:/run/secrets/op-token:ro
       - /DATA/doco-cd/apprise-urls:/run/secrets/apprise-urls:ro
-      # registry login for the private hydra images on ghcr; file only, buildx writes next to it
-      - /DATA/doco-cd/docker/config.json:/root/.docker/config.json:ro
     cap_drop:
       - ALL
     security_opt:

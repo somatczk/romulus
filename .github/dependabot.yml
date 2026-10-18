@@ -1,12 +1,5 @@
 version: 2
 
-registries:
-  ghcr:
-    type: docker-registry
-    url: https://ghcr.io
-    username: somatczk
-    password: ${{secrets.G_PAT}}
-
 updates:
   # Workflows and the composite actions under .github/actions.
   - package-ecosystem: github-actions
@@ -32,7 +25,6 @@ updates:
 
   # One single-line Dockerfile per service (stacks/<stack>/<service>) plus built images.
   - package-ecosystem: docker
-    registries: [ghcr]
     directories:
       - /stacks/*/*
       - /images/*

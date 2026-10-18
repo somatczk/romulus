@@ -19,6 +19,9 @@ services:
       - ${APPDATA}/security/authelia:/data
     environment:
       TZ: ${TZ}
+      # the image runs as root unless these are set
+      PUID: ${PUID}
+      PGID: ${PGID}
       AUTHELIA_SESSION_SECRET: ${AUTHELIA_SESSION_SECRET}
       AUTHELIA_STORAGE_ENCRYPTION_KEY: ${AUTHELIA_STORAGE_ENCRYPTION_KEY}
       AUTHELIA_JWT_SECRET: ${AUTHELIA_JWT_SECRET}

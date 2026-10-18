@@ -15,7 +15,7 @@ DOCKER_POOL=10.10.0.0/16
 HOMELAB_NETS="proxy socket media monitoring hydra db-nextcloud db-immich db-paperless core_default security_authelia utilities_ts-db"
 PRIVATE_DSTS="192.168.0.0/16 172.16.0.0/12 100.64.0.0/10 169.254.0.0/16"
 ROUTER_DNS=192.168.0.1
-LAN_IF=eth1
+LAN_IF=$(ip -o route show default | awk '{print $5; exit}')  # eth1 on ZimaOS, eth0 on Ubuntu
 
 log() { echo "$(date +%FT%T) hardening-firewall: $*" >&2; }
 

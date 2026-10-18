@@ -15,7 +15,7 @@ services:
       - proxy
       - authelia
     volumes:
-      - ../../configs/authelia:/config
+      - ../../configs/authelia/configuration.yml:/config/configuration.yml:ro
       - ${APPDATA}/security/authelia:/data
     environment:
       TZ: ${TZ}

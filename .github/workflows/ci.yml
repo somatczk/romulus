@@ -172,6 +172,25 @@ jobs:
               -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/501527ab9c40c827144c8f45945b25a023e344ce/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
           done
 
+      # every stack doco-cd deploys must render with host.env and only the secrets it lists
+      - name: doco-cd stacks render
+        run: |
+          python3 - <<'PY'
+          import os, subprocess, sys, yaml
+          bad = 0
+          for d in yaml.safe_load_all(open(".doco-cd.yml")):
+              env = {k: "x" for k in (d.get("external_secrets") or {})}
+              env.update(PATH=os.environ["PATH"], HOME=os.environ["HOME"])
+              r = subprocess.run(["docker", "compose", "--env-file", "../host.env", "config", "-q"],
+                                 cwd=d["working_dir"], env=env, capture_output=True, text=True)
+              unset = [l for l in r.stderr.splitlines() if "not set" in l]
+              if r.returncode or unset:
+                  bad += 1
+                  print(f"::error::{d['name']}: {r.stderr.strip()}")
+          sys.exit(bad)
+          PY
+          docker compose -f host/doco-cd/compose.yml config -q
+
       - name: gitleaks
         env:
           BASE_REF: ${{ github.base_ref }}

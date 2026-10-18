@@ -1,0 +1,9 @@
+[Unit]
+Description=Keep /DATA/stacks on origin/master and re-apply host setup on change
+Requires=DATA.mount
+After=DATA.mount docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/DATA/stacks/scripts/sync-stacks.sh

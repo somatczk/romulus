@@ -1,6 +1,0 @@
-self-hosted-runner:
-  labels: [romulus, hydra]
-paths:
-  # retired once doco-cd takes over deploys
-  .github/workflows/deploy.yml:
-    ignore: ['SC2086']

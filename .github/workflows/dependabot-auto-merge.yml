@@ -13,7 +13,6 @@ jobs:
     name: Auto-Merge Dependabot PRs
     runs-on: ubuntu-latest
     permissions:
-      actions: write
       contents: write
       pull-requests: write
     if: >-
@@ -44,8 +43,3 @@ jobs:
             fi
           fi
           gh pr merge "$PR" --merge --delete-branch
-          # Merges by GITHUB_TOKEN don't trigger push workflows, so start the deploy explicitly.
-          # Drop once doco-cd pulls master.
-          if [[ "$TITLE" == *" in /stacks/"* ]]; then
-            gh workflow run deploy-romulus --ref master -f force_full=true
-          fi

@@ -57,6 +57,7 @@ updates:
   - package-ecosystem: docker-compose
     directories:
       - /stacks/*
+      - /host/*
     # new releases wait a few days so a hijacked one can be pulled first
     cooldown:
       default-days: 7

@@ -25,8 +25,8 @@ x-env-common: &env-common
   DOCKER_CONFIG: /tmp/.docker
   TESTCONTAINERS_HOST_OVERRIDE: host.docker.internal
   # Interpolated, never env_file: the entrypoint unsets ACCESS_TOKEN before jobs run, any
-  # other variable would reach job steps. Run with: docker compose --env-file ci.env up -d
-  ACCESS_TOKEN: ${GITHUB_PAT:?run docker compose with --env-file ci.env}
+  # other variable would reach job steps. doco-cd resolves it from 1Password (.doco-cd.yml).
+  ACCESS_TOKEN: ${GITHUB_PAT:?}
   TZ: Europe/Budapest
   EPHEMERAL: "true"
   DISABLE_AUTO_UPDATE: "true"
@@ -46,15 +46,6 @@ x-hydra-env: &hydra-env
   REPO_URL: https://github.com/somatczk/hydra
   RUNNER_NAME_PREFIX: zimaos-hydra
   LABELS: self-hosted,linux,x64,zimaos,hydra
-
-# romulus runners deploy the homelab: deploy.yml rsyncs into /DATA/stacks and runs compose
-# against it, so the host path must be mounted at the identical path.
-x-romulus-env: &romulus-env
-  <<: *env-common
-  RUNNER_SCOPE: repo
-  REPO_URL: https://github.com/somatczk/romulus
-  RUNNER_NAME_PREFIX: zimaos-romulus
-  LABELS: self-hosted,linux,x64,zimaos,romulus
 
 x-runner-base: &runner-base
   build: ./gh-runner
@@ -191,50 +182,3 @@ services:
       - /DATA/ci/cache:/cache
       - /DATA/ci/cache:/DATA/ci/cache
 
-  gh-runner-romulus-1:
-    <<: *runner-repo
-    container_name: gh-runner-romulus-1
-    environment:
-      <<: *romulus-env
-      RUNNER_WORKDIR: /DATA/ci/runners/runner-romulus-1
-    volumes:
-      - /DATA/ci/runners/runner-romulus-1:/DATA/ci/runners/runner-romulus-1
-      - /DATA/stacks:/DATA/stacks
-      - /DATA/ci/cache:/cache
-      - /DATA/ci/cache:/DATA/ci/cache
-
-  gh-runner-romulus-2:
-    <<: *runner-repo
-    container_name: gh-runner-romulus-2
-    environment:
-      <<: *romulus-env
-      RUNNER_WORKDIR: /DATA/ci/runners/runner-romulus-2
-    volumes:
-      - /DATA/ci/runners/runner-romulus-2:/DATA/ci/runners/runner-romulus-2
-      - /DATA/stacks:/DATA/stacks
-      - /DATA/ci/cache:/cache
-      - /DATA/ci/cache:/DATA/ci/cache
-
-  gh-runner-romulus-3:
-    <<: *runner-repo
-    container_name: gh-runner-romulus-3
-    environment:
-      <<: *romulus-env
-      RUNNER_WORKDIR: /DATA/ci/runners/runner-romulus-3
-    volumes:
-      - /DATA/ci/runners/runner-romulus-3:/DATA/ci/runners/runner-romulus-3
-      - /DATA/stacks:/DATA/stacks
-      - /DATA/ci/cache:/cache
-      - /DATA/ci/cache:/DATA/ci/cache
-
-  gh-runner-romulus-4:
-    <<: *runner-repo
-    container_name: gh-runner-romulus-4
-    environment:
-      <<: *romulus-env
-      RUNNER_WORKDIR: /DATA/ci/runners/runner-romulus-4
-    volumes:
-      - /DATA/ci/runners/runner-romulus-4:/DATA/ci/runners/runner-romulus-4
-      - /DATA/stacks:/DATA/stacks
-      - /DATA/ci/cache:/cache
-      - /DATA/ci/cache:/DATA/ci/cache

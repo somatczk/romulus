@@ -13,25 +13,40 @@ Homelab configuration for a ZimaCube (Ryzen 9 5950X, 128GB RAM, GTX 1650 SUPER) 
 | **media** | Jellyfin, Sonarr, Radarr, FlareSolverr, Prowlarr, Bazarr, Lidarr, qBittorrent, Jellyseerr | 11 GB |
 | **productivity** | Nextcloud, Immich, Home Assistant, Paperless-ngx, Actual Budget, Homebox (+ PostgreSQL/Redis) | 26.5 GB |
 | **monitoring** | Prometheus, Grafana, Loki, Promtail, Node/GPU/SMART/Restic Exporters, cAdvisor, Uptime Kuma, Glances | 5.1 GB |
-| **ci** | hydra/romulus repo runners, Socket Proxy, BuildKit, registry mirror (org runners live in k3s, see CI platform) | ~30 GB |
+| **ci** | hydra repo runners, Socket Proxy, BuildKit, registry mirror (org runners live in k3s, see CI platform) | ~30 GB |
 | **notifications** | ntfy | 256 MB |
 | **utilities** | Watchtower, Dozzle, Speedtest, Portainer, TeamSpeak, Autoheal | 2.6 GB |
 | **dashboard** | Homepage | 512 MB |
 | **ai** | Ollama, OpenClaw, Open WebUI, Socket Proxy | ~19 GB |
 | **hydra** | Hydra Engine, Dashboard, Backtest Worker, TimescaleDB, Redis | 18.5 GB |
 
-Image versions pinned in single-line Dockerfiles (`stacks/<stack>/<service>/Dockerfile`). Dependabot opens weekly PRs for bumps, auto-merged after CI passes.
+Image versions pinned in single-line Dockerfiles (`stacks/<stack>/<service>/Dockerfile`). Dependabot opens weekly PRs; patch and minor bumps of stateless images auto-merge after CI passes, majors, 0.x and calendar-version minors and stateful images (databases, immich, nextcloud, paperless, Home Assistant) wait for a review.
 
 ## Deployment
 
-```bash
-cp stacks/.env.example stacks/.env  # fill in secrets
-./deploy.sh                          # full deploy
-./deploy.sh media ai verify          # selective
-./deploy.sh --port 2222 verify       # after SSH hardening
-```
+Pull-based: [doco-cd](https://doco.cd) on the host polls `master` every minute and deploys the stacks listed in `.doco-cd.yml`. Merging is deploying; there is no deploy job in CI.
 
-On the server: `cd /DATA/stacks/stacks && docker compose --env-file .env -f <stack>/compose.yml up -d --build`
+- **Secrets:** 1Password vault `romulus-deploy`, one item per stack. doco-cd reads it with a read-only service account (token in `/DATA/doco-cd/op-token`) and interpolates only the secrets each stack lists. Non-secret settings are in `stacks/host.env`. Containers get only the variables their compose service maps, never a shared `.env`.
+- **Host files:** `/DATA/stacks` is a checkout kept on `origin/master` by `romulus-stacks-sync.timer` (every 5 minutes, local edits are discarded). When master moves it also re-applies the crons and doco-cd itself. Host scripts load their secrets through `scripts/lib/env.sh` and alert via ntfy if 1Password is unreachable.
+- **Notifications:** deploy results (success, warnings, failures) go to ntfy and Telegram through apprise. Prometheus scrapes doco-cd; `DocoCdDown` fires after 10 minutes down.
+- **Host setup** (packages, networks, checkout, doco-cd, crons), idempotent: `sudo bash /DATA/stacks/scripts/install-gitops.sh`.
+
+Check a deploy: `docker logs -f doco-cd`, `git -C /DATA/stacks log -1`, labels `cd.doco.deployment.target.sha` on the containers. Roll back: `git revert` on master (that is a deploy too). Rotate a secret: edit it in 1Password, then redeploy the stack (a commit touching it, or `docker restart doco-cd`).
+
+### Cutover from deploy.yml
+
+Staged, `.doco-cd.yml` starts with core, security, notifications and dashboard; the other stacks keep running untouched until they are added (see the comment at its top).
+
+1. Merge, then on the host: `curl -fsSL https://raw.githubusercontent.com/somatczk/romulus/master/scripts/install-gitops.sh | sudo bash`. It checks every secret resolves and moves the authelia users file before anything is swapped, and aborts otherwise.
+2. Watch `docker logs -f doco-cd`: each listed stack is recreated once (new labels and paths). Check traefik routes and an authelia login.
+3. Add the next stacks to `.doco-cd.yml` one PR at a time: monitoring, media, utilities, then productivity, hydra and ci.
+4. After a week without rollback: `rm -rf /DATA/stacks.pre-gitops` (it holds the old plaintext `.env`), delete the deploy secrets from the GitHub repo settings.
+
+Rollback during the first week: `docker compose -f /DATA/stacks/host/doco-cd/compose.yml down`, `mv /DATA/stacks /DATA/stacks.gitops && mv /DATA/stacks.pre-gitops /DATA/stacks`, then `docker compose --env-file ../.env up -d` per stack in `/DATA/stacks/stacks/<stack>`.
+
+### Disaster recovery
+
+Fresh host: restore `/media/*-Storage` from restic, create a new service account for `romulus-deploy` (1Password, read-only), write its token to `/DATA/doco-cd/op-token`, run the install script from step 1. Keep a copy of `RESTIC_PASSWORD` outside 1Password (paper or a separate vault): restoring the backups must not depend on the service that holds the secrets.
 
 ## CI platform
 

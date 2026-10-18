@@ -1,0 +1,32 @@
+# doco-cd deployments. Stacks deploy independently and in parallel, no ordering between them;
+# shared networks are created by scripts/install-gitops.sh.
+# name must stay equal to the existing compose project name, doco-cd adopts by name.
+# Secrets come from the romulus-deploy vault; host.env holds the non-secret settings.
+# Cutover is staged: stacks not listed here keep running as they are, untouched.
+# Next: monitoring, media, productivity, utilities, hydra, ci.
+name: core
+working_dir: stacks/core
+env_files:
+  - ../host.env
+external_secrets:
+  CF_API_TOKEN: op://romulus-deploy/core/CF_API_TOKEN
+---
+name: security
+working_dir: stacks/security
+env_files:
+  - ../host.env
+external_secrets:
+  AUTHELIA_JWT_SECRET: op://romulus-deploy/security/AUTHELIA_JWT_SECRET
+  AUTHELIA_SESSION_SECRET: op://romulus-deploy/security/AUTHELIA_SESSION_SECRET
+  AUTHELIA_STORAGE_ENCRYPTION_KEY: op://romulus-deploy/security/AUTHELIA_STORAGE_ENCRYPTION_KEY
+  CROWDSEC_BOUNCER_API_KEY: op://romulus-deploy/security/CROWDSEC_BOUNCER_API_KEY
+---
+name: notifications
+working_dir: stacks/notifications
+env_files:
+  - ../host.env
+---
+name: dashboard
+working_dir: stacks/dashboard
+env_files:
+  - ../host.env

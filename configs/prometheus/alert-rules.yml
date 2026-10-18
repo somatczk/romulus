@@ -260,3 +260,14 @@ groups:
         annotations:
           summary: "Alertmanager cannot deliver to {{ $labels.integration }}"
           description: "Check: docker logs alertmanager (bot token, chat id, Telegram reachability)"
+
+  - name: deploys
+    rules:
+      - alert: DocoCdDown
+        expr: up{job="doco-cd"} == 0 or absent(up{job="doco-cd"})
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "doco-cd is down, merges to master are not deploying"
+          description: "Check: docker logs doco-cd; restart with sudo bash /DATA/stacks/scripts/install-gitops.sh"

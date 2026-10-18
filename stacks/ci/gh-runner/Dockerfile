@@ -1,4 +1,4 @@
-FROM myoung34/github-runner:2.336.0
+FROM myoung34/github-runner:2.338.0@sha256:a97aa55628225bc94af2e78c40f6877a000430255af6bf0aed119a7b0b85ee8c
 
 # Node.js 24 LTS from the signed NodeSource apt repo (no piped setup script)
 RUN apt-get update && \
@@ -23,8 +23,10 @@ RUN curl -fsSL https://apt.corretto.aws/corretto.key | \
 
 # Maven 3.9.15
 ARG MAVEN_VERSION=3.9.15
-RUN curl -fsSL "https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz" \
-    | tar -xz -C /opt && \
+ARG MAVEN_SHA512=33d81e0ec785f0207e3e5e3ffb61863e1dca5784c15ac3fb5ff105f69cffbea484eb8d473ea60467a63f7b0570eef8622f2fed8eee96acbe668aa313391cddb3
+RUN curl -fsSLo /tmp/maven.tgz "https://archive.apache.org/dist/maven/maven-3/${MAVEN_VERSION}/binaries/apache-maven-${MAVEN_VERSION}-bin.tar.gz" && \
+    echo "${MAVEN_SHA512}  /tmp/maven.tgz" | sha512sum -c - && \
+    tar -xzf /tmp/maven.tgz -C /opt && rm /tmp/maven.tgz && \
     ln -s /opt/apache-maven-${MAVEN_VERSION}/bin/mvn /usr/local/bin/mvn
 
 # --- Shared CI caches (volume /DATA/ci/cache -> /cache) ---

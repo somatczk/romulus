@@ -13,6 +13,7 @@ log() {
 # Define cron entries
 CRON_ENTRIES=(
     "@reboot mkdir -p /var/log/homelab && ${SCRIPTS_DIR}/firewall.sh"
+    "*/5 * * * * ${SCRIPTS_DIR}/hardening-firewall.sh >> /var/log/homelab/firewall.log 2>&1"
     "0 3 * * * ${SCRIPTS_DIR}/backup.sh >> /var/log/homelab/backup.log 2>&1"
     "0 * * * * ${SCRIPTS_DIR}/btrfs-snapshot.sh ssd >> /var/log/homelab/snapshot-ssd.log 2>&1"
     "0 4 * * * ${SCRIPTS_DIR}/btrfs-snapshot.sh hdd >> /var/log/homelab/snapshot-hdd.log 2>&1"

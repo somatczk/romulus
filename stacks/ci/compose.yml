@@ -1,11 +1,18 @@
 networks:
   ci:
     external: true
+  # Subnets pinned: scripts/hardening-firewall.sh treats unlisted pool subnets as CI.
   ci-socket:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.10.0/24
   # internet egress for buildkitd + mirror only (ci is internal)
   ci-egress:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.13.0/24
 
 # Shared runner env. RUNNER_WORKDIR is set PER SERVICE to a host-aligned path
 # (/DATA/ci/runners/<name>, mounted at the identical path inside the container).
@@ -17,7 +24,10 @@ x-env-common: &env-common
   DOCKER_HOST: tcp://ci-socket-proxy:2375
   DOCKER_CONFIG: /tmp/.docker
   TESTCONTAINERS_HOST_OVERRIDE: host.docker.internal
-  ACCESS_TOKEN: ${GITHUB_PAT}
+  # Interpolated, never env_file: the entrypoint unsets ACCESS_TOKEN before jobs run, any
+  # other variable would reach job steps. Run with: docker compose --env-file ci.env up -d
+  ACCESS_TOKEN: ${GITHUB_PAT:?run docker compose with --env-file ci.env}
+  TZ: Europe/Budapest
   EPHEMERAL: "true"
   DISABLE_AUTO_UPDATE: "true"
   npm_config_store_dir: /cache/pnpm
@@ -34,28 +44,28 @@ x-env-common: &env-common
 x-org-heavy-env: &org-heavy-env
   <<: *env-common
   RUNNER_SCOPE: org
-  ORG_NAME: ${GITHUB_ORG}
+  ORG_NAME: vetoo-hq
   RUNNER_NAME_PREFIX: zimaos-heavy
   LABELS: self-hosted,linux,x64,zimaos,org-vetoo-hq,heavy
 
 x-org-light-env: &org-light-env
   <<: *env-common
   RUNNER_SCOPE: org
-  ORG_NAME: ${GITHUB_ORG}
+  ORG_NAME: vetoo-hq
   RUNNER_NAME_PREFIX: zimaos-light
   LABELS: self-hosted,linux,x64,zimaos,org-vetoo-hq,light
 
 x-org-heavy-coord-env: &org-heavy-coord-env
   <<: *env-common
   RUNNER_SCOPE: org
-  ORG_NAME: ${GITHUB_ORG_COORDENTRA}
+  ORG_NAME: coordentra
   RUNNER_NAME_PREFIX: zimaos-coord-heavy
   LABELS: self-hosted,linux,x64,zimaos,org-coordentra,heavy
 
 x-org-light-coord-env: &org-light-coord-env
   <<: *env-common
   RUNNER_SCOPE: org
-  ORG_NAME: ${GITHUB_ORG_COORDENTRA}
+  ORG_NAME: coordentra
   RUNNER_NAME_PREFIX: zimaos-coord-light
   LABELS: self-hosted,linux,x64,zimaos,org-coordentra,light
 
@@ -83,7 +93,6 @@ x-romulus-env: &romulus-env
 x-runner-base: &runner-base
   build: ./gh-runner
   image: ci-gh-runner:current
-  env_file: ./ci.env
   extra_hosts:
     - "host.docker.internal:host-gateway"
   networks:

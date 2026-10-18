@@ -119,6 +119,7 @@ jobs:
 
       - name: Generate .env
         run: |
+          umask 077
           cat > stacks/.env <<'EOF'
           # --- System ---
           PUID=999
@@ -180,10 +181,9 @@ jobs:
       # Runners get only their registration token: never the shared homelab .env.
       - name: Generate ci.env
         run: |
+          umask 077
           cat > stacks/ci/ci.env <<'EOF'
           GITHUB_PAT=${{ secrets.G_PAT }}
-          GITHUB_ORG=vetoo-hq
-          GITHUB_ORG_COORDENTRA=coordentra
           EOF
 
       - name: Rsync to /DATA/stacks/
@@ -198,9 +198,11 @@ jobs:
 
       - name: Ensure Docker Networks
         run: |
-          for net in proxy socket media db-nextcloud db-immich monitoring ci db-paperless ai hydra; do
+          for net in proxy socket media db-nextcloud db-immich monitoring db-paperless ai hydra; do
             docker network create "$net" 2>/dev/null || true
           done
+          # internal + fixed subnet: the CI firewall keys on it
+          docker network create --internal --subnet 10.10.4.0/24 ci 2>/dev/null || true
 
       - name: Ensure Restic Installed
         run: |
@@ -211,6 +213,10 @@ jobs:
               | bunzip2 > /DATA/bin/restic
             chmod +x /DATA/bin/restic
           fi
+
+      - name: Remove generated env files from workspace
+        if: always()
+        run: rm -f stacks/.env stacks/ci/ci.env
 
   deploy-core:
     name: Deploy Core

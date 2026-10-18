@@ -13,6 +13,9 @@ updates:
     directories:
       - /
       - /.github/actions/*
+    # new releases wait a few days so a hijacked one can be pulled first
+    cooldown:
+      default-days: 7
     schedule:
       interval: weekly
       day: monday
@@ -33,6 +36,9 @@ updates:
     directories:
       - /stacks/*/*
       - /images/*
+    # new releases wait a few days so a hijacked one can be pulled first
+    cooldown:
+      default-days: 7
     schedule:
       interval: weekly
       day: monday
@@ -52,6 +58,9 @@ updates:
     directories:
       - /stacks/*
       - /host/*
+    # new releases wait a few days so a hijacked one can be pulled first
+    cooldown:
+      default-days: 7
     schedule:
       interval: weekly
       day: monday
@@ -66,6 +75,9 @@ updates:
   - package-ecosystem: docker
     directories:
       - /kubernetes/**
+    # new releases wait a few days so a hijacked one can be pulled first
+    cooldown:
+      default-days: 7
     schedule:
       interval: weekly
       day: monday

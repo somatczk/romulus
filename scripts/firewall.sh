@@ -120,5 +120,7 @@ echo "    @reboot $(readlink -f "$0")"
 echo ""
 # The INPUT flush above drops Tailscale's hook; restore it if tailscaled is running.
 iptables -N ts-input 2>/dev/null && iptables -X ts-input || iptables -C INPUT -j ts-input 2>/dev/null || iptables -I INPUT 1 -j ts-input
+# Tailscale on nftables (Ubuntu) has no ts-input hook; tailnet ACLs gate what reaches tailscale0.
+iptables -C INPUT -i tailscale0 -j ACCEPT 2>/dev/null || iptables -I INPUT 2 -i tailscale0 -j ACCEPT
 # FORWARD is Docker's; CI isolation + IPv6 live in hardening-firewall.sh (also re-run by cron).
 "$(dirname "$(readlink -f "$0")")/hardening-firewall.sh" || true

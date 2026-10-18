@@ -2,8 +2,7 @@
 # shared networks are created by scripts/install-gitops.sh.
 # name must stay equal to the existing compose project name, doco-cd adopts by name.
 # Secrets come from the romulus-deploy vault; host.env holds the non-secret settings.
-# Cutover is staged: stacks not listed here keep running as they are, untouched.
-# Next: productivity, hydra, ci.
+# Stacks not listed here are not deployed.
 name: core
 working_dir: stacks/core
 env_files:
@@ -55,3 +54,41 @@ env_files:
 external_secrets:
   SPEEDTEST_APP_KEY: op://romulus-deploy/utilities/SPEEDTEST_APP_KEY
   TEAMSPEAK_DB_PASSWORD: op://romulus-deploy/utilities/TEAMSPEAK_DB_PASSWORD
+---
+name: productivity
+working_dir: stacks/productivity
+env_files:
+  - ../host.env
+external_secrets:
+  HBOX_AUTH_API_KEY_PEPPER: op://romulus-deploy/productivity/HBOX_AUTH_API_KEY_PEPPER
+  IMMICH_DB_PASSWORD: op://romulus-deploy/productivity/IMMICH_DB_PASSWORD
+  NEXTCLOUD_DB_PASSWORD: op://romulus-deploy/productivity/NEXTCLOUD_DB_PASSWORD
+  NEXTCLOUD_REDIS_PASSWORD: op://romulus-deploy/productivity/NEXTCLOUD_REDIS_PASSWORD
+  PAPERLESS_ADMIN_PASSWORD: op://romulus-deploy/productivity/PAPERLESS_ADMIN_PASSWORD
+  PAPERLESS_DB_PASSWORD: op://romulus-deploy/productivity/PAPERLESS_DB_PASSWORD
+  PAPERLESS_SECRET_KEY: op://romulus-deploy/productivity/PAPERLESS_SECRET_KEY
+---
+name: hydra
+working_dir: stacks/hydra
+env_files:
+  - ../host.env
+external_secrets:
+  BINANCE_API_KEY: op://romulus-deploy/hydra/BINANCE_API_KEY
+  BINANCE_API_SECRET: op://romulus-deploy/hydra/BINANCE_API_SECRET
+  BYBIT_API_KEY: op://romulus-deploy/hydra/BYBIT_API_KEY
+  BYBIT_API_SECRET: op://romulus-deploy/hydra/BYBIT_API_SECRET
+  HYDRA_DB_PASSWORD: op://romulus-deploy/hydra/HYDRA_DB_PASSWORD
+  HYDRA_TELEGRAM_BOT_TOKEN: op://romulus-deploy/hydra/HYDRA_TELEGRAM_BOT_TOKEN
+  HYDRA_TELEGRAM_CHAT_ID: op://romulus-deploy/hydra/HYDRA_TELEGRAM_CHAT_ID
+  KRAKEN_API_KEY: op://romulus-deploy/hydra/KRAKEN_API_KEY
+  KRAKEN_API_SECRET: op://romulus-deploy/hydra/KRAKEN_API_SECRET
+  OKX_API_KEY: op://romulus-deploy/hydra/OKX_API_KEY
+  OKX_API_SECRET: op://romulus-deploy/hydra/OKX_API_SECRET
+  OKX_PASSPHRASE: op://romulus-deploy/hydra/OKX_PASSPHRASE
+---
+name: ci
+working_dir: stacks/ci
+env_files:
+  - ../host.env
+external_secrets:
+  GITHUB_PAT: op://romulus-deploy/ci/GITHUB_PAT

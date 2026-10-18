@@ -157,7 +157,7 @@ runs:
           echo "stacks/.env not found, generating dummy env for validation..."
           GENERATED_ENV=true
           grep -rohP '\$\{([A-Z_][A-Z0-9_]*)' stacks/*/compose.yml | sed 's/\${//' | sort -u | while read -r var; do
-            echo "${var}=placeholder"
+            echo "${var}=/placeholder"  # absolute: path vars must not parse as named volumes
           done > stacks/.env
           echo "  Generated $(wc -l < stacks/.env) placeholder variables"
         fi

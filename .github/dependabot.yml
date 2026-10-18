@@ -71,7 +71,7 @@ updates:
       prefix: "docker"
 
   # Container images in the Flux-managed Kubernetes manifests and Helm values.
-  # Chart versions in HelmReleases are not covered by Dependabot; bump them by hand.
+  # Helm chart versions and Flux itself are bumped by Renovate (renovate.json).
   - package-ecosystem: docker
     directories:
       - /kubernetes/**

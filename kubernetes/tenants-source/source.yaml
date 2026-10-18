@@ -1,0 +1,50 @@
+# Runner tenants (orgs, GitHub Apps, scale sets) live in a private repo.
+# Flux reads it with a read-only deploy key kept in 1Password.
+apiVersion: external-secrets.io/v1
+kind: ClusterSecretStore
+metadata:
+  name: onepassword-flux
+spec:
+  provider:
+    onepasswordSDK:
+      vault: romulus-ci
+      auth:
+        serviceAccountSecretRef:
+          name: onepassword-token
+          key: token
+          namespace: external-secrets
+  conditions:
+    - namespaces: [flux-system]
+---
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: romulus-tenants-deploy-key
+  namespace: flux-system
+spec:
+  # 1Password service accounts are rate limited; the key rarely changes
+  refreshInterval: 24h
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: onepassword-flux
+  target:
+    name: romulus-tenants-deploy-key
+    creationPolicy: Owner
+  data:
+    - secretKey: identity
+      remoteRef: {key: romulus-tenants-deploy-key/identity}
+    - secretKey: known_hosts
+      remoteRef: {key: romulus-tenants-deploy-key/known_hosts}
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: romulus-tenants
+  namespace: flux-system
+spec:
+  interval: 1m
+  url: ssh://git@github.com/somatczk/romulus-tenants
+  ref:
+    branch: main
+  secretRef:
+    name: romulus-tenants-deploy-key

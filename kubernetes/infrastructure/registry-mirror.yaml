@@ -85,7 +85,7 @@ spec:
   ingress:
     - from:
         - namespaceSelector:
-            matchExpressions:
-              - {key: kubernetes.io/metadata.name, operator: In, values: [arc-vetoo, arc-coordentra, arc-somatczk]}
+            # runner namespaces carry this label (somatczk/romulus-tenants)
+            matchLabels: {romulus.ci/runners: "true"}
       ports:
         - {protocol: TCP, port: 5000}

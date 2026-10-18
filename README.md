@@ -67,7 +67,7 @@ flowchart LR
   repo[(this repo)] --> flux
 ```
 
-- **GitOps:** Flux syncs `clusters/romulus` and `kubernetes/` from `master`; only the bootstrap is applied by hand.
+- **GitOps:** Flux syncs `clusters/romulus` and `kubernetes/` from `master`; only the bootstrap is applied by hand. The tenants (orgs, GitHub Apps, scale sets) live in a private repo that Flux reads with a read-only deploy key.
 - **Identity:** one GitHub App per organisation, no PATs. Keys reach the cluster from 1Password through External Secrets.
 - **Runners:** an ephemeral pod per job with a dind sidecar, per-org cache and BuildKit, a shared Docker Hub pull-through mirror.
 - **Supply chain:** the runner image is built on GitHub-hosted runners with SBOM and provenance, cosign-signed, and deployed by digest.

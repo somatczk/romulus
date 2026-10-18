@@ -5,12 +5,12 @@ metadata:
   namespace: flux-system
 spec:
   dependsOn:
-    - name: infrastructure
+    - name: tenants-source
   interval: 10m
   retryInterval: 1m
   timeout: 10m
   prune: true
   sourceRef:
     kind: GitRepository
-    name: flux-system
-  path: ./kubernetes/ci-runners
+    name: romulus-tenants
+  path: ./ci-runners

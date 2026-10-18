@@ -43,6 +43,8 @@ spec:
           env:
             - {name: REGISTRY_PROXY_REMOTEURL, value: https://registry-1.docker.io}
             - {name: REGISTRY_STORAGE_DELETE_ENABLED, value: "true"}
+            # registry 3 exports traces by default, there is no collector
+            - {name: OTEL_TRACES_EXPORTER, value: none}
           ports:
             - containerPort: 5000
           readinessProbe:

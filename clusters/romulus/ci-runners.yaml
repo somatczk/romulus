@@ -14,7 +14,3 @@ spec:
     kind: GitRepository
     name: flux-system
   path: ./kubernetes/ci-runners
-  decryption:
-    provider: sops
-    secretRef:
-      name: sops-age

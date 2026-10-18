@@ -3,3 +3,4 @@ kind: Kustomization
 resources:
   - arc-controller.yaml
   - registry-mirror.yaml
+  - external-secrets.yaml

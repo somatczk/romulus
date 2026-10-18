@@ -3,7 +3,7 @@ kind: Kustomization
 namespace: arc-coordentra
 resources:
   - namespace.yaml
-  - github-app.sops.yaml
+  - github-app.yaml
   - scale-sets.yaml
 components:
   - ../base

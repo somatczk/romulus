@@ -3,7 +3,7 @@ kind: Kustomization
 namespace: arc-vetoo
 resources:
   - namespace.yaml
-  - github-app.sops.yaml
+  - github-app.yaml
   - scale-sets.yaml
 components:
   - ../base

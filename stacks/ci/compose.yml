@@ -131,6 +131,8 @@ services:
     environment:
       REGISTRY_PROXY_REMOTEURL: https://registry-1.docker.io
       REGISTRY_STORAGE_DELETE_ENABLED: "true"
+      # registry 3 exports traces by default, there is no collector
+      OTEL_TRACES_EXPORTER: none
     volumes:
       - /DATA/ci/registry-mirror:/var/lib/registry
     deploy:

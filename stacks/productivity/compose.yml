@@ -24,7 +24,7 @@ services:
       POSTGRES_USER: nextcloud
       POSTGRES_PASSWORD: ${NEXTCLOUD_DB_PASSWORD}
     volumes:
-      - ${APPDATA}/productivity/nextcloud-db:/var/lib/postgresql/data
+      - ${APPDATA}/productivity/nextcloud-db:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U nextcloud"]
       interval: 30s
@@ -265,7 +265,7 @@ services:
       POSTGRES_USER: paperless
       POSTGRES_PASSWORD: ${PAPERLESS_DB_PASSWORD}
     volumes:
-      - ${APPDATA}/productivity/paperless-db:/var/lib/postgresql/data
+      - ${APPDATA}/productivity/paperless-db:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U paperless"]
       interval: 30s

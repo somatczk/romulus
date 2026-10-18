@@ -1,4 +1,42 @@
 services:
+  alertmanager:
+    build: ./alertmanager
+    container_name: alertmanager
+    restart: unless-stopped
+    networks:
+      - monitoring
+      # monitoring is internal; telegram needs egress
+      - proxy
+    environment:
+      TZ: ${TZ}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID}
+    volumes:
+      - ../../configs/alertmanager/alertmanager.yml:/etc/alertmanager/template.yml:ro
+      - alertmanager-data:/alertmanager
+    # alertmanager can't read env in its config: render the chat id in, hand the token over
+    # as a file (keeps it out of the alertmanager process env, not out of docker inspect)
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >-
+        : "$${TELEGRAM_CHAT_ID:?}" "$${TELEGRAM_BOT_TOKEN:?}"
+        && umask 077
+        && sed "s/__TELEGRAM_CHAT_ID__/$$TELEGRAM_CHAT_ID/" /etc/alertmanager/template.yml > /tmp/alertmanager.yml
+        && printf %s "$$TELEGRAM_BOT_TOKEN" > /tmp/telegram-token
+        && unset TELEGRAM_BOT_TOKEN
+        && exec /bin/alertmanager --config.file=/tmp/alertmanager.yml --storage.path=/alertmanager
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9093/-/healthy"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+    security_opt:
+      - no-new-privileges:true
+
   prometheus:
     build: ./prometheus
     container_name: prometheus
@@ -12,6 +50,7 @@ services:
     volumes:
       - ../../configs/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ../../configs/prometheus/alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
+      - ../../configs/prometheus/hydra-alert-rules.yml:/etc/prometheus/hydra-alert-rules.yml:ro
       - ${APPDATA}/monitoring/prometheus/data:/prometheus
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -277,3 +316,7 @@ networks:
     external: true
   socket:
     external: true
+
+volumes:
+  alertmanager-data:
+    name: monitoring_alertmanager-data

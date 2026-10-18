@@ -1,0 +1,35 @@
+# Rendered at container start: __TELEGRAM_CHAT_ID__ is filled in and the bot token is
+# written to /tmp/telegram-token (see the alertmanager service in stacks/monitoring).
+route:
+  receiver: telegram
+  group_by: [alertname]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 12h
+  routes:
+    - matchers: [alertname="AlertmanagerNotificationsFailing"]
+      receiver: ntfy
+      repeat_interval: 1h
+    - matchers: [severity="critical"]
+      receiver: telegram
+      repeat_interval: 1h
+    - matchers: [severity="info"]
+      receiver: blackhole
+
+inhibit_rules:
+  # disk at 90% silences the 80% warning for the same mount
+  - source_matchers: [alertname="DiskUsageCritical"]
+    target_matchers: [alertname="DiskUsageWarning"]
+    equal: [instance, mountpoint]
+
+receivers:
+  - name: telegram
+    telegram_configs:
+      - bot_token_file: /tmp/telegram-token
+        chat_id: __TELEGRAM_CHAT_ID__
+        parse_mode: HTML
+        send_resolved: true
+  - name: ntfy
+    webhook_configs:
+      - url: http://ntfy:80/alerts
+  - name: blackhole

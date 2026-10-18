@@ -7,8 +7,7 @@ spec:
   interval: 1m
   url: https://github.com/somatczk/romulus
   ref:
-    # TODO(merge): switch to `branch: master` in the last commit before merging.
-    branch: feat/gitops-k3s
+    branch: master
   ignore: |
     /*
     !/clusters/romulus

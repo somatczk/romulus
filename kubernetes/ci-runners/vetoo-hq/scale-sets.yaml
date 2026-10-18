@@ -19,7 +19,7 @@ spec:
   values:
     githubConfigUrl: https://github.com/vetoo-hq
     runnerScaleSetName: vetoo-heavy
-    scaleSetLabels: [linux, x64, zimaos, org-vetoo-hq, heavy]
+    scaleSetLabels: [self-hosted, linux, x64, zimaos, org-vetoo-hq, heavy]
     maxRunners: 4
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
@@ -43,5 +43,5 @@ spec:
   values:
     githubConfigUrl: https://github.com/vetoo-hq
     runnerScaleSetName: vetoo-light
-    scaleSetLabels: [linux, x64, zimaos, org-vetoo-hq, light]
+    scaleSetLabels: [self-hosted, linux, x64, zimaos, org-vetoo-hq, light]
     maxRunners: 6

@@ -19,5 +19,5 @@ spec:
   values:
     githubConfigUrl: https://github.com/somatczk/solhouse-nextjs
     runnerScaleSetName: solhouse
-    scaleSetLabels: [linux, x64, zimaos, solhouse]
+    scaleSetLabels: [self-hosted, linux, x64, zimaos, solhouse]
     maxRunners: 2

@@ -19,7 +19,7 @@ spec:
   values:
     githubConfigUrl: https://github.com/coordentra
     runnerScaleSetName: coordentra-heavy
-    scaleSetLabels: [linux, x64, zimaos, org-coordentra, heavy]
+    scaleSetLabels: [self-hosted, linux, x64, zimaos, org-coordentra, heavy]
     maxRunners: 1
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
@@ -43,5 +43,5 @@ spec:
   values:
     githubConfigUrl: https://github.com/coordentra
     runnerScaleSetName: coordentra-light
-    scaleSetLabels: [linux, x64, zimaos, org-coordentra, light]
+    scaleSetLabels: [self-hosted, linux, x64, zimaos, org-coordentra, light]
     maxRunners: 2

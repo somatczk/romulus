@@ -85,10 +85,3 @@ external_secrets:
   OKX_API_KEY: op://romulus-deploy/hydra/OKX_API_KEY
   OKX_API_SECRET: op://romulus-deploy/hydra/OKX_API_SECRET
   OKX_PASSPHRASE: op://romulus-deploy/hydra/OKX_PASSPHRASE
----
-name: ci
-working_dir: stacks/ci
-env_files:
-  - ../host.env
-external_secrets:
-  GITHUB_PAT: op://romulus-deploy/ci/GITHUB_PAT

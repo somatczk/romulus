@@ -13,7 +13,6 @@ Homelab configuration for a ZimaCube (Ryzen 9 5950X, 128GB RAM, GTX 1650 SUPER) 
 | **media** | Jellyfin, Sonarr, Radarr, FlareSolverr, Prowlarr, Bazarr, Lidarr, qBittorrent, Jellyseerr | 11 GB |
 | **productivity** | Nextcloud, Immich, Home Assistant, Paperless-ngx, Actual Budget, Homebox (+ PostgreSQL/Redis) | 26.5 GB |
 | **monitoring** | Prometheus, Grafana, Loki, Promtail, Node/GPU/SMART/Restic Exporters, cAdvisor, Uptime Kuma, Glances | 5.1 GB |
-| **ci** | hydra repo runners, Socket Proxy, BuildKit, registry mirror (org runners live in k3s, see CI platform) | ~30 GB |
 | **notifications** | ntfy | 256 MB |
 | **utilities** | Watchtower, Dozzle, Speedtest, Portainer, TeamSpeak, Autoheal | 2.6 GB |
 | **dashboard** | Homepage | 512 MB |

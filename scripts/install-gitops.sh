@@ -55,9 +55,7 @@ OP_SERVICE_ACCOUNT_TOKEN=$(cat "$DOCO/op-token")
 while read -r ref; do
     op read "$ref" >/dev/null || { echo "cannot read $ref"; exit 1; }
 done < <(grep -oE 'op://[^ ]+' "$src/.doco-cd.yml" | sort -u)
-install -d -m 700 "$DOCO/data" "$DOCO/docker"
-# private hydra images on ghcr
-op read op://romulus-deploy/ci/GITHUB_PAT | docker --config "$DOCO/docker" login ghcr.io -u somatczk --password-stdin >/dev/null
+install -d -m 700 "$DOCO/data"
 ( umask 077
   printf 'ntfy://ntfy:80/deployments,tgram://%s/%s\n' \
       "$(op read op://romulus-deploy/shared/TELEGRAM_BOT_TOKEN)" "$(op read op://romulus-deploy/shared/TELEGRAM_CHAT_ID)" \
@@ -79,7 +77,6 @@ proxy false 10.10.5.0/24
 monitoring true 10.10.1.0/24
 db-immich true 10.10.2.0/24
 db-nextcloud true 10.10.3.0/24
-ci true 10.10.4.0/24
 media true 10.10.6.0/24
 socket true 10.10.7.0/24
 db-paperless true 10.10.12.0/24

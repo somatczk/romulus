@@ -102,12 +102,6 @@ jobs:
           } >> "$GITHUB_OUTPUT"
           echo "${FILES:-No Dockerfile changes detected}"
 
-      - name: Login to GHCR
-        if: steps.changed.outputs.files != ''
-        env:
-          GHCR_TOKEN: ${{ secrets.G_PAT }}
-        run: echo "$GHCR_TOKEN" | docker login ghcr.io -u somatczk --password-stdin
-
       - name: Verify images exist
         if: steps.changed.outputs.files != ''
         env:

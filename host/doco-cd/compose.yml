@@ -10,6 +10,8 @@ services:
     depends_on:
       apprise:
         condition: service_healthy
+      connect-api:
+        condition: service_started
     networks:
       - doco-cd
       # prometheus scrapes :9120
@@ -21,12 +23,11 @@ services:
         - url: https://github.com/somatczk/romulus.git
           reference: refs/heads/master
           interval: 60
+      # every poll re-resolves all secrets; Connect serves them from its synced copy,
+      # so there is no 1Password rate limit and a rotated secret lands on the next poll
       SECRET_PROVIDER: 1password
-      SECRET_PROVIDER_ACCESS_TOKEN_FILE: /run/secrets/op-token
-      # every poll re-resolves all secrets; the default 5m TTL meant ~400 reads/h and hit the 1Password limits.
-      # 24h keeps it to one read per secret a day. After rotating a secret: docker restart doco-cd.
-      SECRET_PROVIDER_CACHE_ENABLED: "true"
-      SECRET_PROVIDER_CACHE_TTL: 24h
+      SECRET_PROVIDER_CONNECT_HOST: http://connect-api:8080
+      SECRET_PROVIDER_CONNECT_TOKEN_FILE: /run/secrets/connect-token
       APPRISE_API_URL: http://apprise:8000/notify
       APPRISE_NOTIFY_URLS_FILE: /run/secrets/apprise-urls
       # minimum level: success also sends warnings and failures
@@ -34,7 +35,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /DATA/doco-cd/data:/data
-      - /DATA/doco-cd/op-token:/run/secrets/op-token:ro
+      - /DATA/doco-cd/connect-token:/run/secrets/connect-token:ro
       - /DATA/doco-cd/apprise-urls:/run/secrets/apprise-urls:ro
     cap_drop:
       - ALL
@@ -46,6 +47,34 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
+
+  # 1Password Connect: keeps a synced copy of the romulus-deploy vault and serves it locally
+  connect-api:
+    image: 1password/connect-api:1.8.3@sha256:656e4b10df83ca258d8a75b2a051f7c06dd608212f8ae5ba4722e3fe164099d3
+    container_name: op-connect-api
+    restart: unless-stopped
+    networks:
+      - doco-cd
+    volumes: &connect-volumes
+      # owned by uid 999 (opuser), mode 600
+      - /DATA/doco-cd/1password-credentials.json:/home/opuser/.op/1password-credentials.json:ro
+      - connect-data:/home/opuser/.op/data
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+  connect-sync:
+    image: 1password/connect-sync:1.8.3@sha256:a760350c941a3e7c98dd66394e9fc3c7e68b6a0a2246a837c74084e534f75f6b
+    container_name: op-connect-sync
+    restart: unless-stopped
+    networks:
+      - doco-cd
+    volumes: *connect-volumes
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
 
   apprise:
     image: caronc/apprise:2.0.1@sha256:0b2913b15c8eb47c25345722985ffbfae701326edde21909c205d296d62dd52c
@@ -63,6 +92,9 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
+
+volumes:
+  connect-data:
 
 networks:
   doco-cd:

@@ -35,11 +35,11 @@ Configuration for a single homelab server (ZimaCube, Ryzen 9 5950X, 128 GB RAM, 
 
 Pull-based. [doco-cd](https://doco.cd) on the host polls `master` and deploys every stack listed in `.doco-cd.yml`; only services whose config changed are recreated. CI never touches the host.
 
-- **Secrets** live in 1Password, one item per stack, read by doco-cd through a read-only service account. Each stack gets only the secrets it lists, each container only the variables its service maps. Nothing secret is in git.
+- **Secrets** live in 1Password, one item per stack. doco-cd reads them through a local 1Password Connect server (no API rate limits, a rotated secret lands on the next poll); host scripts use a read-only service account. Each stack gets only the secrets it lists, each container only the variables its service maps. Nothing secret is in git.
 - **Host files:** the checkout on the host is reset to `origin/master` by a systemd timer, which also re-applies the crons and the deployer.
 - **Notifications:** deploy results go to ntfy and Telegram. Prometheus alerts route through Alertmanager to Telegram, with ntfy as fallback.
 - **Rollback:** `git revert` on `master`.
-- **Rotating a secret:** change it in 1Password, then restart doco-cd; resolved secrets are cached for a day to stay under the 1Password rate limits.
+- **Rotating a secret:** change it in 1Password; the next deploy of that stack picks it up.
 
 Host setup is one idempotent script, `scripts/install-gitops.sh` (packages, Docker networks, checkout, deployer, crons). A fresh host needs its storage restored from backup, a 1Password service account token, and that script.
 

@@ -23,8 +23,10 @@ services:
           interval: 60
       SECRET_PROVIDER: 1password
       SECRET_PROVIDER_ACCESS_TOKEN_FILE: /run/secrets/op-token
-      # one deploy reads ~40 secrets, cache keeps it off the 1Password rate limit
+      # every poll re-resolves all secrets; the default 5m TTL meant ~400 reads/h and hit the 1Password limits.
+      # 24h keeps it to one read per secret a day. After rotating a secret: docker restart doco-cd.
       SECRET_PROVIDER_CACHE_ENABLED: "true"
+      SECRET_PROVIDER_CACHE_TTL: 24h
       APPRISE_API_URL: http://apprise:8000/notify
       APPRISE_NOTIFY_URLS_FILE: /run/secrets/apprise-urls
       # minimum level: success also sends warnings and failures

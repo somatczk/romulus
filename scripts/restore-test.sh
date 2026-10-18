@@ -10,7 +10,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/../stacks/.env"
 
 NTFY_URL="https://notify.${DOMAIN}/backups"
-mkdir -p /media/HDD-Storage/restore-test; RESTORE_DIR=$(mktemp -d "/media/HDD-Storage/restore-test/run-XXXXXX")
+mkdir -p "${HDD}/restore-test"
+RESTORE_DIR=$(mktemp -d "${HDD}/restore-test/run-XXXXXX")
 METRICS_DIR="/var/lib/node_exporter/textfile_collector"
 START_TIME=$(date +%s)
 

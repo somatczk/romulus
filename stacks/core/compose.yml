@@ -124,14 +124,10 @@ services:
     security_opt:
       - no-new-privileges:true
 
-  # Tailnet client: joins this host (and, via docker bridge NAT, every runner
-  # container) to the coordentra tailnet so CI can reach the tailnet-gated
-  # staging/prod frontend ALBs. --accept-routes is load-bearing: without it the
-  # subnet routes to the frontend VPCs are ignored. Host network + tun: the
-  # tailscale0 interface must live on the HOST stack for bridge containers to
-  # route through it. Interactive auth (soma@); state survives in appdata.
+  # Tailnet client on the host network so bridge containers route through tailscale0.
+  # --accept-routes is required for the advertised subnet routes. State lives in appdata.
   tailscale:
-    image: tailscale/tailscale:stable
+    image: tailscale/tailscale:v1.102.2@sha256:321ce041508c19079b57a28b6666c8d81ab0b08accc0a2585b3ab663d557ac24
     container_name: tailscale
     restart: unless-stopped
     network_mode: host

@@ -22,4 +22,4 @@ configs/authelia/db.sqlite3
 # OS files
 .DS_Store
 Thumbs.db
-stacks/ci/ci.env
+**/ci.env

@@ -188,39 +188,7 @@ chmod 644 "${DOCKER_CONFIG_DIR}/config.json"
 
 log_info "Docker config.json permissions fixed."
 
-# =============================================================================
-# 5. Create Docker Networks
-# =============================================================================
-log_info "Creating Docker networks..."
-
-declare -A NETWORKS
-# network_name -> "internal|external"
-NETWORKS=(
-    ["proxy"]="external"
-    ["socket"]="internal"
-    ["media"]="internal"
-    ["db-nextcloud"]="internal"
-    ["db-immich"]="internal"
-    ["monitoring"]="internal"
-    ["ci"]="internal"
-    ["db-paperless"]="internal"
-    ["ai"]="internal"
-    ["hydra"]="internal"
-)
-
-for net in "${!NETWORKS[@]}"; do
-    if docker network inspect "$net" &>/dev/null; then
-        log_warn "Network '${net}' already exists, skipping."
-    else
-        if [[ "${NETWORKS[$net]}" == "internal" ]]; then
-            docker network create --driver bridge --internal "$net"
-            log_info "Created internal network: ${net}"
-        else
-            docker network create --driver bridge "$net"
-            log_info "Created network: ${net}"
-        fi
-    fi
-done
+# 5. Docker networks: created with fixed subnets by scripts/install-gitops.sh
 
 # =============================================================================
 # 6. Create Metrics Directory (for node-exporter textfile collector)
@@ -258,15 +226,9 @@ echo "  Directories created under:"
 echo "    - ${APPDATA}/"
 echo "    - ${HDD}/"
 echo ""
-echo "  Docker networks created:"
-for net in "${!NETWORKS[@]}"; do
-    echo "    - ${net} (${NETWORKS[$net]})"
-done
-echo ""
 echo "  Next steps:"
-echo "    1. Edit stacks/.env and replace all changeme_ values"
-echo "    2. Copy docker/daemon.json to /etc/docker/daemon.json"
-echo "    3. Run: sudo systemctl restart docker"
-echo "    4. Run: sudo bash scripts/swap.sh (configure 8GB swap + kernel tuning)"
-echo "    5. Deploy stacks in order: core -> security -> media -> productivity -> monitoring -> ci -> notifications -> dashboard -> utilities -> ai -> hydra"
+echo "    1. Copy docker/daemon.json to /etc/docker/daemon.json"
+echo "    2. Run: sudo systemctl restart docker"
+echo "    3. Run: sudo bash scripts/swap.sh (configure 8GB swap + kernel tuning)"
+echo "    4. Run: sudo bash scripts/install-gitops.sh (networks, secrets, doco-cd deploys every stack)"
 echo ""

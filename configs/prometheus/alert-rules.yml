@@ -31,7 +31,7 @@ groups:
           description: "Container {{ $labels.name }} experienced an OOM kill."
 
       - alert: ContainerHighCPU
-        expr: sum(rate(container_cpu_usage_seconds_total{name!=""}[5m])) by (name) > 0.9
+        expr: sum(rate(container_cpu_usage_seconds_total{name!="",name!~"gh-runner-.*|buildx_buildkit.*|ci-.*"}[5m])) by (name) > 0.9
         for: 10m
         labels:
           severity: warning
@@ -40,7 +40,7 @@ groups:
           description: "Container {{ $labels.name }} CPU usage is above 90% for 10 minutes."
 
       - alert: ContainerHighMemory
-        expr: container_memory_usage_bytes{name!=""} / container_spec_memory_limit_bytes{name!=""} * 100 > 90
+        expr: (container_memory_usage_bytes{name!="",name!~"gh-runner-.*|buildx_buildkit.*|ci-.*"} / container_spec_memory_limit_bytes{name!=""} * 100 > 90) and container_spec_memory_limit_bytes > 0
         for: 5m
         labels:
           severity: warning
@@ -80,7 +80,7 @@ groups:
   - name: services
     rules:
       - alert: ServiceDown
-        expr: up == 0
+        expr: up{job!="hydra"} == 0
         for: 5m
         labels:
           severity: critical
@@ -237,22 +237,26 @@ groups:
 
   - name: ntfy
     rules:
-      - alert: NtfyNotificationReceived
-        expr: increase(ntfy_messages_published_success[2m]) > 0
-        for: 0m
-        labels:
-          severity: info
-        annotations:
-          summary: "ntfy notification received"
-          description: "{{ printf \"%.0f\" $value }} new notification(s) published to ntfy in the last 2 minutes."
 
   - name: speedtest
     rules:
       - alert: SpeedtestSlow
         expr: speedtest_download_bits_per_second < 100000000
-        for: 0m
+        for: 7h
         labels:
           severity: warning
         annotations:
           summary: "Internet download speed below 100 Mbps"
           description: "Download speed has dropped below 100 Mbps."
+
+  - name: alerting
+    rules:
+      # routed to ntfy by alertmanager, so a broken telegram path still reaches someone
+      - alert: AlertmanagerNotificationsFailing
+        expr: sum(rate(alertmanager_notifications_failed_total[10m])) by (integration) > 0
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Alertmanager cannot deliver to {{ $labels.integration }}"
+          description: "Check: docker logs alertmanager (bot token, chat id, Telegram reachability)"

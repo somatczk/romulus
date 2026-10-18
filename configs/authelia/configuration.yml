@@ -15,7 +15,8 @@ totp:
 
 authentication_backend:
   file:
-    path: /config/users_database.yml
+    # host-only file (password hashes), kept out of git with the rest of authelia's state
+    path: /data/users_database.yml
     password:
       algorithm: argon2id
       iterations: 3

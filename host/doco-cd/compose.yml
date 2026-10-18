@@ -1,0 +1,69 @@
+# doco-cd: pulls master and deploys the stacks listed in /.doco-cd.yml.
+# Runs outside its own deployments; scripts/install-gitops.sh starts and updates it.
+name: doco-cd
+
+services:
+  doco-cd:
+    image: ghcr.io/kimdre/doco-cd:0.129.0@sha256:79960a8eb7a294db6e5e5af47a702e83d494cc7abe9eecfaacb7c70a71eeb2cb
+    container_name: doco-cd
+    restart: unless-stopped
+    depends_on:
+      apprise:
+        condition: service_healthy
+    networks:
+      - doco-cd
+    environment:
+      TZ: Europe/Budapest
+      LOG_LEVEL: info
+      POLL_CONFIG: |
+        - url: https://github.com/somatczk/romulus.git
+          reference: refs/heads/master
+          interval: 60
+      SECRET_PROVIDER: 1password
+      SECRET_PROVIDER_ACCESS_TOKEN_FILE: /run/secrets/op-token
+      # one deploy reads ~40 secrets, cache keeps it off the 1Password rate limit
+      SECRET_PROVIDER_CACHE_ENABLED: "true"
+      # registry login for the private hydra images on ghcr
+      DOCKER_CONFIG: /docker-config
+      APPRISE_API_URL: http://apprise:8000/notify
+      APPRISE_NOTIFY_URLS_FILE: /run/secrets/apprise-urls
+      APPRISE_NOTIFY_LEVEL: success
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /DATA/doco-cd/data:/data
+      - /DATA/doco-cd/op-token:/run/secrets/op-token:ro
+      - /DATA/doco-cd/apprise-urls:/run/secrets/apprise-urls:ro
+      - /DATA/doco-cd/docker:/docker-config:ro
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "/doco-cd", "healthcheck"]
+      start_period: 15s
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  apprise:
+    image: caronc/apprise:2.0.1@sha256:0b2913b15c8eb47c25345722985ffbfae701326edde21909c205d296d62dd52c
+    container_name: doco-cd-apprise
+    restart: unless-stopped
+    networks:
+      - doco-cd
+      # reaches ntfy
+      - monitoring
+    environment:
+      TZ: Europe/Budapest
+      APPRISE_WORKER_COUNT: 1
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8000/status"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+networks:
+  doco-cd:
+    name: doco-cd
+  monitoring:
+    external: true

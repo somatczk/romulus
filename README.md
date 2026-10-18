@@ -13,25 +13,25 @@ Homelab configuration for a ZimaCube (Ryzen 9 5950X, 128GB RAM, GTX 1650 SUPER) 
 | **media** | Jellyfin, Sonarr, Radarr, FlareSolverr, Prowlarr, Bazarr, Lidarr, qBittorrent, Jellyseerr | 11 GB |
 | **productivity** | Nextcloud, Immich, Home Assistant, Paperless-ngx, Actual Budget, Homebox (+ PostgreSQL/Redis) | 26.5 GB |
 | **monitoring** | Prometheus, Grafana, Loki, Promtail, Node/GPU/SMART/Restic Exporters, cAdvisor, Uptime Kuma, Glances | 5.1 GB |
-| **ci** | hydra/romulus repo runners, Socket Proxy, BuildKit, registry mirror (org runners live in k3s, see CI platform) | ~30 GB |
+| **ci** | hydra repo runners, Socket Proxy, BuildKit, registry mirror (org runners live in k3s, see CI platform) | ~30 GB |
 | **notifications** | ntfy | 256 MB |
 | **utilities** | Watchtower, Dozzle, Speedtest, Portainer, TeamSpeak, Autoheal | 2.6 GB |
 | **dashboard** | Homepage | 512 MB |
 | **ai** | Ollama, OpenClaw, Open WebUI, Socket Proxy | ~19 GB |
 | **hydra** | Hydra Engine, Dashboard, Backtest Worker, TimescaleDB, Redis | 18.5 GB |
 
-Image versions pinned in single-line Dockerfiles (`stacks/<stack>/<service>/Dockerfile`). Dependabot opens weekly PRs for bumps, auto-merged after CI passes.
+Image versions pinned in single-line Dockerfiles (`stacks/<stack>/<service>/Dockerfile`). Dependabot opens weekly PRs; patch and minor bumps of stateless images auto-merge after CI passes, majors, 0.x and calendar-version minors and stateful images (databases, immich, nextcloud, paperless, Home Assistant) wait for a review.
 
 ## Deployment
 
-```bash
-cp stacks/.env.example stacks/.env  # fill in secrets
-./deploy.sh                          # full deploy
-./deploy.sh media ai verify          # selective
-./deploy.sh --port 2222 verify       # after SSH hardening
-```
+Pull-based: [doco-cd](https://doco.cd) on the host polls `master` every minute and deploys the stacks listed in `.doco-cd.yml` (core first). Merging is deploying; there is no deploy job in CI.
 
-On the server: `cd /DATA/stacks/stacks && docker compose --env-file .env -f <stack>/compose.yml up -d --build`
+- **Secrets:** 1Password vault `romulus-deploy`, one item per stack. doco-cd reads it with a read-only service account (token in `/DATA/doco-cd/op-token`) and interpolates only the secrets each stack lists. Non-secret settings are in `stacks/host.env`. Containers get only the variables their compose service maps, never a shared `.env`.
+- **Host files:** `/DATA/stacks` is a git checkout fast-forwarded every 5 minutes (`romulus-stacks-sync.timer`), so crons, scripts and the firewall unit stay current. Host scripts load their secrets through `scripts/lib/env.sh`.
+- **Notifications:** deploy results go to ntfy and Telegram through apprise.
+- **Host setup** (packages, networks, checkout, doco-cd itself, crons), idempotent: `sudo bash /DATA/stacks/scripts/install-gitops.sh`. Re-run it when `host/` or `scripts/systemd/` change; doco-cd does not deploy itself.
+
+Rotate a secret: edit it in 1Password, then make doco-cd redeploy the stack (any commit touching it, or a restart of doco-cd).
 
 ## CI platform
 

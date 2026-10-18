@@ -1,0 +1,9 @@
+[Unit]
+Description=Fast-forward /DATA/stacks to master (scripts, crons, firewall)
+Requires=DATA.mount
+After=DATA.mount network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/git -C /DATA/stacks pull -q --ff-only

@@ -7,9 +7,9 @@ export XDG_CACHE_HOME="/DATA/.cache"
 # Restores latest restic snapshot to temp dir, validates, cleans up
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/../stacks/.env"
+source "${SCRIPT_DIR}/lib/env.sh" DOMAIN RESTIC_PASSWORD
 
-: "${HDD:?HDD must be set in stacks/.env}"
+: "${HDD:?HDD must be set in stacks/host.env}"
 NTFY_URL="https://notify.${DOMAIN}/backups"
 mkdir -p "${HDD}/restore-test"
 RESTORE_DIR=$(mktemp -d "${HDD}/restore-test/run-XXXXXX")

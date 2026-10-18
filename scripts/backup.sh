@@ -7,7 +7,7 @@ export XDG_CACHE_HOME="/DATA/.cache"
 # Runs at 3:00 AM via cron
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/../stacks/.env"
+source "${SCRIPT_DIR}/lib/env.sh" DOMAIN RESTIC_PASSWORD TEAMSPEAK_DB_PASSWORD
 
 BACKUP_DIR="${APPDATA}/backups"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)

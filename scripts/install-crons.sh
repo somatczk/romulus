@@ -19,7 +19,7 @@ CRON_ENTRIES=(
     "0 5 * * 0 ${SCRIPTS_DIR}/btrfs-maintenance.sh scrub >> /var/log/homelab/maintenance.log 2>&1"
     "0 5 1 * * ${SCRIPTS_DIR}/btrfs-maintenance.sh balance >> /var/log/homelab/maintenance.log 2>&1"
     "0 6 1 * * ${SCRIPTS_DIR}/restore-test.sh >> /var/log/homelab/restore-test.log 2>&1"
-    "0 5 * * 3 /bin/bash -c 'export PATH=\$PATH:/DATA/bin && export XDG_CACHE_HOME=/DATA/.cache && source /DATA/stacks/stacks/.env && export RESTIC_REPOSITORY=/media/HDD-Storage/backups/restic-repo && export RESTIC_PASSWORD && restic check' >> /var/log/homelab/restic-check.log 2>&1"
+    "0 5 * * 3 /bin/bash -c 'export PATH=\$PATH:/DATA/bin && export XDG_CACHE_HOME=/DATA/.cache && source /DATA/stacks/scripts/lib/env.sh RESTIC_PASSWORD && export RESTIC_REPOSITORY=/media/HDD-Storage/backups/restic-repo && restic check' >> /var/log/homelab/restic-check.log 2>&1"
     "0 3 * * 0 docker system prune -f --volumes --filter 'until=168h' >> /var/log/homelab/docker-cleanup.log 2>&1"
 )
 

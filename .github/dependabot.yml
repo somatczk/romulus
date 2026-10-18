@@ -51,6 +51,7 @@ updates:
   - package-ecosystem: docker-compose
     directories:
       - /stacks/*
+      - /host/*
     schedule:
       interval: weekly
       day: monday

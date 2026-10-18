@@ -5,37 +5,33 @@ on:
     workflows: [CI]
     types: [completed]
 
-permissions:
-  contents: write
-  pull-requests: write
+permissions: {}
 
 jobs:
   auto-merge:
     name: Auto-Merge Dependabot PRs
-    runs-on: [self-hosted, romulus]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     if: >-
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.actor.login == 'dependabot[bot]'
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v7
-
-      - name: Get PR number
-        id: pr
+      # Patch and minor bumps merge on green CI; majors wait for a human.
+      - name: Merge non-major update
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
           HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
         run: |
-          PR_NUMBER=$(gh pr list \
-            --head "$HEAD_BRANCH" \
-            --json number --jq '.[0].number')
-          echo "number=$PR_NUMBER" >> $GITHUB_OUTPUT
-
-      - name: Merge PR
-        if: steps.pr.outputs.number != ''
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PR_NUMBER: ${{ steps.pr.outputs.number }}
-        run: |
-          gh pr merge "$PR_NUMBER" \
-            --merge --delete-branch
+          read -r PR TITLE < <(gh pr list --head "$HEAD_BRANCH" --author 'app/dependabot' \
+            --json number,title --jq '.[0] | "\(.number) \(.title)"')
+          [ -n "${PR:-}" ] || { echo "no open Dependabot PR for $HEAD_BRANCH"; exit 0; }
+          # Grouped PRs ("bump the actions group ...") carry no versions in the title.
+          if [[ "$TITLE" =~ from\ v?([0-9]+)[^\ ]*\ to\ v?([0-9]+) ]] && \
+             [ "${BASH_REMATCH[1]}" != "${BASH_REMATCH[2]}" ]; then
+            echo "major bump, leaving #$PR for review: $TITLE"
+            exit 0
+          fi
+          gh pr merge "$PR" --merge --delete-branch

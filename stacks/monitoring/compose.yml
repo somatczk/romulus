@@ -12,11 +12,13 @@ services:
     volumes:
       - ../../configs/alertmanager/alertmanager.yml:/etc/alertmanager/template.yml:ro
       - alertmanager-data:/alertmanager
-    # alertmanager can't read env in its config: render it, keep the token in a file only
+    # alertmanager can't read env in its config: render the chat id in, hand the token over
+    # as a file (keeps it out of the alertmanager process env, not out of docker inspect)
     entrypoint: ["/bin/sh", "-c"]
     command:
       - >-
-        umask 077
+        : "$${TELEGRAM_CHAT_ID:?}" "$${TELEGRAM_BOT_TOKEN:?}"
+        && umask 077
         && sed "s/__TELEGRAM_CHAT_ID__/$$TELEGRAM_CHAT_ID/" /etc/alertmanager/template.yml > /tmp/alertmanager.yml
         && printf %s "$$TELEGRAM_BOT_TOKEN" > /tmp/telegram-token
         && unset TELEGRAM_BOT_TOKEN

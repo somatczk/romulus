@@ -123,3 +123,39 @@ services:
           memory: 256m
     security_opt:
       - no-new-privileges:true
+
+  # Tailnet client: joins this host (and, via docker bridge NAT, every runner
+  # container) to the coordentra tailnet so CI can reach the tailnet-gated
+  # staging/prod frontend ALBs. --accept-routes is load-bearing: without it the
+  # subnet routes to the frontend VPCs are ignored. Host network + tun: the
+  # tailscale0 interface must live on the HOST stack for bridge containers to
+  # route through it. Interactive auth (soma@); state survives in appdata.
+  tailscale:
+    image: tailscale/tailscale:stable
+    container_name: tailscale
+    restart: unless-stopped
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      TS_STATE_DIR: /var/lib/tailscale
+      TS_USERSPACE: "false"
+      TS_HOSTNAME: zimaos-ci
+      TS_AUTH_ONCE: "true"
+      TS_EXTRA_ARGS: "--accept-routes"
+    volumes:
+      - ${APPDATA}/core/tailscale:/var/lib/tailscale
+    healthcheck:
+      test: ["CMD", "tailscale", "status", "--peers=false"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+    security_opt:
+      - no-new-privileges:true

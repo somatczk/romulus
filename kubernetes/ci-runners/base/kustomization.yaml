@@ -5,6 +5,10 @@ resources:
   - cache.yaml
   - network-policy.yaml
 configMapGenerator:
+  # Hashed name: a config edit changes the Deployment spec, so buildkitd restarts.
+  - name: buildkitd-config
+    files:
+      - buildkitd.toml
   - name: runner-values-heavy
     files:
       - values.yaml=runner-values-heavy.yaml

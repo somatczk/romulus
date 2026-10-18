@@ -1,0 +1,14 @@
+[worker.oci]
+  enabled = true
+  gc = true
+  max-parallelism = 8
+  [[worker.oci.gcpolicy]]
+    keepDuration = 1209600
+    maxUsedSpace = "40GB"
+  [[worker.oci.gcpolicy]]
+    all = true
+    maxUsedSpace = "40GB"
+[registry."docker.io"]
+  mirrors = ["registry-mirror.ci-shared.svc.cluster.local:5000"]
+[registry."registry-mirror.ci-shared.svc.cluster.local:5000"]
+  http = true

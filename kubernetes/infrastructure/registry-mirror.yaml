@@ -31,6 +31,7 @@ spec:
     metadata:
       labels: {app: registry-mirror}
     spec:
+      automountServiceAccountToken: false
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
@@ -68,3 +69,20 @@ spec:
   ports:
     - port: 5000
       targetPort: 5000
+---
+# Only the runner namespaces may pull through the mirror.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: runners-only
+  namespace: ci-shared
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchExpressions:
+              - {key: kubernetes.io/metadata.name, operator: In, values: [arc-vetoo, arc-coordentra, arc-somatczk]}
+      ports:
+        - {protocol: TCP, port: 5000}

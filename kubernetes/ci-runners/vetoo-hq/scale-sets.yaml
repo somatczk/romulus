@@ -12,6 +12,10 @@ spec:
         kind: HelmRepository
         name: arc
         namespace: arc-systems
+  install:
+    remediation: {retries: 3}
+  upgrade:
+    remediation: {retries: 3}
   valuesFrom:
     - kind: ConfigMap
       name: runner-values-heavy
@@ -20,6 +24,8 @@ spec:
     githubConfigUrl: https://github.com/vetoo-hq
     runnerScaleSetName: vetoo-heavy
     scaleSetLabels: [self-hosted, linux, x64, zimaos, org-vetoo-hq, heavy]
+    # One warm pod hides the cold start on the busiest tier.
+    minRunners: 1
     maxRunners: 4
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
@@ -36,6 +42,10 @@ spec:
         kind: HelmRepository
         name: arc
         namespace: arc-systems
+  install:
+    remediation: {retries: 3}
+  upgrade:
+    remediation: {retries: 3}
   valuesFrom:
     - kind: ConfigMap
       name: runner-values-light
@@ -44,4 +54,4 @@ spec:
     githubConfigUrl: https://github.com/vetoo-hq
     runnerScaleSetName: vetoo-light
     scaleSetLabels: [self-hosted, linux, x64, zimaos, org-vetoo-hq, light]
-    maxRunners: 6
+    maxRunners: 8

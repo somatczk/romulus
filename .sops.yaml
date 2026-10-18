@@ -1,6 +1,0 @@
-# Encrypt only Secret payloads; the age private key lives on romulus (root) and in the
-# cluster as flux-system/sops-age. Back it up in the password manager.
-creation_rules:
-  - path_regex: (kubernetes|stacks)/.*\.sops\.(ya?ml|env)$
-    encrypted_regex: ^(data|stringData)$
-    age: age1n9s8625vzq4gemx8yrxl8msshstzlwcuzrnqlcc0k7zyqvm2qyfqmk67wm

@@ -1,4 +1,5 @@
 # Per-org BuildKit daemon under the name workflows already use (ci-buildkitd:1234).
+# GC keeps 40GiB on the 60Gi volume so a burst between GC runs still fits.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -21,11 +22,11 @@ data:
       gc = true
       max-parallelism = 8
       [[worker.oci.gcpolicy]]
-        keepBytes = 53687091200
+        keepBytes = 42949672960
         keepDuration = 1209600
       [[worker.oci.gcpolicy]]
         all = true
-        keepBytes = 53687091200
+        keepBytes = 42949672960
     [registry."docker.io"]
       mirrors = ["registry-mirror.ci-shared.svc.cluster.local:5000"]
     [registry."registry-mirror.ci-shared.svc.cluster.local:5000"]
@@ -45,6 +46,7 @@ spec:
     metadata:
       labels: {app: ci-buildkitd}
     spec:
+      automountServiceAccountToken: false
       containers:
         - name: buildkitd
           image: moby/buildkit:v0.34.0@sha256:b059f8d7226d0b326bc871af489a5dddf65e36af4d20d14251b072974d9ee87c
@@ -59,7 +61,7 @@ spec:
             periodSeconds: 10
           resources:
             requests: {cpu: 500m, memory: 1Gi}
-            limits: {memory: 12Gi}
+            limits: {cpu: "8", memory: 12Gi}
           volumeMounts:
             - {name: state, mountPath: /var/lib/buildkit}
             - {name: config, mountPath: /etc/buildkit}

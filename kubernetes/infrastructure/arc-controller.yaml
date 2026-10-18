@@ -29,10 +29,12 @@ spec:
         name: arc
   install:
     crds: CreateReplace
+    remediation: {retries: 3}
   upgrade:
     crds: CreateReplace
+    remediation: {retries: 3}
   values:
     replicaCount: 1
-    # Org namespaces each hold their own GitHub App secret.
-    flags:
-      watchSingleNamespace: ""
+    resources:
+      requests: {cpu: 50m, memory: 128Mi}
+      limits: {memory: 512Mi}

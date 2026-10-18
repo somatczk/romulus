@@ -12,6 +12,10 @@ spec:
         kind: HelmRepository
         name: arc
         namespace: arc-systems
+  install:
+    remediation: {retries: 3}
+  upgrade:
+    remediation: {retries: 3}
   valuesFrom:
     - kind: ConfigMap
       name: runner-values-heavy
@@ -36,6 +40,10 @@ spec:
         kind: HelmRepository
         name: arc
         namespace: arc-systems
+  install:
+    remediation: {retries: 3}
+  upgrade:
+    remediation: {retries: 3}
   valuesFrom:
     - kind: ConfigMap
       name: runner-values-light

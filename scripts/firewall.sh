@@ -39,14 +39,12 @@ fi
 log_info "Flushing existing iptables rules..."
 iptables -F INPUT
 iptables -F OUTPUT
-iptables -F FORWARD
 
 # =============================================================================
 # Set default policies
 # =============================================================================
 log_info "Setting default policies..."
 iptables -P INPUT DROP
-iptables -P FORWARD ACCEPT
 iptables -P OUTPUT ACCEPT
 
 # =============================================================================
@@ -121,3 +119,5 @@ echo -e "${YELLOW}  To persist across reboots, add to root's crontab:${NC}"
 echo "    sudo crontab -e"
 echo "    @reboot $(readlink -f "$0")"
 echo ""
+# FORWARD is Docker's; CI isolation + IPv6 live in hardening-firewall.sh (also re-run by cron).
+"$(dirname "$(readlink -f "$0")")/hardening-firewall.sh" || true

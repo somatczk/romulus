@@ -119,6 +119,7 @@ jobs:
 
       - name: Generate .env
         run: |
+          umask 077
           cat > stacks/.env <<'EOF'
           # --- System ---
           PUID=999
@@ -135,9 +136,6 @@ jobs:
           # --- Database Passwords ---
           NEXTCLOUD_DB_PASSWORD=${{ secrets.NEXTCLOUD_DB_PASSWORD }}
           IMMICH_DB_PASSWORD=${{ secrets.IMMICH_DB_PASSWORD }}
-          # --- GitHub (CI/CD) ---
-          GITHUB_PAT=${{ secrets.G_PAT }}
-          GITHUB_ORG=${{ secrets.G_ORG }}
           # --- Redis ---
           NEXTCLOUD_REDIS_PASSWORD=${{ secrets.NEXTCLOUD_REDIS_PASSWORD }}
           # --- Backup ---
@@ -180,6 +178,14 @@ jobs:
           HYDRA_TELEGRAM_CHAT_ID=${{ secrets.HYDRA_TELEGRAM_CHAT_ID }}
           EOF
 
+      # Runners get only their registration token: never the shared homelab .env.
+      - name: Generate ci.env
+        run: |
+          umask 077
+          cat > stacks/ci/ci.env <<'EOF'
+          GITHUB_PAT=${{ secrets.G_PAT }}
+          EOF
+
       - name: Rsync to /DATA/stacks/
         run: |
           rsync -a --delete \
@@ -188,12 +194,15 @@ jobs:
             --exclude 'deploy.sh' \
             --exclude 'configs/authelia/users_database.yml' \
             ./ /DATA/stacks/
+          chmod 600 /DATA/stacks/stacks/.env /DATA/stacks/stacks/ci/ci.env
 
       - name: Ensure Docker Networks
         run: |
-          for net in proxy socket media db-nextcloud db-immich monitoring ci db-paperless ai hydra; do
+          for net in proxy socket media db-nextcloud db-immich monitoring db-paperless ai hydra; do
             docker network create "$net" 2>/dev/null || true
           done
+          # internal + fixed subnet: the CI firewall keys on it
+          docker network create --internal --subnet 10.10.4.0/24 ci 2>/dev/null || true
 
       - name: Ensure Restic Installed
         run: |
@@ -204,6 +213,10 @@ jobs:
               | bunzip2 > /DATA/bin/restic
             chmod +x /DATA/bin/restic
           fi
+
+      - name: Remove generated env files from workspace
+        if: always()
+        run: rm -f stacks/.env stacks/ci/ci.env
 
   deploy-core:
     name: Deploy Core

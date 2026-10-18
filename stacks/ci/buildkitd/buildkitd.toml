@@ -1,0 +1,18 @@
+# Shared CI BuildKit daemon. GC keeps the layer cache under 60 GiB; docker.io
+# pulls route through the local pull-through mirror.
+[worker.oci]
+  enabled = true
+  gc = true
+  max-parallelism = 8
+  [[worker.oci.gcpolicy]]
+    keepBytes = 64424509440
+    keepDuration = 1209600
+  [[worker.oci.gcpolicy]]
+    all = true
+    keepBytes = 64424509440
+
+[registry."docker.io"]
+  mirrors = ["ci-registry-mirror:5000"]
+
+[registry."ci-registry-mirror:5000"]
+  http = true

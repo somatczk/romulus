@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
-export PATH="$PATH:/DATA/bin"
-export XDG_CACHE_HOME="/DATA/.cache"
+export PATH="$PATH:/usr/local/bin"
+export RESTIC_CACHE_DIR=/var/cache/restic
 
 # Daily backup script: database dumps + restic backup
 # Runs at 3:00 AM via cron
@@ -12,7 +12,6 @@ source "${SCRIPT_DIR}/lib/env.sh" RESTIC_PASSWORD TEAMSPEAK_DB_PASSWORD
 BACKUP_DIR="${APPDATA}/backups"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 NTFY_URL="https://notify.${DOMAIN}/backups"
-LOG_FILE="${BACKUP_DIR}/backup_${TIMESTAMP}.log"
 METRICS_DIR="/var/lib/node_exporter/textfile_collector"
 START_TIME=$(date +%s)
 
@@ -22,7 +21,7 @@ export RESTIC_PASSWORD="${RESTIC_PASSWORD}"
 mkdir -p "${BACKUP_DIR}/db-dumps"
 
 log() {
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "${LOG_FILE}"
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
 }
 
 notify() {
@@ -57,7 +56,7 @@ cleanup() {
     local exit_code=$?
     if [ ${exit_code} -ne 0 ]; then
         log "ERROR: Backup failed with exit code ${exit_code}"
-        notify "Backup FAILED" "Backup failed at $(date). Check ${LOG_FILE} for details." "urgent"
+        notify "Backup FAILED" "Backup failed at $(date). Check /var/log/homelab/backup.log for details." "urgent"
         write_metrics 0
     fi
 }
@@ -107,7 +106,7 @@ restic backup "${APPDATA}" \
     --exclude="${APPDATA}/*/Cache" \
     --exclude="${APPDATA}/**/logs" \
     --tag "scheduled" \
-    --verbose 2>&1 | tee -a "${LOG_FILE}"
+    --verbose 2>&1
 log "Restic backup complete"
 
 # Apply retention policy
@@ -118,7 +117,7 @@ restic forget \
     --keep-monthly 6 \
     --keep-yearly 1 \
     --prune \
-    --verbose 2>&1 | tee -a "${LOG_FILE}"
+    --verbose 2>&1
 log "Retention policy applied"
 
 # Get stats for notification

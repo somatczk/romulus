@@ -24,12 +24,11 @@ if ! command -v op >/dev/null; then
         > /etc/apt/sources.list.d/1password.list
     apt-get update -qq && apt-get install -y -qq 1password-cli
 fi
-if [[ ! -x /DATA/bin/restic ]]; then
-    mkdir -p /DATA/bin
+if [[ ! -x /usr/local/bin/restic ]]; then
     tmp=$(mktemp)
     curl -fsSLo "$tmp" "https://github.com/restic/restic/releases/download/v${RESTIC_VERSION}/restic_${RESTIC_VERSION}_linux_amd64.bz2"
     echo "$RESTIC_SHA  $tmp" | sha256sum -c --quiet -
-    bunzip2 -c "$tmp" > /DATA/bin/restic && chmod +x /DATA/bin/restic && rm -f "$tmp"
+    bunzip2 -c "$tmp" > /usr/local/bin/restic && chmod +x /usr/local/bin/restic && rm -f "$tmp"
 fi
 
 echo "== $STACKS as a git checkout"

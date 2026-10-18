@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
-export PATH="$PATH:/DATA/bin"
-export XDG_CACHE_HOME="/DATA/.cache"
+export PATH="$PATH:/usr/local/bin"
+export RESTIC_CACHE_DIR=/var/cache/restic
 
 # Monthly automated restore test
 # Restores latest restic snapshot to temp dir, validates, cleans up

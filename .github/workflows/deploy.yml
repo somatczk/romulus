@@ -201,8 +201,16 @@ jobs:
           for net in proxy socket media db-nextcloud db-immich monitoring db-paperless ai hydra; do
             docker network create "$net" 2>/dev/null || true
           done
-          # internal + fixed subnet: the CI firewall keys on it
-          docker network create --internal --subnet 10.10.4.0/24 ci 2>/dev/null || true
+          # Must be internal with the fixed subnet the firewall expects; never silently reuse a stale one.
+          if docker network inspect ci >/dev/null 2>&1; then
+            got=$(docker network inspect ci --format '{{.Internal}} {{range .IPAM.Config}}{{.Subnet}}{{end}}')
+            if [ "$got" != "true 10.10.4.0/24" ]; then
+              echo "::error::network 'ci' is '$got', expected 'true 10.10.4.0/24'; stop stacks/ci, docker network rm ci, redeploy"
+              exit 1
+            fi
+          else
+            docker network create --internal --subnet 10.10.4.0/24 ci
+          fi
 
       - name: Ensure Restic Installed
         run: |

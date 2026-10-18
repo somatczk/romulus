@@ -47,6 +47,8 @@ x-hydra-env: &hydra-env
   RUNNER_NAME_PREFIX: zimaos-hydra
   LABELS: self-hosted,linux,x64,zimaos,hydra
 
+# romulus runners deploy the homelab: deploy.yml rsyncs into /DATA/stacks and runs compose
+# against it, so the host path must be mounted at the identical path.
 x-romulus-env: &romulus-env
   <<: *env-common
   RUNNER_SCOPE: repo
@@ -197,6 +199,7 @@ services:
       RUNNER_WORKDIR: /DATA/ci/runners/runner-romulus-1
     volumes:
       - /DATA/ci/runners/runner-romulus-1:/DATA/ci/runners/runner-romulus-1
+      - /DATA/stacks:/DATA/stacks
       - /DATA/ci/cache:/cache
       - /DATA/ci/cache:/DATA/ci/cache
 
@@ -208,6 +211,7 @@ services:
       RUNNER_WORKDIR: /DATA/ci/runners/runner-romulus-2
     volumes:
       - /DATA/ci/runners/runner-romulus-2:/DATA/ci/runners/runner-romulus-2
+      - /DATA/stacks:/DATA/stacks
       - /DATA/ci/cache:/cache
       - /DATA/ci/cache:/DATA/ci/cache
 
@@ -219,6 +223,7 @@ services:
       RUNNER_WORKDIR: /DATA/ci/runners/runner-romulus-3
     volumes:
       - /DATA/ci/runners/runner-romulus-3:/DATA/ci/runners/runner-romulus-3
+      - /DATA/stacks:/DATA/stacks
       - /DATA/ci/cache:/cache
       - /DATA/ci/cache:/DATA/ci/cache
 
@@ -230,5 +235,6 @@ services:
       RUNNER_WORKDIR: /DATA/ci/runners/runner-romulus-4
     volumes:
       - /DATA/ci/runners/runner-romulus-4:/DATA/ci/runners/runner-romulus-4
+      - /DATA/stacks:/DATA/stacks
       - /DATA/ci/cache:/cache
       - /DATA/ci/cache:/DATA/ci/cache

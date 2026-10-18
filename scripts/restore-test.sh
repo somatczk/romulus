@@ -9,6 +9,7 @@ export XDG_CACHE_HOME="/DATA/.cache"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/../stacks/.env"
 
+: "${HDD:?HDD must be set in stacks/.env}"
 NTFY_URL="https://notify.${DOMAIN}/backups"
 mkdir -p "${HDD}/restore-test"
 RESTORE_DIR=$(mktemp -d "${HDD}/restore-test/run-XXXXXX")
@@ -68,7 +69,12 @@ log "Restore directory: ${RESTORE_DIR}"
 
 # Restore latest snapshot
 # The restore lands on the backup HDD: refuse if it would not fit with 10% to spare.
-NEED=$(restic stats latest --mode restore-size --json | jq -r .total_size)
+NEED=$(restic stats latest --mode restore-size --json | jq -r .total_size) || NEED=""
+if ! [[ "$NEED" =~ ^[0-9]+$ ]]; then
+    log "ERROR: could not size the latest snapshot (got '${NEED}')"
+    notify "Restore test failed" "Could not size the latest snapshot" "high"
+    exit 1
+fi
 FREE=$(( $(df --output=avail -B1 "${HDD}" | tail -1) ))
 if (( NEED + NEED / 10 > FREE )); then
     log "ERROR: restore needs ${NEED} bytes, ${FREE} free on ${HDD}"

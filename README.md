@@ -65,7 +65,9 @@ flowchart LR
 
 ```bash
 sudo scripts/ci-vm/create.sh ~/.ssh/id_ed25519.pub        # on romulus
-ssh romulus-ci sudo cat /etc/rancher/k3s/k3s.yaml           # kubeconfig, server https://192.168.122.10:6443
+ssh romulus-ci sudo cat /etc/rancher/k3s/k3s.yaml | \
+  sed 's#127.0.0.1:6443#192.168.122.10:6443#' > ~/.kube/romulus-ci.yaml && chmod 600 ~/.kube/romulus-ci.yaml
+export KUBECONFIG=~/.kube/romulus-ci.yaml                   # reach it via: ssh -L 6443:192.168.122.10:6443 romulus
 kubectl create namespace external-secrets
 op read "op://<vault>/<service account item>/credential" | tr -d '\n' | \
   kubectl -n external-secrets create secret generic onepassword-token --from-file=token=/dev/stdin

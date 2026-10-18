@@ -22,11 +22,11 @@ data:
       gc = true
       max-parallelism = 8
       [[worker.oci.gcpolicy]]
-        keepBytes = 42949672960
         keepDuration = 1209600
+        maxUsedSpace = "40GB"
       [[worker.oci.gcpolicy]]
         all = true
-        keepBytes = 42949672960
+        maxUsedSpace = "40GB"
     [registry."docker.io"]
       mirrors = ["registry-mirror.ci-shared.svc.cluster.local:5000"]
     [registry."registry-mirror.ci-shared.svc.cluster.local:5000"]

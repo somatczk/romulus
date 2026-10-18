@@ -10,8 +10,14 @@ configMapGenerator:
       - values.yaml=runner-values-heavy.yaml
     options:
       disableNameSuffixHash: true
+      # Helm does not watch valuesFrom; this label makes Flux upgrade on change.
+      labels:
+        reconcile.fluxcd.io/watch: Enabled
   - name: runner-values-light
     files:
       - values.yaml=runner-values-light.yaml
     options:
       disableNameSuffixHash: true
+      # Helm does not watch valuesFrom; this label makes Flux upgrade on change.
+      labels:
+        reconcile.fluxcd.io/watch: Enabled

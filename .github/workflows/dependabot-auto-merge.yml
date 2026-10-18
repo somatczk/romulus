@@ -13,31 +13,39 @@ jobs:
     name: Auto-Merge Dependabot PRs
     runs-on: ubuntu-latest
     permissions:
+      actions: write
       contents: write
       pull-requests: write
     if: >-
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.actor.login == 'dependabot[bot]'
     steps:
-      # Patch and minor bumps merge on green CI; majors wait for a human.
-      - name: Merge non-major update
+      # Patch and minor bumps merge on green CI. Majors, 0.x minors, calendar-version minors
+      # and stateful images wait for a human: CI can't see their data migrations.
+      - name: Merge safe update
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
           HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          STATEFUL: 'postgres|mariadb|mysql|redis|timescaledb|immich|nextcloud|paperless|home-assistant|homeassistant'
         run: |
           read -r PR TITLE < <(gh pr list --head "$HEAD_BRANCH" --author 'app/dependabot' \
             --json number,title --jq '.[0] | "\(.number) \(.title)"')
           [ -n "${PR:-}" ] || { echo "no open Dependabot PR for $HEAD_BRANCH"; exit 0; }
-          # Groups only carry minor/patch updates (see dependabot.yml). Anything else must
-          # show "from X to Y" with the same major, or it waits for a human.
-          if [[ "$TITLE" == *" group "* ]]; then
-            :
-          elif [[ "$TITLE" =~ from\ v?([0-9]+)[^\ ]*\ to\ v?([0-9]+) ]] && \
-               [ "${BASH_REMATCH[1]}" = "${BASH_REMATCH[2]}" ]; then
-            :
-          else
-            echo "not a recognisable minor/patch bump, leaving #$PR for review: $TITLE"
-            exit 0
+          hold() { echo "leaving #$PR for review ($1): $TITLE"; exit 0; }
+          [[ "$TITLE" =~ $STATEFUL ]] && hold "stateful image"
+          # Groups only carry minor/patch github-actions updates (see dependabot.yml).
+          if [[ "$TITLE" != *" group "* ]]; then
+            [[ "$TITLE" =~ from\ v?([0-9]+)\.([0-9]+)[^\ ]*\ to\ v?([0-9]+)\.([0-9]+) ]] || hold "unparsed version"
+            [ "${BASH_REMATCH[1]}" = "${BASH_REMATCH[3]}" ] || hold "major"
+            # 0.x and calendar versions break on the second number
+            if [ "${BASH_REMATCH[1]}" -eq 0 ] || [ "${BASH_REMATCH[1]}" -ge 2000 ]; then
+              [ "${BASH_REMATCH[2]}" = "${BASH_REMATCH[4]}" ] || hold "0.x or calver minor"
+            fi
           fi
           gh pr merge "$PR" --merge --delete-branch
+          # Merges by GITHUB_TOKEN don't trigger push workflows, so start the deploy explicitly.
+          # Drop once doco-cd pulls master.
+          if [[ "$TITLE" == *" in /stacks/"* ]]; then
+            gh workflow run deploy-romulus --ref master -f force_full=true
+          fi

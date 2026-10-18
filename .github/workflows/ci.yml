@@ -7,6 +7,11 @@ on:
 permissions:
   contents: read
 
+# bash -eo pipefail, so a failing producer in a pipe fails the step
+defaults:
+  run:
+    shell: bash
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -164,7 +169,7 @@ jobs:
             echo "== $d"
             kubectl kustomize "$d" | kubeconform -strict -summary -skip CustomResourceDefinition \
               -schema-location default \
-              -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
+              -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/501527ab9c40c827144c8f45945b25a023e344ce/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
           done
 
       - name: gitleaks

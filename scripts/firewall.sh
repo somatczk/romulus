@@ -72,8 +72,7 @@ iptables -A INPUT -s 10.10.0.0/16 -j ACCEPT
 log_info "Accepting Docker network traffic (10.10.0.0/16)."
 
 # SSH rate limiting (max 4 new connections per 60 seconds)
-iptables -A INPUT -p tcp --dport 2222 -m state --state NEW -m recent --set --name SSH
-iptables -A INPUT -p tcp --dport 2222 -m state --state NEW -m recent --update --seconds 60 --hitcount 4 --name SSH -j DROP
+# No xt_recent on the ZimaOS kernel: rate limiting is left to sshd (MaxAuthTries) and LAN/VPN-only access.
 # Allow SSH from LAN and ZeroTier only
 iptables -A INPUT -p tcp --dport 2222 -s 192.168.0.0/24 -j ACCEPT
 iptables -A INPUT -p tcp --dport 2222 -s 172.22.0.0/16 -j ACCEPT
@@ -119,5 +118,7 @@ echo -e "${YELLOW}  To persist across reboots, add to root's crontab:${NC}"
 echo "    sudo crontab -e"
 echo "    @reboot $(readlink -f "$0")"
 echo ""
+# The INPUT flush above drops Tailscale's hook; restore it if tailscaled is running.
+iptables -N ts-input 2>/dev/null && iptables -X ts-input || iptables -C INPUT -j ts-input 2>/dev/null || iptables -I INPUT 1 -j ts-input
 # FORWARD is Docker's; CI isolation + IPv6 live in hardening-firewall.sh (also re-run by cron).
 "$(dirname "$(readlink -f "$0")")/hardening-firewall.sh" || true

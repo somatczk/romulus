@@ -42,7 +42,8 @@ fi
 if [[ ! -f $USERS_DB ]]; then
     for src in "$STACKS" "$STACKS.pre-gitops"; do
         f=$src/configs/authelia/users_database.yml
-        [[ -f $f ]] && { install -D -m 600 "$f" "$USERS_DB"; break; }
+        # authelia runs as 999:1000 (PUID/PGID)
+        [[ -f $f ]] && { install -D -m 600 -o 999 -g 1000 "$f" "$USERS_DB"; break; }
     done
 fi
 [[ -f $USERS_DB ]] || { echo "authelia users file not found, aborting before anything moves"; exit 1; }

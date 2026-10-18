@@ -44,6 +44,9 @@ MARKER_END="# --- HOMELAB MANAGED END ---"
 
 # Remove any existing managed block
 CLEAN_CRON=$(echo "${EXISTING_CRON}" | sed "/${MARKER_START}/,/${MARKER_END}/d")
+# also drop stray markers and copies of our entries left by an older, broken block
+CLEAN_CRON=$(echo "${CLEAN_CRON}" | grep -vxF -e "${MARKER_START}" -e "${MARKER_END}" \
+    -f <(printf '%s\n' "${CRON_ENTRIES[@]}") | grep -v 'source /DATA/stacks/stacks/.env' || true)
 
 # Build new crontab
 {

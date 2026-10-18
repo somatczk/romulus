@@ -16,10 +16,10 @@ services:
     build: ./postgres
     container_name: nextcloud-db
     restart: unless-stopped
-    env_file: ../.env
     networks:
       - db-nextcloud
     environment:
+      TZ: ${TZ}
       POSTGRES_DB: nextcloud
       POSTGRES_USER: nextcloud
       POSTGRES_PASSWORD: ${NEXTCLOUD_DB_PASSWORD}
@@ -41,7 +41,8 @@ services:
     build: ./redis
     container_name: nextcloud-redis
     restart: unless-stopped
-    env_file: ../.env
+    environment:
+      TZ: ${TZ}
     networks:
       - db-nextcloud
     command: redis-server --requirepass ${NEXTCLOUD_REDIS_PASSWORD}
@@ -63,7 +64,6 @@ services:
     build: ./nextcloud
     container_name: nextcloud
     restart: unless-stopped
-    env_file: ../.env
     networks:
       - proxy
       - db-nextcloud
@@ -73,6 +73,7 @@ services:
       nextcloud-redis:
         condition: service_healthy
     environment:
+      TZ: ${TZ}
       POSTGRES_HOST: nextcloud-db
       POSTGRES_DB: nextcloud
       POSTGRES_USER: nextcloud
@@ -114,10 +115,10 @@ services:
     build: ./immich-db
     container_name: immich-db
     restart: unless-stopped
-    env_file: ../.env
     networks:
       - db-immich
     environment:
+      TZ: ${TZ}
       POSTGRES_DB: immich
       POSTGRES_USER: immich
       POSTGRES_PASSWORD: ${IMMICH_DB_PASSWORD}
@@ -140,7 +141,8 @@ services:
     build: ./redis
     container_name: immich-redis
     restart: unless-stopped
-    env_file: ../.env
+    environment:
+      TZ: ${TZ}
     networks:
       - db-immich
     volumes:
@@ -161,7 +163,6 @@ services:
     build: ./immich-server
     container_name: immich-server
     restart: unless-stopped
-    env_file: ../.env
     networks:
       - proxy
       - db-immich
@@ -171,6 +172,7 @@ services:
       immich-redis:
         condition: service_healthy
     environment:
+      TZ: ${TZ}
       DB_HOSTNAME: immich-db
       DB_USERNAME: immich
       DB_PASSWORD: ${IMMICH_DB_PASSWORD}
@@ -205,11 +207,11 @@ services:
     build: ./immich-ml
     container_name: immich-ml
     restart: unless-stopped
-    env_file: ../.env
     networks:
       - db-immich
     runtime: nvidia
     environment:
+      TZ: ${TZ}
       NVIDIA_VISIBLE_DEVICES: all
     volumes:
       - ${APPDATA}/productivity/immich/ml-cache:/cache
@@ -232,7 +234,6 @@ services:
     build: ./homeassistant
     container_name: homeassistant
     restart: unless-stopped
-    env_file: ../.env
     network_mode: host
     privileged: true
     environment:
@@ -257,10 +258,10 @@ services:
     build: ./postgres
     container_name: paperless-db
     restart: unless-stopped
-    env_file: ../.env
     networks:
       - db-paperless
     environment:
+      TZ: ${TZ}
       POSTGRES_DB: paperless
       POSTGRES_USER: paperless
       POSTGRES_PASSWORD: ${PAPERLESS_DB_PASSWORD}
@@ -302,7 +303,6 @@ services:
     build: ./paperless
     container_name: paperless
     restart: unless-stopped
-    env_file: ../.env
     depends_on:
       paperless-db:
         condition: service_healthy
@@ -312,6 +312,7 @@ services:
       - proxy
       - db-paperless
     environment:
+      TZ: ${TZ}
       PAPERLESS_DBHOST: paperless-db
       PAPERLESS_DBNAME: paperless
       PAPERLESS_DBUSER: paperless
@@ -355,7 +356,8 @@ services:
     build: ./actual-budget
     container_name: actual-budget
     restart: unless-stopped
-    env_file: ../.env
+    environment:
+      TZ: ${TZ}
     networks:
       - proxy
     volumes:
@@ -386,11 +388,12 @@ services:
     build: ./homebox
     container_name: homebox
     restart: unless-stopped
-    env_file: ../.env
     networks:
       - proxy
     environment:
+      TZ: ${TZ}
       HBOX_WEB_PORT: "7745"
+      HBOX_AUTH_API_KEY_PEPPER: ${HBOX_AUTH_API_KEY_PEPPER:?}
     volumes:
       - ${APPDATA}/productivity/homebox:/data
     labels:

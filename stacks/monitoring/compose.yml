@@ -3,7 +3,8 @@ services:
     build: ./prometheus
     container_name: prometheus
     restart: unless-stopped
-    env_file: ../.env
+    environment:
+      TZ: ${TZ}
     networks:
       - monitoring
       - proxy
@@ -42,12 +43,12 @@ services:
     build: ./grafana
     container_name: grafana
     restart: unless-stopped
-    env_file: ../.env
     user: "999"
     networks:
       - monitoring
       - proxy
     environment:
+      - TZ=${TZ}
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
       - GF_SERVER_ROOT_URL=https://grafana.${DOMAIN}
       - GF_INSTALL_PLUGINS=grafana-clock-panel
@@ -87,7 +88,8 @@ services:
     build: ./loki
     container_name: loki
     restart: unless-stopped
-    env_file: ../.env
+    environment:
+      TZ: ${TZ}
     networks:
       - monitoring
     volumes:
@@ -186,10 +188,10 @@ services:
     build: ./restic-exporter
     container_name: restic-exporter
     restart: unless-stopped
-    env_file: ../.env
     networks:
       - monitoring
     environment:
+      TZ: ${TZ}
       RESTIC_REPOSITORY: ${HDD}/backups/restic-repo
       RESTIC_PASSWORD: ${RESTIC_PASSWORD}
       REFRESH_INTERVAL: 3600
@@ -206,12 +208,12 @@ services:
     build: ./uptime-kuma
     container_name: uptime-kuma
     restart: unless-stopped
-    env_file: ../.env
     networks:
       - monitoring
       - proxy
       - socket
     environment:
+      - TZ=${TZ}
       - DOCKER_HOST=tcp://socket-proxy:2375
     volumes:
       - ${APPDATA}/monitoring/uptime-kuma:/app/data

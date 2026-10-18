@@ -3,7 +3,6 @@ services:
     build: ./jellyfin
     container_name: jellyfin
     runtime: nvidia
-    env_file: ../.env
     environment:
       - NVIDIA_VISIBLE_DEVICES=all
       - NVIDIA_DRIVER_CAPABILITIES=all
@@ -40,7 +39,6 @@ services:
   sonarr:
     build: ./sonarr
     container_name: sonarr
-    env_file: ../.env
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
@@ -70,7 +68,6 @@ services:
   radarr:
     build: ./radarr
     container_name: radarr
-    env_file: ../.env
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
@@ -116,7 +113,6 @@ services:
   prowlarr:
     build: ./prowlarr
     container_name: prowlarr
-    env_file: ../.env
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
@@ -144,7 +140,6 @@ services:
   bazarr:
     build: ./bazarr
     container_name: bazarr
-    env_file: ../.env
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
@@ -174,7 +169,6 @@ services:
   lidarr:
     build: ./lidarr
     container_name: lidarr
-    env_file: ../.env
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
@@ -204,7 +198,6 @@ services:
   qbittorrent:
     build: ./qbittorrent
     container_name: qbittorrent
-    env_file: ../.env
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
@@ -238,7 +231,6 @@ services:
   jellyseerr:
     build: ./jellyseerr
     container_name: jellyseerr
-    env_file: ../.env
     environment:
       - TZ=${TZ}
     volumes:

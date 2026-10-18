@@ -63,8 +63,8 @@ services:
     build: ./openclaw
     container_name: openclaw
     restart: unless-stopped
-    env_file: ../.env
     environment:
+      - TZ=${TZ}
       - DOCKER_HOST=tcp://ai-socket-proxy:2375
       - OLLAMA_HOST=http://ollama:11434
       - OLLAMA_API_KEY=ollama-local
@@ -101,8 +101,8 @@ services:
     build: ./open-webui
     container_name: open-webui
     restart: unless-stopped
-    env_file: ../.env
     environment:
+      - TZ=${TZ}
       - OLLAMA_BASE_URL=http://ollama:11434
       - WEBUI_AUTH=false
     volumes:

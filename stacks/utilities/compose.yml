@@ -12,11 +12,11 @@ services:
   watchtower:
     build: ./watchtower
     container_name: watchtower
-    env_file: ../.env
     networks:
       - proxy
       - socket
     environment:
+      TZ: ${TZ}
       DOCKER_HOST: tcp://socket-proxy:2375
       WATCHTOWER_NOTIFICATION_URL: "generic+http://ntfy/updates"
       WATCHTOWER_MONITOR_ONLY: "true"
@@ -33,11 +33,11 @@ services:
   dozzle:
     build: ./dozzle
     container_name: dozzle
-    env_file: ../.env
     networks:
       - proxy
       - socket
     environment:
+      TZ: ${TZ}
       DOCKER_HOST: tcp://socket-proxy:2375
     labels:
       traefik.enable: "true"
@@ -80,7 +80,6 @@ services:
   speedtest:
     build: ./speedtest
     container_name: speedtest
-    env_file: ../.env
     networks:
       - proxy
     environment:
@@ -117,7 +116,8 @@ services:
   portainer:
     build: ./portainer
     container_name: portainer
-    env_file: ../.env
+    environment:
+      TZ: ${TZ}
     networks:
       - proxy
       - socket
@@ -144,10 +144,10 @@ services:
   teamspeak-db:
     build: ./teamspeak-db
     container_name: teamspeak-db
-    env_file: ../.env
     networks:
       - ts-db
     environment:
+      TZ: ${TZ}
       MYSQL_ROOT_PASSWORD: ${TEAMSPEAK_DB_PASSWORD}
       MYSQL_DATABASE: teamspeak
       MYSQL_USER: teamspeak
@@ -171,7 +171,6 @@ services:
   teamspeak:
     build: ./teamspeak
     container_name: teamspeak
-    env_file: ../.env
     depends_on:
       teamspeak-db:
         condition: service_healthy
@@ -182,6 +181,7 @@ services:
       - "9987:9987/udp"
       - "30033:30033/tcp"
     environment:
+      TZ: ${TZ}
       TS3SERVER_DB_PLUGIN: ts3db_mariadb
       TS3SERVER_DB_SQLCREATEPATH: create_mariadb
       TS3SERVER_DB_HOST: teamspeak-db

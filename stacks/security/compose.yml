@@ -11,7 +11,6 @@ services:
     build: ./authelia
     container_name: authelia
     restart: unless-stopped
-    env_file: ../.env
     networks:
       - proxy
       - authelia
@@ -47,7 +46,6 @@ services:
     build: ./crowdsec
     container_name: crowdsec
     restart: unless-stopped
-    env_file: ../.env
     networks:
       - proxy
       - monitoring
@@ -57,6 +55,7 @@ services:
       - ${APPDATA}/security/crowdsec/hub:/etc/crowdsec/hub
       - /var/log:/var/log:ro
     environment:
+      TZ: ${TZ}
       COLLECTIONS: "crowdsecurity/linux crowdsecurity/sshd crowdsecurity/traefik crowdsecurity/nextcloud"
       GID: "${PGID}"
     healthcheck:
@@ -75,10 +74,10 @@ services:
     build: ./crowdsec-bouncer
     container_name: crowdsec-bouncer
     restart: unless-stopped
-    env_file: ../.env
     networks:
       - proxy
     environment:
+      TZ: ${TZ}
       CROWDSEC_BOUNCER_API_KEY: "${CROWDSEC_BOUNCER_API_KEY:-changeme_crowdsec_bouncer_key}"
       CROWDSEC_AGENT_HOST: "crowdsec:8080"
       GIN_MODE: "release"

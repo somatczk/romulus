@@ -14,7 +14,6 @@ services:
     build: ./engine
     container_name: hydra-engine
     restart: unless-stopped
-    env_file: ../.env
     networks:
       - proxy
       - hydra
@@ -25,6 +24,7 @@ services:
       hydra-redis:
         condition: service_healthy
     environment:
+      TZ: ${TZ}
       DATABASE_URL: postgresql://hydra:${HYDRA_DB_PASSWORD}@hydra-timescaledb:5432/hydra
       REDIS_URL: redis://hydra-redis:6379
       BINANCE_API_KEY: ${BINANCE_API_KEY}
@@ -80,11 +80,11 @@ services:
     build: ./dashboard
     container_name: hydra-dashboard
     restart: unless-stopped
-    env_file: ../.env
     networks:
       - proxy
       - hydra
     environment:
+      TZ: ${TZ}
       NEXT_PUBLIC_API_URL: https://trading.${DOMAIN}
     depends_on:
       - hydra-engine
@@ -117,7 +117,6 @@ services:
     build: ./backtest-worker
     container_name: hydra-backtest-worker
     restart: unless-stopped
-    env_file: ../.env
     networks:
       - hydra
     depends_on:
@@ -126,6 +125,7 @@ services:
       hydra-redis:
         condition: service_healthy
     environment:
+      TZ: ${TZ}
       DATABASE_URL: postgresql://hydra:${HYDRA_DB_PASSWORD}@hydra-timescaledb:5432/hydra
       REDIS_URL: redis://hydra-redis:6379
     volumes:
@@ -151,10 +151,10 @@ services:
     build: ./timescaledb
     container_name: hydra-timescaledb
     restart: unless-stopped
-    env_file: ../.env
     networks:
       - hydra
     environment:
+      TZ: ${TZ}
       POSTGRES_DB: hydra
       POSTGRES_USER: hydra
       POSTGRES_PASSWORD: ${HYDRA_DB_PASSWORD}
@@ -180,7 +180,8 @@ services:
     build: ./redis
     container_name: hydra-redis
     restart: unless-stopped
-    env_file: ../.env
+    environment:
+      TZ: ${TZ}
     networks:
       - hydra
     command: redis-server --maxmemory 1536mb --maxmemory-policy allkeys-lru

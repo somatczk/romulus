@@ -9,12 +9,12 @@ services:
     build: ./socket-proxy
     container_name: socket-proxy
     restart: unless-stopped
-    env_file: ../.env
     networks:
       - socket
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     environment:
+      TZ: ${TZ}
       CONTAINERS: 1
       IMAGES: 1
       NETWORKS: 1
@@ -38,7 +38,6 @@ services:
     build: ./traefik
     container_name: traefik
     restart: unless-stopped
-    env_file: ../.env
     networks:
       - proxy
       - socket
@@ -48,6 +47,7 @@ services:
       # if port 80 becomes available in the future.
       - "443:443"
     environment:
+      TZ: ${TZ}
       CLOUDFLARE_DNS_API_TOKEN: ${CF_API_TOKEN}
     volumes:
       - ${APPDATA}/core/traefik/acme.json:/acme.json
@@ -95,7 +95,8 @@ services:
     build: ./adguard
     container_name: adguard
     restart: unless-stopped
-    env_file: ../.env
+    environment:
+      TZ: ${TZ}
     networks:
       - proxy
     ports:

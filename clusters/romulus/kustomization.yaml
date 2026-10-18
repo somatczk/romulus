@@ -3,4 +3,5 @@ kind: Kustomization
 resources:
   - flux-system
   - infrastructure.yaml
+  - tenants-source.yaml
   - ci-runners.yaml

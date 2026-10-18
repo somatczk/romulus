@@ -159,7 +159,7 @@ jobs:
 
       - name: kubeconform
         run: |
-          for d in clusters/romulus kubernetes/infrastructure kubernetes/ci-runners; do
+          for d in clusters/romulus kubernetes/infrastructure kubernetes/tenants-source; do
             echo "== $d"
             kubectl kustomize "$d" | kubeconform -strict -summary -skip CustomResourceDefinition \
               -schema-location default \

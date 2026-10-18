@@ -96,5 +96,34 @@ v6() {
   ensure_first "$IP6T" INPUT HOST6-IN
 }
 
+# CI VM (libvirt NAT on virbr0): internet and tailnet VPC routes only. A separate nftables
+# table at priority -10 runs before iptables, so libvirt/Docker rule churn cannot reorder it.
+vm() {
+  nft -f - <<'NFT'
+table inet romulus_vm_guard
+delete table inet romulus_vm_guard
+table inet romulus_vm_guard {
+  set blocked4 {
+    type ipv4_addr; flags interval
+    elements = { 192.168.0.0/16, 172.16.0.0/12, 100.64.0.0/10, 169.254.0.0/16, 10.10.0.0/16 }
+  }
+  chain forward {
+    type filter hook forward priority -10; policy accept;
+    iifname "virbr0" ct state established,related accept
+    iifname "virbr0" ip daddr @blocked4 drop
+    iifname "virbr0" meta nfproto ipv6 drop
+  }
+  chain input {
+    type filter hook input priority -10; policy accept;
+    iifname "virbr0" ct state established,related accept
+    iifname "virbr0" udp dport { 53, 67 } accept
+    iifname "virbr0" tcp dport 53 accept
+    iifname "virbr0" drop
+  }
+}
+NFT
+}
+
 v4 || log "ERROR v4 block failed"
 v6 || log "ERROR v6 block failed"
+vm || log "ERROR vm block failed"

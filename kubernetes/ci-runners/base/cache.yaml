@@ -1,0 +1,11 @@
+# Org-private dependency cache (pnpm store, Maven repo, tool cache). RWO is per node; single-node cluster.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: runner-cache
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 80Gi

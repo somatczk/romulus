@@ -63,6 +63,10 @@ log_info "Accepting loopback traffic."
 iptables -A INPUT -s 192.168.0.0/24 -j ACCEPT
 log_info "Accepting LAN traffic (192.168.0.0/24)."
 
+# libvirt VM bridge: DHCP + DNS from libvirt's dnsmasq only (the VM itself is fenced in hardening-firewall.sh).
+iptables -A INPUT -i virbr0 -p udp -m multiport --dports 53,67 -j ACCEPT
+iptables -A INPUT -i virbr0 -p tcp --dport 53 -j ACCEPT
+
 # Allow Docker networks (10.10.0.0/16)
 iptables -A INPUT -s 10.10.0.0/16 -j ACCEPT
 log_info "Accepting Docker network traffic (10.10.0.0/16)."

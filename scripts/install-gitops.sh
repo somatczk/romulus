@@ -4,6 +4,8 @@
 # First run (before /DATA/stacks is a checkout), straight from the repo:
 #   curl -fsSL https://raw.githubusercontent.com/somatczk/romulus/master/scripts/install-gitops.sh | sudo bash
 # Expects /DATA/doco-cd/op-token (romulus-deploy service account, read-only).
+# and for doco-cd, a 1Password Connect server: /DATA/doco-cd/1password-credentials.json (owner 999, 600)
+# and /DATA/doco-cd/connect-token, both from `op connect server create` / `op connect token create`.
 set -euo pipefail
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 REPO=https://github.com/somatczk/romulus.git
@@ -15,6 +17,7 @@ RESTIC_SHA=5097faeda6aa13167aae6e36efdba636637f8741fed89bbf015678334632d4d3
 
 [[ $EUID -eq 0 ]] || { echo "run as root"; exit 1; }
 [[ -s $DOCO/op-token ]] || { echo "$DOCO/op-token missing"; exit 1; }
+for f in 1password-credentials.json connect-token; do [[ -s $DOCO/$f ]] || { echo "$DOCO/$f missing"; exit 1; }; done
 
 echo "== packages"
 if ! command -v op >/dev/null; then

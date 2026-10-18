@@ -62,7 +62,8 @@ template:
           - {name: TURBO_CONCURRENCY, value: "4"}
         resources:
           requests: {cpu: "1", memory: 3Gi}
-          limits: {memory: 8Gi}
+          # next.js builds (2 turbo tasks x 3 GB heap + workers) were OOM-killed at 8Gi
+          limits: {memory: 16Gi}
         volumeMounts:
           - {name: work, mountPath: /home/runner/_work}
           - {name: dind-sock, mountPath: /var/run}

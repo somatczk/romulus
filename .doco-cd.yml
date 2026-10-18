@@ -1,13 +1,15 @@
-# doco-cd deployments, applied in this order (core first: traefik and the shared networks).
+# doco-cd deployments. Stacks deploy independently and in parallel, no ordering between them;
+# shared networks are created by scripts/install-gitops.sh.
 # name must stay equal to the existing compose project name, doco-cd adopts by name.
 # Secrets come from the romulus-deploy vault; host.env holds the non-secret settings.
+# Cutover is staged: stacks not listed here keep running as they are, untouched.
+# Next: monitoring, media, productivity, utilities, hydra, ci.
 name: core
 working_dir: stacks/core
 env_files:
   - ../host.env
 external_secrets:
   CF_API_TOKEN: op://romulus-deploy/core/CF_API_TOKEN
-  DOMAIN: op://romulus-deploy/shared/DOMAIN
 ---
 name: security
 working_dir: stacks/security
@@ -18,84 +20,13 @@ external_secrets:
   AUTHELIA_SESSION_SECRET: op://romulus-deploy/security/AUTHELIA_SESSION_SECRET
   AUTHELIA_STORAGE_ENCRYPTION_KEY: op://romulus-deploy/security/AUTHELIA_STORAGE_ENCRYPTION_KEY
   CROWDSEC_BOUNCER_API_KEY: op://romulus-deploy/security/CROWDSEC_BOUNCER_API_KEY
-  DOMAIN: op://romulus-deploy/shared/DOMAIN
 ---
 name: notifications
 working_dir: stacks/notifications
 env_files:
   - ../host.env
-external_secrets:
-  DOMAIN: op://romulus-deploy/shared/DOMAIN
----
-name: monitoring
-working_dir: stacks/monitoring
-env_files:
-  - ../host.env
-external_secrets:
-  DOMAIN: op://romulus-deploy/shared/DOMAIN
-  GRAFANA_ADMIN_PASSWORD: op://romulus-deploy/monitoring/GRAFANA_ADMIN_PASSWORD
-  RESTIC_PASSWORD: op://romulus-deploy/backup/RESTIC_PASSWORD
-  TELEGRAM_BOT_TOKEN: op://romulus-deploy/shared/TELEGRAM_BOT_TOKEN
-  TELEGRAM_CHAT_ID: op://romulus-deploy/shared/TELEGRAM_CHAT_ID
 ---
 name: dashboard
 working_dir: stacks/dashboard
 env_files:
   - ../host.env
----
-name: media
-working_dir: stacks/media
-env_files:
-  - ../host.env
-external_secrets:
-  DOMAIN: op://romulus-deploy/shared/DOMAIN
-  QBIT_WEBUI_PASSWORD: op://romulus-deploy/media/QBIT_WEBUI_PASSWORD
----
-name: productivity
-working_dir: stacks/productivity
-env_files:
-  - ../host.env
-external_secrets:
-  DOMAIN: op://romulus-deploy/shared/DOMAIN
-  HBOX_AUTH_API_KEY_PEPPER: op://romulus-deploy/productivity/HBOX_AUTH_API_KEY_PEPPER
-  IMMICH_DB_PASSWORD: op://romulus-deploy/productivity/IMMICH_DB_PASSWORD
-  NEXTCLOUD_DB_PASSWORD: op://romulus-deploy/productivity/NEXTCLOUD_DB_PASSWORD
-  NEXTCLOUD_REDIS_PASSWORD: op://romulus-deploy/productivity/NEXTCLOUD_REDIS_PASSWORD
-  PAPERLESS_ADMIN_PASSWORD: op://romulus-deploy/productivity/PAPERLESS_ADMIN_PASSWORD
-  PAPERLESS_DB_PASSWORD: op://romulus-deploy/productivity/PAPERLESS_DB_PASSWORD
-  PAPERLESS_SECRET_KEY: op://romulus-deploy/productivity/PAPERLESS_SECRET_KEY
----
-name: utilities
-working_dir: stacks/utilities
-env_files:
-  - ../host.env
-external_secrets:
-  DOMAIN: op://romulus-deploy/shared/DOMAIN
-  SPEEDTEST_APP_KEY: op://romulus-deploy/utilities/SPEEDTEST_APP_KEY
-  TEAMSPEAK_DB_PASSWORD: op://romulus-deploy/utilities/TEAMSPEAK_DB_PASSWORD
----
-name: hydra
-working_dir: stacks/hydra
-env_files:
-  - ../host.env
-external_secrets:
-  BINANCE_API_KEY: op://romulus-deploy/hydra/BINANCE_API_KEY
-  BINANCE_API_SECRET: op://romulus-deploy/hydra/BINANCE_API_SECRET
-  BYBIT_API_KEY: op://romulus-deploy/hydra/BYBIT_API_KEY
-  BYBIT_API_SECRET: op://romulus-deploy/hydra/BYBIT_API_SECRET
-  DOMAIN: op://romulus-deploy/shared/DOMAIN
-  HYDRA_DB_PASSWORD: op://romulus-deploy/hydra/HYDRA_DB_PASSWORD
-  HYDRA_TELEGRAM_BOT_TOKEN: op://romulus-deploy/hydra/HYDRA_TELEGRAM_BOT_TOKEN
-  HYDRA_TELEGRAM_CHAT_ID: op://romulus-deploy/hydra/HYDRA_TELEGRAM_CHAT_ID
-  KRAKEN_API_KEY: op://romulus-deploy/hydra/KRAKEN_API_KEY
-  KRAKEN_API_SECRET: op://romulus-deploy/hydra/KRAKEN_API_SECRET
-  OKX_API_KEY: op://romulus-deploy/hydra/OKX_API_KEY
-  OKX_API_SECRET: op://romulus-deploy/hydra/OKX_API_SECRET
-  OKX_PASSPHRASE: op://romulus-deploy/hydra/OKX_PASSPHRASE
----
-name: ci
-working_dir: stacks/ci
-env_files:
-  - ../host.env
-external_secrets:
-  GITHUB_PAT: op://romulus-deploy/ci/GITHUB_PAT

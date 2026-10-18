@@ -1,9 +1,9 @@
 [Unit]
-Description=Fast-forward /DATA/stacks to master (scripts, crons, firewall)
+Description=Keep /DATA/stacks on origin/master and re-apply host setup on change
 Requires=DATA.mount
-After=DATA.mount network-online.target
+After=DATA.mount docker.service network-online.target
 Wants=network-online.target
 
 [Service]
 Type=oneshot
-ExecStart=/usr/bin/git -C /DATA/stacks pull -q --ff-only
+ExecStart=/DATA/stacks/scripts/sync-stacks.sh

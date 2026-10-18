@@ -27,6 +27,11 @@ scrape_configs:
       - targets:
           - 192.168.0.3:9323
 
+  - job_name: doco-cd
+    static_configs:
+      - targets:
+          - doco-cd:9120
+
   - job_name: traefik
     static_configs:
       - targets:

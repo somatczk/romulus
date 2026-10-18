@@ -256,3 +256,14 @@ groups:
         annotations:
           summary: "Internet download speed below 100 Mbps"
           description: "Download speed has dropped below 100 Mbps."
+
+  - name: deploys
+    rules:
+      - alert: DocoCdDown
+        expr: up{job="doco-cd"} == 0 or absent(up{job="doco-cd"})
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "doco-cd is down, merges to master are not deploying"
+          description: "Check: docker logs doco-cd; restart with sudo bash /DATA/stacks/scripts/install-gitops.sh"

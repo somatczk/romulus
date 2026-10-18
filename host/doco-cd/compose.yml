@@ -12,6 +12,8 @@ services:
         condition: service_healthy
     networks:
       - doco-cd
+      # prometheus scrapes :9120
+      - monitoring
     environment:
       TZ: Europe/Budapest
       LOG_LEVEL: info
@@ -23,23 +25,23 @@ services:
       SECRET_PROVIDER_ACCESS_TOKEN_FILE: /run/secrets/op-token
       # one deploy reads ~40 secrets, cache keeps it off the 1Password rate limit
       SECRET_PROVIDER_CACHE_ENABLED: "true"
-      # registry login for the private hydra images on ghcr
-      DOCKER_CONFIG: /docker-config
       APPRISE_API_URL: http://apprise:8000/notify
       APPRISE_NOTIFY_URLS_FILE: /run/secrets/apprise-urls
+      # minimum level: success also sends warnings and failures
       APPRISE_NOTIFY_LEVEL: success
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /DATA/doco-cd/data:/data
       - /DATA/doco-cd/op-token:/run/secrets/op-token:ro
       - /DATA/doco-cd/apprise-urls:/run/secrets/apprise-urls:ro
-      - /DATA/doco-cd/docker:/docker-config:ro
+      # registry login for the private hydra images on ghcr; file only, buildx writes next to it
+      - /DATA/doco-cd/docker/config.json:/root/.docker/config.json:ro
     cap_drop:
       - ALL
     security_opt:
       - no-new-privileges:true
     healthcheck:
-      test: ["CMD", "/doco-cd", "healthcheck"]
+      test: ["CMD", "/healthcheck"]
       start_period: 15s
       interval: 30s
       timeout: 5s

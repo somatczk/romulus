@@ -24,14 +24,29 @@ Image versions pinned in single-line Dockerfiles (`stacks/<stack>/<service>/Dock
 
 ## Deployment
 
-Pull-based: [doco-cd](https://doco.cd) on the host polls `master` every minute and deploys the stacks listed in `.doco-cd.yml` (core first). Merging is deploying; there is no deploy job in CI.
+Pull-based: [doco-cd](https://doco.cd) on the host polls `master` every minute and deploys the stacks listed in `.doco-cd.yml`. Merging is deploying; there is no deploy job in CI.
 
 - **Secrets:** 1Password vault `romulus-deploy`, one item per stack. doco-cd reads it with a read-only service account (token in `/DATA/doco-cd/op-token`) and interpolates only the secrets each stack lists. Non-secret settings are in `stacks/host.env`. Containers get only the variables their compose service maps, never a shared `.env`.
-- **Host files:** `/DATA/stacks` is a git checkout fast-forwarded every 5 minutes (`romulus-stacks-sync.timer`), so crons, scripts and the firewall unit stay current. Host scripts load their secrets through `scripts/lib/env.sh`.
-- **Notifications:** deploy results go to ntfy and Telegram through apprise.
-- **Host setup** (packages, networks, checkout, doco-cd itself, crons), idempotent: `sudo bash /DATA/stacks/scripts/install-gitops.sh`. Re-run it when `host/` or `scripts/systemd/` change; doco-cd does not deploy itself.
+- **Host files:** `/DATA/stacks` is a checkout kept on `origin/master` by `romulus-stacks-sync.timer` (every 5 minutes, local edits are discarded). When master moves it also re-applies the crons and doco-cd itself. Host scripts load their secrets through `scripts/lib/env.sh` and alert via ntfy if 1Password is unreachable.
+- **Notifications:** deploy results (success, warnings, failures) go to ntfy and Telegram through apprise. Prometheus scrapes doco-cd; `DocoCdDown` fires after 10 minutes down.
+- **Host setup** (packages, networks, checkout, doco-cd, crons), idempotent: `sudo bash /DATA/stacks/scripts/install-gitops.sh`.
 
-Rotate a secret: edit it in 1Password, then make doco-cd redeploy the stack (any commit touching it, or a restart of doco-cd).
+Check a deploy: `docker logs -f doco-cd`, `git -C /DATA/stacks log -1`, labels `cd.doco.deployment.target.sha` on the containers. Roll back: `git revert` on master (that is a deploy too). Rotate a secret: edit it in 1Password, then redeploy the stack (a commit touching it, or `docker restart doco-cd`).
+
+### Cutover from deploy.yml
+
+Staged, `.doco-cd.yml` starts with core, security, notifications and dashboard; the other stacks keep running untouched until they are added (see the comment at its top).
+
+1. Merge, then on the host: `curl -fsSL https://raw.githubusercontent.com/somatczk/romulus/master/scripts/install-gitops.sh | sudo bash`. It checks every secret resolves and moves the authelia users file before anything is swapped, and aborts otherwise.
+2. Watch `docker logs -f doco-cd`: each listed stack is recreated once (new labels and paths). Check traefik routes and an authelia login.
+3. Add the next stacks to `.doco-cd.yml` one PR at a time: monitoring, media, utilities, then productivity, hydra and ci.
+4. After a week without rollback: `rm -rf /DATA/stacks.pre-gitops` (it holds the old plaintext `.env`), delete the deploy secrets from the GitHub repo settings.
+
+Rollback during the first week: `docker compose -f /DATA/stacks/host/doco-cd/compose.yml down`, `mv /DATA/stacks /DATA/stacks.gitops && mv /DATA/stacks.pre-gitops /DATA/stacks`, then `docker compose --env-file ../.env up -d` per stack in `/DATA/stacks/stacks/<stack>`.
+
+### Disaster recovery
+
+Fresh host: restore `/media/*-Storage` from restic, create a new service account for `romulus-deploy` (1Password, read-only), write its token to `/DATA/doco-cd/op-token`, run the install script from step 1. Keep a copy of `RESTIC_PASSWORD` outside 1Password (paper or a separate vault): restoring the backups must not depend on the service that holds the secrets.
 
 ## CI platform
 

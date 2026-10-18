@@ -1,1 +1,1 @@
-FROM binwiederhier/ntfy:v2.29.0
+FROM binwiederhier/ntfy:v2.30.0

@@ -19,12 +19,14 @@ CRON_ENTRIES=(
     "0 5 * * 0 ${SCRIPTS_DIR}/btrfs-maintenance.sh scrub >> /var/log/homelab/maintenance.log 2>&1"
     "0 5 1 * * ${SCRIPTS_DIR}/btrfs-maintenance.sh balance >> /var/log/homelab/maintenance.log 2>&1"
     "0 6 1 * * ${SCRIPTS_DIR}/restore-test.sh >> /var/log/homelab/restore-test.log 2>&1"
-    "0 5 * * 3 /bin/bash -c 'export PATH=\$PATH:/DATA/bin && export XDG_CACHE_HOME=/DATA/.cache && source /DATA/stacks/scripts/lib/env.sh RESTIC_PASSWORD && export RESTIC_REPOSITORY=/media/HDD-Storage/backups/restic-repo && restic check' >> /var/log/homelab/restic-check.log 2>&1"
-    "0 3 * * 0 docker system prune -f --volumes --filter 'until=168h' >> /var/log/homelab/docker-cleanup.log 2>&1"
+    "0 5 * * 3 /bin/bash -c 'export PATH=\$PATH:/usr/local/bin RESTIC_CACHE_DIR=/var/cache/restic && source /DATA/stacks/scripts/lib/env.sh RESTIC_PASSWORD && export RESTIC_REPOSITORY=/media/HDD-Storage/backups/restic-repo && restic check' >> /var/log/homelab/restic-check.log 2>&1"
+    "0 3 * * 0 docker image prune -af --filter until=168h >> /var/log/homelab/docker-cleanup.log 2>&1; docker builder prune -af --filter until=168h >> /var/log/homelab/docker-cleanup.log 2>&1"
 )
 
 # Create log directory
 mkdir -p /var/log/homelab
+install -m 644 "${SCRIPTS_DIR}/logrotate/homelab" /etc/logrotate.d/homelab
+install -d -m 700 /var/cache/restic
 
 # Boot-time firewall runs from systemd so it is ordered after Docker (cron @reboot is not).
 install -m 644 "${SCRIPTS_DIR}/systemd/homelab-firewall.service" /etc/systemd/system/
@@ -74,4 +76,4 @@ log "  5:00 Sun    - BTRFS scrub (weekly)"
 log "  5:00 1st    - BTRFS balance (monthly)"
 log "  6:00 1st    - Restore test (monthly, after backup)"
 log "  5:00 Wed    - Restic integrity check (weekly)"
-log "  3:00 Sun    - Docker system prune (weekly)"
+log "  3:00 Sun    - Docker image and build cache prune (weekly)"

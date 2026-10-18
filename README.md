@@ -32,20 +32,9 @@ Pull-based: [doco-cd](https://doco.cd) on the host polls `master` every minute a
 
 Check a deploy: `docker logs -f doco-cd`, `git -C /DATA/stacks log -1`, labels `cd.doco.deployment.target.sha` on the containers. Roll back: `git revert` on master (that is a deploy too). Rotate a secret: edit it in 1Password, then redeploy the stack (a commit touching it, or `docker restart doco-cd`).
 
-### Cutover from deploy.yml
-
-Done in two steps: core, security, notifications and dashboard first, then every other stack. `ai` is disabled and not deployed.
-
-1. Merge, then on the host: `curl -fsSL https://raw.githubusercontent.com/somatczk/romulus/master/scripts/install-gitops.sh | sudo bash`. It checks every secret resolves and moves the authelia users file before anything is swapped, and aborts otherwise.
-2. Watch `docker logs -f doco-cd`: each listed stack is recreated once (new labels and paths). Check traefik routes and an authelia login.
-3. Add the remaining stacks to `.doco-cd.yml`. Each is recreated once, so the merge drops downloads and streams; silence alerts for 30 minutes first (`amtool silence add` in alertmanager).
-4. After a week without rollback: `rm -rf /DATA/stacks.pre-gitops` (it holds the old plaintext `.env`), delete the deploy secrets from the GitHub repo settings.
-
-Rollback during the first week: `docker compose -f /DATA/stacks/host/doco-cd/compose.yml down`, `mv /DATA/stacks /DATA/stacks.gitops && mv /DATA/stacks.pre-gitops /DATA/stacks`, then `docker compose --env-file ../.env up -d` per stack in `/DATA/stacks/stacks/<stack>`.
-
 ### Disaster recovery
 
-Fresh host: restore `/media/*-Storage` from restic, create a new service account for `romulus-deploy` (1Password, read-only), write its token to `/DATA/doco-cd/op-token`, run the install script from step 1. Keep a copy of `RESTIC_PASSWORD` outside 1Password (paper or a separate vault): restoring the backups must not depend on the service that holds the secrets.
+Fresh host: restore `/media/*-Storage` from restic, create a new service account for `romulus-deploy` (1Password, read-only), write its token to `/DATA/doco-cd/op-token`, run `curl -fsSL https://raw.githubusercontent.com/somatczk/romulus/master/scripts/install-gitops.sh | sudo bash`. `ai` is disabled and not deployed. Keep a copy of `RESTIC_PASSWORD` outside 1Password (paper or a separate vault): restoring the backups must not depend on the service that holds the secrets.
 
 ## CI platform
 

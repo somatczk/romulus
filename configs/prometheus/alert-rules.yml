@@ -39,8 +39,9 @@ groups:
           summary: "Container high CPU usage"
           description: "Container {{ $labels.name }} CPU usage is above 90% for 10 minutes."
 
+      # working set, not usage: usage counts reclaimable page cache (immich fills it overnight)
       - alert: ContainerHighMemory
-        expr: (container_memory_usage_bytes{name!="",name!~"gh-runner-.*|buildx_buildkit.*|ci-.*"} / container_spec_memory_limit_bytes{name!=""} * 100 > 90) and container_spec_memory_limit_bytes > 0
+        expr: (container_memory_working_set_bytes{name!="",name!~"gh-runner-.*|buildx_buildkit.*|ci-.*"} / container_spec_memory_limit_bytes{name!=""} * 100 > 90) and container_spec_memory_limit_bytes > 0
         for: 5m
         labels:
           severity: warning

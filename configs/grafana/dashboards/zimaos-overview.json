@@ -441,7 +441,7 @@
       "title": "AI Container Memory",
       "type": "timeseries",
       "targets": [
-        { "expr": "container_memory_usage_bytes{name=~\"ollama|openclaw|open-webui|ai-socket-proxy\"}", "legendFormat": "{{name}}" }
+        { "expr": "container_memory_working_set_bytes{name=~\"ollama|openclaw|open-webui|ai-socket-proxy\"}", "legendFormat": "{{name}}" }
       ]
     },
     {
@@ -489,7 +489,7 @@
       "options": { "legend": { "displayMode": "table", "placement": "right", "sortBy": "Last *", "sortDesc": true }, "tooltip": { "mode": "multi", "sort": "desc" } },
       "title": "Container Memory Usage",
       "type": "timeseries",
-      "targets": [{ "expr": "container_memory_usage_bytes{name!=\"\",name!~\"POD.*\"}", "legendFormat": "{{name}}" }]
+      "targets": [{ "expr": "container_memory_working_set_bytes{name!=\"\",name!~\"POD.*\"}", "legendFormat": "{{name}}" }]
     },
     {
       "datasource": { "type": "prometheus" },

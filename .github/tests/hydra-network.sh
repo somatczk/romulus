@@ -77,6 +77,8 @@ expect_flagged dashboard-on-edge "sub(hydra, '    networks:\n      - proxy\n    
 expect_flagged other-stack-aliased-edge "(root / 'stacks/rogue').mkdir(); (root / 'stacks/rogue/compose.yml').write_text('networks:\n  edge:\n    external: true\n    name: hydra-edge\nservices:\n  shim:\n    image: busybox:1.37\n    networks:\n      edge:\n        ipv4_address: 10.10.13.9\n')"
 expect_flagged shares-engine-netns "(root / 'stacks/rogue').mkdir(); (root / 'stacks/rogue/compose.yml').write_text('services:\n  shim:\n    image: busybox:1.37\n    network_mode: container:hydra-engine\n')"
 expect_flagged engine-renamed "sub(hydra, '  hydra-engine:\n    build: ./engine', '  hydra-api:\n    build: ./engine')"
+expect_flagged engine-gone "sub(hydra, '  hydra-engine:\n    build: ./engine', '  hydra-api:\n    build: ./engine'); sub(hydra, '$ENGINE_NETS', '      hydra: {}\n')"
+expect_flagged traefik-gone "sub(core, '  traefik:\n    build: ./traefik', '  edge-proxy:\n    build: ./traefik'); sub(core, '$TRAEFIK_EDGE', '')"
 expect_flagged traefik-renamed "sub(core, '  traefik:\n    build: ./traefik', '  edge-proxy:\n    build: ./traefik')"
 expect_flagged nets-missing "sub(nets, 'hydra-edge true 10.10.13.0/24\n', '')"
 expect_flagged nets-not-internal "sub(nets, 'hydra-edge true 10.10.13.0/24', 'hydra-edge false 10.10.13.0/24')"

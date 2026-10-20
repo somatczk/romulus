@@ -165,27 +165,13 @@ jobs:
           promtool check rules /p/alert-rules.yml /p/hydra-alert-rules.yml
           promtool test rules /p/tests/hydra-alert-rules.test.yml
 
-      # hydra main owns these files; a PR that touches one must match it byte for byte
+      # hydra main owns these files; fails on drift when the PR touches one or bumps a hydra image
       - name: hydra rules and dashboard in sync
         env:
           BASE_REF: ${{ github.base_ref }}
         run: |
-          RAW=https://raw.githubusercontent.com/somatczk/hydra/main/deploy
-          CHANGED=$(git diff --name-only "origin/$BASE_REF...HEAD")
-          DRIFT=0
-          sync() {
-            if curl -fsSL "$RAW/$1" | sed 's#^  - prometheus-rules\.yml$#  - ../hydra-alert-rules.yml#' | diff -u - "$2"; then
-              echo "in sync: $2"
-            elif grep -qxF "$2" <<< "$CHANGED"; then
-              echo "::error file=$2::differs from hydra main deploy/$1"; DRIFT=1
-            else
-              echo "::warning file=$2::differs from hydra main deploy/$1 (not touched by this PR)"
-            fi
-          }
-          sync prometheus-rules.yml configs/prometheus/hydra-alert-rules.yml
-          sync prometheus-rules.test.yml configs/prometheus/tests/hydra-alert-rules.test.yml
-          sync grafana-dashboard.json configs/grafana/dashboards/hydra-trading.json
-          exit "$DRIFT"
+          bash .github/tests/hydra-sync-test.sh
+          git diff --name-only "origin/$BASE_REF...HEAD" | bash .github/tests/hydra-sync.sh
 
       - name: dependabot auto-merge hold logic
         run: |

@@ -1,5 +1,5 @@
 # ARC runner image: GitHub's official runner plus the toolchain the org workflows expect
-# (Node 24, Corretto 25, Maven, AWS CLI, GitHub CLI). Docker comes from the dind sidecar via DOCKER_HOST.
+# (Node 24, Corretto 25, Maven, AWS CLI, GitHub CLI, docker compose). Docker comes from the dind sidecar via DOCKER_HOST.
 # libatomic1: setup-node downloads Node builds (26+) that link against it.
 FROM ghcr.io/actions/actions-runner:2.338.0@sha256:4ffadc0002b2581327e06101fc8c06cd189232baf79fe561fac9caeb76f5e807
 
@@ -36,6 +36,14 @@ ARG AWSCLI_SHA256=b11ed416d91f4251da363a17706938eeaf0e520745754c104c0c1890dd8363
 RUN curl -fsSLo /tmp/awscli.zip "https://awscli.amazonaws.com/awscli-exe-linux-x86_64-${AWSCLI_VERSION}.zip" && \
     echo "${AWSCLI_SHA256}  /tmp/awscli.zip" | sha256sum -c - && \
     unzip -q /tmp/awscli.zip -d /tmp && /tmp/aws/install && rm -rf /tmp/awscli.zip /tmp/aws
+
+# docker compose plugin: Testcontainers' ComposeContainer (vetoo-backend integration tests) shells out to it
+ARG COMPOSE_VERSION=v5.6.0
+ARG COMPOSE_SHA256=40343e21ca777173e69cff5dbafeb37c6f81f3b0d57d9e597f036e95eb63e76a
+RUN curl -fsSLo /usr/local/lib/docker/cli-plugins/docker-compose \
+        "https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-linux-x86_64" && \
+    echo "${COMPOSE_SHA256}  /usr/local/lib/docker/cli-plugins/docker-compose" | sha256sum -c - && \
+    chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
 
 ARG MAVEN_VERSION=3.9.15
 ARG MAVEN_SHA512=33d81e0ec785f0207e3e5e3ffb61863e1dca5784c15ac3fb5ff105f69cffbea484eb8d473ea60467a63f7b0570eef8622f2fed8eee96acbe668aa313391cddb3

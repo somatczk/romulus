@@ -3,6 +3,8 @@ networks:
     external: true
   socket:
     external: true
+  hydra-edge:
+    external: true
 
 services:
   socket-proxy:
@@ -39,8 +41,11 @@ services:
     container_name: traefik
     restart: unless-stopped
     networks:
-      - proxy
-      - socket
+      proxy: {}
+      socket: {}
+      # static: hydra trusts Remote-User only from this address (HYDRA_API__TRUSTED_PROXY_CIDRS)
+      hydra-edge:
+        ipv4_address: 10.10.13.2
     ports:
       # NOTE: Port 80 not published — ZimaOS gateway uses it.
       # HTTP→HTTPS redirect is configured in traefik.yml but only works

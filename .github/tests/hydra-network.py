@@ -6,6 +6,7 @@ import ipaddress
 import re
 import sys
 from pathlib import Path
+from urllib.parse import urlsplit
 
 import yaml
 
@@ -17,6 +18,9 @@ NETS = "scripts/install-gitops.sh"
 TOKEN = "HYDRA_API_TOKEN"
 TOKEN_REF = "op://romulus-deploy/hydra/HYDRA_API_TOKEN"
 RETIRED = ("HYDRA_AUTH_MODE", "HYDRA_TRUSTED_PROXY_CIDRS")
+ENGINE_NETS = {EDGE, "hydra", "monitoring"}
+DYNAMIC = "configs/traefik/dynamic/*.y*ml"
+SERVICE_TARGET = re.compile(r"traefik\.(http|tcp|udp)\.services\.[^.]+\.loadbalancer\.server\.(url|address)")
 
 
 def env_of(svc):
@@ -36,6 +40,8 @@ def labels_of(svc):
 def service_networks(doc, svc):
     """Docker network name -> per-service config, resolving compose keys through top-level `name:`."""
     declared = doc.get("networks") or {}
+    if "networks" not in svc and not svc.get("network_mode"):
+        return {str((declared.get("default") or {}).get("name") or "default"): {}}
     raw = svc.get("networks") or {}
     if isinstance(raw, list):
         raw = {str(n): None for n in raw}
@@ -49,6 +55,40 @@ def service_networks(doc, svc):
 def edge_external(doc):
     declared = doc.get("networks") or {}
     return any(str((c or {}).get("name") or k) == EDGE and (c or {}).get("external") for k, c in declared.items())
+
+
+def target_host(target):
+    """Host of a Traefik server url (scheme://host:port) or tcp/udp address (host:port)."""
+    target = str(target).strip()
+    try:
+        return urlsplit(target if "://" in target else f"//{target}").hostname
+    except ValueError:
+        return None
+
+
+def edge_targets(root, compose_docs, subnet, engine_ip):
+    """Traefik file or label services aimed at an address on hydra-edge, bypassing the engine's own router."""
+    found = []
+    for f in sorted(root.glob(DYNAMIC)):
+        doc = yaml.safe_load(f.read_text()) or {}
+        for proto in ("http", "tcp", "udp"):
+            for name, svc in ((doc.get(proto) or {}).get("services") or {}).items():
+                for server in ((svc or {}).get("loadBalancer") or {}).get("servers") or []:
+                    for key in ("url", "address"):
+                        if key in (server or {}):
+                            found.append((f"{f.relative_to(root)}:{proto}.services.{name}", server[key]))
+    for where, doc in compose_docs:
+        for name, svc in (doc.get("services") or {}).items():
+            for key, value in labels_of(svc or {}).items():
+                if SERVICE_TARGET.fullmatch(key):
+                    found.append((f"{where}:{name}:{key}", value))
+    for where, target in found:
+        try:
+            ip = ipaddress.ip_address(target_host(target) or "")
+        except ValueError:
+            continue
+        if (subnet and ip in subnet) or ip == engine_ip:
+            yield f"{where}: targets {target} on {EDGE}; only hydra-engine's own docker router may reach it"
 
 
 def compose_files(root):
@@ -90,10 +130,12 @@ def check(root):
             yield f"{NETS}: {EDGE} must be internal (true), got {internal!r}"
 
     found = {}
+    docs = []
     for f in compose_files(root):
         doc = yaml.safe_load(f.read_text()) or {}
         stack = str(f.parent.relative_to(root))
         where = f.relative_to(root)
+        docs.append((where, doc))
         for name, svc in (doc.get("services") or {}).items():
             svc = svc or {}
             ident = (stack, str(name))
@@ -125,8 +167,11 @@ def check(root):
             yield f"{where}: {EDGE} must be declared external"
 
     where, doc, svc, on = found[ENGINE]
+    engine_ip = None
     if "proxy" in on:
         yield f"{where}:hydra-engine: on proxy; every container there could call the API"
+    elif set(on) != ENGINE_NETS:
+        yield f"{where}:hydra-engine: networks must be exactly {sorted(ENGINE_NETS)}, got {sorted(on)}"
     if EDGE not in on:
         yield f"{where}:hydra-engine: not on {EDGE}"
     else:
@@ -137,6 +182,7 @@ def check(root):
             yield f"{where}:hydra-engine: {EDGE} address {engine_ip} is Traefik's"
         if not edge_external(doc):
             yield f"{where}: {EDGE} must be declared external"
+    yield from edge_targets(root, docs, subnet, engine_ip)
     label = labels_of(svc).get("traefik.docker.network")
     if label != EDGE:
         yield f"{where}:hydra-engine: label traefik.docker.network must be {EDGE}, got {label!r}"

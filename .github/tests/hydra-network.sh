@@ -75,6 +75,11 @@ expect_flagged traefik-outside-subnet "sub(core, 'ipv4_address: 10.10.13.2', 'ip
 expect_flagged edge-not-external "sub(hydra, '  hydra-edge:\n    external: true\n', '  hydra-edge:\n    internal: true\n')"
 expect_flagged dashboard-on-edge "sub(hydra, '    networks:\n      - proxy\n    environment:\n      TZ: \${TZ}\n      NEXT_PUBLIC_API_URL', '    networks:\n      - proxy\n      - hydra-edge\n    environment:\n      TZ: \${TZ}\n      NEXT_PUBLIC_API_URL')"
 expect_flagged other-stack-aliased-edge "(root / 'stacks/rogue').mkdir(); (root / 'stacks/rogue/compose.yml').write_text('networks:\n  edge:\n    external: true\n    name: hydra-edge\nservices:\n  shim:\n    image: busybox:1.37\n    networks:\n      edge:\n        ipv4_address: 10.10.13.9\n')"
+expect_flagged other-stack-default-is-edge "(root / 'stacks/rogue').mkdir(); (root / 'stacks/rogue/compose.yml').write_text('networks:\n  default:\n    name: hydra-edge\n    external: true\nservices:\n  shim:\n    image: busybox:1.37\n')"
+expect_flagged engine-on-ai "sub(hydra, '  monitoring:\n    external: true\n', '  monitoring:\n    external: true\n  ai:\n    external: true\n'); sub(hydra, '$ENGINE_NETS', '${ENGINE_NETS}      ai: {}\n')"
+expect_flagged file-router-to-engine-ip "(root / 'configs/traefik/dynamic').mkdir(parents=True); (root / 'configs/traefik/dynamic/status.yml').write_text('http:\n  routers:\n    status:\n      rule: Host(\`status2.example\`)\n      entrypoints: [websecure]\n      service: status\n  services:\n    status:\n      loadBalancer:\n        servers:\n          - url: http://10.10.13.3:8000\n')"
+expect_flagged tcp-router-to-edge "(root / 'configs/traefik/dynamic').mkdir(parents=True); (root / 'configs/traefik/dynamic/raw.yml').write_text('tcp:\n  services:\n    raw:\n      loadBalancer:\n        servers:\n          - address: 10.10.13.3:8000\n')"
+expect_flagged label-service-to-engine-ip "sub(hydra, '      traefik.http.services.hydra-api.loadbalancer.server.port: \"8000\"\n', '      traefik.http.services.hydra-api.loadbalancer.server.port: \"8000\"\n      traefik.http.services.side.loadbalancer.server.url: \"http://10.10.13.3:8000\"\n')"
 expect_flagged shares-engine-netns "(root / 'stacks/rogue').mkdir(); (root / 'stacks/rogue/compose.yml').write_text('services:\n  shim:\n    image: busybox:1.37\n    network_mode: container:hydra-engine\n')"
 expect_flagged engine-renamed "sub(hydra, '  hydra-engine:\n    build: ./engine', '  hydra-api:\n    build: ./engine')"
 expect_flagged engine-gone "sub(hydra, '  hydra-engine:\n    build: ./engine', '  hydra-api:\n    build: ./engine'); sub(hydra, '$ENGINE_NETS', '      hydra: {}\n')"
@@ -87,6 +92,7 @@ expect_flagged token-missing "sub(hydra, '      HYDRA_API_TOKEN: \${HYDRA_API_TO
 expect_flagged token-ref-missing "sub(doco, '  HYDRA_API_TOKEN: op://romulus-deploy/hydra/HYDRA_API_TOKEN\n', '')"
 expect_flagged token-ref-wrong-item "sub(doco, 'op://romulus-deploy/hydra/HYDRA_API_TOKEN', 'op://romulus-deploy/shared/HYDRA_API_TOKEN')"
 
+expect_ok file-router-off-edge "(root / 'configs/traefik/dynamic').mkdir(parents=True); (root / 'configs/traefik/dynamic/ha.yml').write_text('http:\n  services:\n    ha:\n      loadBalancer:\n        servers:\n          - url: http://192.168.0.3:8123\n')"
 expect_ok other-internal-network "(root / 'stacks/rogue').mkdir(); (root / 'stacks/rogue/compose.yml').write_text('networks:\n  edge:\n    external: true\n    name: hydra-edge-test\nservices:\n  shim:\n    image: busybox:1.37\n    networks:\n      - edge\n')"
 
 if [[ $FAILS -gt 0 ]]; then

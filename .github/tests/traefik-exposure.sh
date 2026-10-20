@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Runs traefik-exposure.py on the repo (must pass) and on fixtures that each expose hydra (must fail).
+# Runs traefik-exposure.py on the repo (must pass) and on fixtures that each expose hydra or the Traefik API (must fail).
 set -euo pipefail
 
 HERE=$(cd "$(dirname "$0")" && pwd)
@@ -9,7 +9,7 @@ TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 FAILS=0
 
-python3 "$CHECK" "$ROOT" --min-routers 20 || { echo "FAIL repo exposes a router or has too few"; FAILS=$((FAILS + 1)); }
+python3 "$CHECK" "$ROOT" --min-routers 20 --require-static || { echo "FAIL repo exposes a router or has too few"; FAILS=$((FAILS + 1)); }
 
 expect_exposed() {
   local name=$1 dir="$TMP/$1"
@@ -129,6 +129,114 @@ services:
       Traefik.HTTP.Routers.Shim.Middlewares: "secure@file"
 YML
 expect_exposed mixed-case-keys
+
+mkdir -p "$TMP/api-insecure/configs/traefik"
+cat > "$TMP/api-insecure/configs/traefik/traefik.yml" <<'YML'
+api:
+  dashboard: true
+  insecure: true
+YML
+expect_exposed api-insecure
+
+mkdir -p "$TMP/api-insecure-string/configs/traefik"
+cat > "$TMP/api-insecure-string/configs/traefik/traefik.yml" <<'YML'
+API:
+  Insecure: "TRUE"
+YML
+expect_exposed api-insecure-string
+
+mkdir -p "$TMP/api-insecure-cli/stacks/core"
+cat > "$TMP/api-insecure-cli/stacks/core/compose.yml" <<'YML'
+services:
+  traefik:
+    command: ["--api.insecure=true"]
+YML
+expect_exposed api-insecure-cli
+
+mkdir -p "$TMP/api-insecure-env/stacks/core"
+cat > "$TMP/api-insecure-env/stacks/core/compose.yml" <<'YML'
+services:
+  traefik:
+    environment:
+      - TRAEFIK_API_INSECURE=true
+YML
+expect_exposed api-insecure-env
+
+expect_exposed static-missing --require-static
+
+mkdir -p "$TMP/dashboard-no-authelia/stacks/core"
+cat > "$TMP/dashboard-no-authelia/stacks/core/compose.yml" <<'YML'
+services:
+  traefik:
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.traefik.rule: "Host(`traefik.${DOMAIN}`)"
+      traefik.http.routers.traefik.entrypoints: "websecure"
+      traefik.http.routers.traefik.service: "api@internal"
+      traefik.http.routers.traefik.middlewares: "traefik-dashboard-redirect@file,secure@file"
+YML
+expect_exposed dashboard-no-authelia
+
+mkdir -p "$TMP/dashboard-file-provider/configs/traefik/dynamic"
+cat > "$TMP/dashboard-file-provider/configs/traefik/dynamic/api.yml" <<'YML'
+http:
+  routers:
+    dash:
+      rule: "Host(`traefik.example`)"
+      entrypoints:
+        - websecure
+      service: api@internal
+      middlewares:
+        - secure
+YML
+expect_exposed dashboard-file-provider
+
+mkdir -p "$TMP/overview-public/stacks/core"
+cat > "$TMP/overview-public/stacks/core/compose.yml" <<'YML'
+services:
+  traefik:
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.o.rule: "Path(`/api/overview`)"
+      traefik.http.routers.o.entrypoints: "traefik-api,websecure"
+      traefik.http.routers.o.service: "api@internal"
+YML
+expect_exposed overview-public
+
+mkdir -p "$TMP/overview-default-entrypoints/stacks/core"
+cat > "$TMP/overview-default-entrypoints/stacks/core/compose.yml" <<'YML'
+services:
+  traefik:
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.o.rule: "Path(`/api/overview`)"
+      traefik.http.routers.o.service: "api@internal"
+YML
+expect_exposed overview-default-entrypoints
+
+mkdir -p "$TMP/api-prefix-internal/stacks/core"
+cat > "$TMP/api-prefix-internal/stacks/core/compose.yml" <<'YML'
+services:
+  traefik:
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.o.rule: "PathPrefix(`/api`)"
+      traefik.http.routers.o.entrypoints: "traefik-api"
+      traefik.http.routers.o.service: "api@internal"
+YML
+expect_exposed api-prefix-internal
+
+mkdir -p "$TMP/overview-or-rawdata/stacks/core"
+cat > "$TMP/overview-or-rawdata/stacks/core/compose.yml" <<'YML'
+services:
+  traefik:
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.o.rule: "Path(`/api/overview`) || Path(`/api/rawdata`)"
+      traefik.http.routers.o.entrypoints: "traefik-api"
+      traefik.http.routers.o.service: "api@internal"
+YML
+expect_exposed overview-or-rawdata
 
 expect_exposed no-routers-below-floor --min-routers 1
 

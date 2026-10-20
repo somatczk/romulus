@@ -1,6 +1,6 @@
 api:
   dashboard: true
-  insecure: true
+  insecure: false
 
 ping:
   entryPoint: metrics
@@ -23,6 +23,9 @@ entryPoints:
     address: ":443"
   metrics:
     address: ":8082"
+  # unpublished; only the /api/overview router (homepage widget) uses it
+  traefik-api:
+    address: ":8080"
 
 providers:
   docker:

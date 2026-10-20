@@ -238,7 +238,121 @@ services:
 YML
 expect_exposed overview-or-rawdata
 
+mkdir -p "$TMP/overview-rewrite/stacks/core"
+cat > "$TMP/overview-rewrite/stacks/core/compose.yml" <<'YML'
+services:
+  traefik:
+    labels:
+      traefik.enable: "true"
+      traefik.http.middlewares.rp.replacepath.path: "/api/rawdata"
+      traefik.http.routers.o.rule: "Path(`/api/overview`)"
+      traefik.http.routers.o.entrypoints: "traefik-api"
+      traefik.http.routers.o.service: "api@internal"
+      traefik.http.routers.o.middlewares: "rp@docker"
+YML
+expect_exposed overview-rewrite
+
+mkdir -p "$TMP/api-port-published/stacks/core"
+cat > "$TMP/api-port-published/stacks/core/compose.yml" <<'YML'
+services:
+  traefik:
+    build: ./traefik
+    ports:
+      - "443:443"
+      - "0.0.0.0:8080:8080"
+YML
+expect_exposed api-port-published
+
+mkdir -p "$TMP/api-port-long-syntax/stacks/core"
+cat > "$TMP/api-port-long-syntax/stacks/core/compose.yml" <<'YML'
+services:
+  proxy:
+    image: traefik:v3.7
+    ports:
+      - target: 8080
+        published: 18080
+YML
+expect_exposed api-port-long-syntax
+
+mkdir -p "$TMP/api-port-range/stacks/core"
+cat > "$TMP/api-port-range/stacks/core/compose.yml" <<'YML'
+services:
+  traefik:
+    ports:
+      - "8000-8090:8000-8090/tcp"
+YML
+expect_exposed api-port-range
+
+mkdir -p "$TMP/api-port-custom/configs/traefik" "$TMP/api-port-custom/stacks/core"
+cat > "$TMP/api-port-custom/configs/traefik/traefik.yml" <<'YML'
+api:
+  insecure: false
+entryPoints:
+  traefik-api:
+    address: ":9000"
+YML
+cat > "$TMP/api-port-custom/stacks/core/compose.yml" <<'YML'
+services:
+  traefik:
+    ports:
+      - "9000:9000"
+YML
+expect_exposed api-port-custom
+
+mkdir -p "$TMP/api-host-network/stacks/core"
+cat > "$TMP/api-host-network/stacks/core/compose.yml" <<'YML'
+services:
+  traefik:
+    network_mode: host
+YML
+expect_exposed api-host-network
+
+mkdir -p "$TMP/dashboard-internal/stacks/core"
+cat > "$TMP/dashboard-internal/stacks/core/compose.yml" <<'YML'
+services:
+  traefik:
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.d.rule: "Host(`dash.${DOMAIN}`)"
+      traefik.http.routers.d.entrypoints: "websecure"
+      traefik.http.routers.d.service: "dashboard@internal"
+      traefik.http.routers.d.middlewares: "secure@file"
+YML
+expect_exposed dashboard-internal
+
 expect_exposed no-routers-below-floor --min-routers 1
+
+mkdir -p "$TMP/overview-internal-ok/configs/traefik" "$TMP/overview-internal-ok/stacks/core" "$TMP/overview-internal-ok/stacks/media"
+cat > "$TMP/overview-internal-ok/configs/traefik/traefik.yml" <<'YML'
+api:
+  insecure: false
+entryPoints:
+  traefik-api:
+    address: ":8080"
+YML
+cat > "$TMP/overview-internal-ok/stacks/core/compose.yml" <<'YML'
+services:
+  traefik:
+    build: ./traefik
+    ports:
+      - "443:443"
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.o.rule: "Path(`/api/overview`)"
+      traefik.http.routers.o.entrypoints: "traefik-api"
+      traefik.http.routers.o.service: "api@internal"
+YML
+cat > "$TMP/overview-internal-ok/stacks/media/compose.yml" <<'YML'
+services:
+  qbit:
+    ports:
+      - "8080:8080"
+YML
+if out=$(python3 "$CHECK" "$TMP/overview-internal-ok" --require-static 2>&1); then
+  echo "ok   overview-internal-ok passes"
+else
+  echo "FAIL overview-internal-ok: check flagged a safe layout"; echo "$out"; FAILS=$((FAILS + 1))
+fi
 
 if [[ $FAILS -gt 0 ]]; then
   echo "$FAILS case(s) failed"

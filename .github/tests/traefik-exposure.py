@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Fail if a Traefik router reaches hydra, /metrics, /health or the Traefik API without secure-admin@file,
-or if the Traefik API is served insecurely."""
+or if the Traefik API is served insecurely or its internal entrypoint is published."""
 
 import argparse
 import re
@@ -15,7 +15,8 @@ ROUTER_KEY = re.compile(r"traefik\.http\.routers\.([^.]+)\.(.+)")
 COMPOSE_GLOBS = ("stacks/*/compose.y*ml", "stacks/*/docker-compose.y*ml", "host/*/compose.y*ml", "host/*/docker-compose.y*ml")
 DYNAMIC = "configs/traefik/dynamic"
 STATIC = "configs/traefik/traefik.yml"
-API_SERVICE = "api@internal"
+API_SERVICES = {"api@internal", "dashboard@internal"}
+API_ENTRYPOINT = "traefik-api"
 PUBLIC_ENTRYPOINTS = {"web", "websecure"}
 OVERVIEW_ONLY = re.compile(r"path\(\s*([`\"'])/api/overview\1\s*\)", re.IGNORECASE)
 INSECURE_ARG = re.compile(r"--api\.insecure(=(?!false\b)\S*)?$", re.IGNORECASE)
@@ -55,6 +56,40 @@ def insecure_flags(svc):
     found = [a for a in args if INSECURE_ARG.match(a.strip())]
     found += [f"{k}={v}" for k, v in env.items() if str(k).upper() == "TRAEFIK_API_INSECURE" and truthy(v)]
     return found
+
+
+def load_static(root):
+    f = root / STATIC
+    doc = yaml.safe_load(f.read_text()) if f.is_file() else None
+    return {str(k).lower(): v for k, v in (doc or {}).items()} if isinstance(doc, dict) else None
+
+
+def api_port(static):
+    eps = {str(k).lower(): v for k, v in ((static or {}).get("entrypoints") or {}).items()}
+    conf = {str(k).lower(): v for k, v in (eps.get(API_ENTRYPOINT) or {}).items()}
+    return str(conf.get("address") or ":8080").rsplit(":", 1)[-1].split("/")[0]
+
+
+def container_ports(svc):
+    for p in svc.get("ports") or []:
+        if isinstance(p, dict):
+            yield str(p.get("target", "")).split("/")[0]
+        else:
+            yield str(p).split("/")[0].rsplit(":", 1)[-1]
+
+
+def publishes(svc, port):
+    for target in container_ports(svc):
+        lo, _, hi = target.partition("-")
+        if target == port or (hi.isdigit() and lo.isdigit() and port.isdigit() and int(lo) <= int(port) <= int(hi)):
+            return True
+    return False
+
+
+def is_traefik(name, svc):
+    build = svc.get("build")
+    build = build.get("context", "") if isinstance(build, dict) else build
+    return any("traefik" in str(v).lower() for v in (name, svc.get("image") or "", build or ""))
 
 
 def compose_services(root):
@@ -105,21 +140,28 @@ def file_routers(root):
 
 
 def insecure_errors(root, required):
-    f = root / STATIC
-    if f.is_file():
-        api = {str(k).lower(): v for k, v in (yaml.safe_load(f.read_text()) or {}).items()}.get("api")
+    static = load_static(root)
+    if static is not None:
+        api = static.get("api")
         api = {str(k).lower(): v for k, v in api.items()} if isinstance(api, dict) else {}
         if truthy(api.get("insecure")):
             yield f"{STATIC}: api.insecure={api['insecure']!r} serves the Traefik API unauthenticated"
     elif required:
         yield f"{STATIC} missing; api.insecure unchecked"
+    port = api_port(static)
     for cf, name, svc in compose_services(root):
+        where = f"{cf.relative_to(root)}:{name}"
         for flag in insecure_flags(svc):
-            yield f"{cf.relative_to(root)}:{name}: {flag} serves the Traefik API unauthenticated"
+            yield f"{where}: {flag} serves the Traefik API unauthenticated"
+        if is_traefik(name, svc) and str(svc.get("network_mode", "")).lower() == "host":
+            yield f"{where}: network_mode=host publishes the {API_ENTRYPOINT} entrypoint (:{port})"
+        elif is_traefik(name, svc) and publishes(svc, port):
+            yield f"{where}: publishes the {API_ENTRYPOINT} entrypoint port {port}; it must stay internal"
 
 
-def api_exempt(rule, eps):
-    return bool(OVERVIEW_ONLY.fullmatch(rule.strip())) and bool(eps) and not PUBLIC_ENTRYPOINTS & set(eps)
+def api_exempt(rule, eps, mws):
+    overview = OVERVIEW_ONLY.fullmatch(rule.strip())
+    return bool(overview) and not mws and bool(eps) and not PUBLIC_ENTRYPOINTS & set(eps)
 
 
 def main():
@@ -141,7 +183,7 @@ def main():
     for where, rule, mws, hydra, service, eps in [*compose_routers(root), *file_routers(root)]:
         checked += 1
         sensitive = bool(SENSITIVE.search(rule)) or "trading." in rule.lower()
-        api = service == API_SERVICE and not api_exempt(rule, eps)
+        api = service in API_SERVICES and not api_exempt(rule, eps, mws)
         if (hydra or sensitive or api) and AUTH not in mws:
             bad += 1
             print(f"::error::{where} rule={rule!r} entrypoints={eps} middlewares={mws} lacks {AUTH}")

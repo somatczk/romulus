@@ -9,11 +9,12 @@ TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 FAILS=0
 
-python3 "$CHECK" "$ROOT" || { echo "FAIL repo exposes a router"; FAILS=$((FAILS + 1)); }
+python3 "$CHECK" "$ROOT" --min-routers 20 || { echo "FAIL repo exposes a router or has too few"; FAILS=$((FAILS + 1)); }
 
 expect_exposed() {
   local name=$1 dir="$TMP/$1"
-  if out=$(python3 "$CHECK" "$dir" 2>&1); then
+  mkdir -p "$dir"
+  if out=$(python3 "$CHECK" "$dir" "${@:2}" 2>&1); then
     echo "FAIL $name: check passed but should flag"; echo "$out"; FAILS=$((FAILS + 1))
   else
     echo "ok   $name flagged: $(grep -c '::error::' <<< "$out") router(s)"
@@ -70,6 +71,66 @@ http:
           - url: "http://hydra-engine:8000"
 YML
 expect_exposed file-provider
+
+mkdir -p "$TMP/file-provider-yaml-ext/configs/traefik/dynamic"
+cat > "$TMP/file-provider-yaml-ext/configs/traefik/dynamic/hydra.yaml" <<'YML'
+http:
+  routers:
+    m:
+      rule: "Host(`trading.example`) && Path(`/metrics`)"
+      service: m
+      middlewares:
+        - secure
+  services:
+    m:
+      loadBalancer:
+        servers:
+          - url: "http://hydra-engine:8000"
+YML
+expect_exposed file-provider-yaml-ext
+
+mkdir -p "$TMP/file-provider-toml/configs/traefik/dynamic"
+cat > "$TMP/file-provider-toml/configs/traefik/dynamic/hydra.toml" <<'TOML'
+[http.routers.m]
+  rule = "Path(`/metrics`)"
+TOML
+expect_exposed file-provider-toml
+
+mkdir -p "$TMP/compose-yaml-ext/stacks/hydra"
+cat > "$TMP/compose-yaml-ext/stacks/hydra/compose.yaml" <<'YML'
+services:
+  hydra-engine:
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.m.rule: "Host(`trading.${DOMAIN}`) && Path(`/metrics`)"
+      traefik.http.routers.m.middlewares: "secure@file"
+YML
+expect_exposed compose-yaml-ext
+
+mkdir -p "$TMP/implicit-router/stacks/hydra"
+cat > "$TMP/implicit-router/stacks/hydra/compose.yml" <<'YML'
+services:
+  hydra-engine:
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.hydra-api.rule: "Host(`trading.${DOMAIN}`) && PathPrefix(`/api`)"
+      traefik.http.routers.hydra-api.middlewares: "secure-admin@file"
+      traefik.http.routers.m.entrypoints: "websecure"
+YML
+expect_exposed implicit-router
+
+mkdir -p "$TMP/mixed-case-keys/stacks/other"
+cat > "$TMP/mixed-case-keys/stacks/other/compose.yml" <<'YML'
+services:
+  shim:
+    labels:
+      Traefik.Enable: "true"
+      Traefik.HTTP.Routers.Shim.Rule: "Host(`shim.${DOMAIN}`) && Path(\"/metrics\")"
+      Traefik.HTTP.Routers.Shim.Middlewares: "secure@file"
+YML
+expect_exposed mixed-case-keys
+
+expect_exposed no-routers-below-floor --min-routers 1
 
 if [[ $FAILS -gt 0 ]]; then
   echo "$FAILS case(s) failed"

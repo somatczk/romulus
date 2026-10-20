@@ -57,7 +57,7 @@ PROM
 
 cleanup() {
     if [ -n "${HYDRA_CID:-}" ]; then
-        docker rm -f "${HYDRA_CID}" >/dev/null 2>&1 || true
+        docker rm -fv "${HYDRA_CID}" >/dev/null 2>&1 || true
     fi
     log "Cleaning up restore test directory..."
     rm -rf "${RESTORE_DIR}"
@@ -121,8 +121,7 @@ if [ -n "${DUMP_DIR}" ]; then
     fi
 fi
 
-# Restores the newest hydra dump into a throwaway TimescaleDB (the stack's pinned image) and
-# checks every table in its .counts manifest came back with at least the rows counted at dump time.
+# restore newest hydra dump into a throwaway TimescaleDB; check alembic_version and .counts
 restore_hydra() {
     local dump counts img table want got version i
     dump=$(find "${DUMP_DIR:-/nonexistent}" -maxdepth 1 -name 'hydra_*.dump' -size +0 2>/dev/null | sort | tail -1)
@@ -142,6 +141,7 @@ restore_hydra() {
     hsql() { docker exec "${HYDRA_CID}" psql -U postgres -d hydra -v ON_ERROR_STOP=1 -At "$@"; }
     hsql -c "CREATE EXTENSION IF NOT EXISTS timescaledb" -c "SELECT timescaledb_pre_restore()" >/dev/null \
         || { log "  FAIL: timescaledb_pre_restore"; return 1; }
+    # shortcut: pg_restore errors are fatal with no benign-error filter, add one after the first on-box run
     docker exec "${HYDRA_CID}" pg_restore -U postgres -d hydra --no-owner --no-privileges \
         "/dumps/$(basename "${dump}")" 2>&1 || { log "  FAIL: pg_restore $(basename "${dump}")"; return 1; }
     hsql -c "SELECT timescaledb_post_restore()" >/dev/null || { log "  FAIL: timescaledb_post_restore"; return 1; }

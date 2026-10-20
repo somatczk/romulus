@@ -184,6 +184,9 @@ jobs:
       - name: hydra credential key and no exchange env
         run: bash .github/tests/hydra-env.sh
 
+      - name: hydra engine only behind Traefik on hydra-edge
+        run: bash .github/tests/hydra-network.sh
+
       - name: kubeconform
         run: |
           for d in clusters/romulus kubernetes/infrastructure kubernetes/tenants-source; do

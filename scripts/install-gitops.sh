@@ -82,6 +82,7 @@ db-nextcloud true 10.10.3.0/24
 media true 10.10.6.0/24
 socket true 10.10.7.0/24
 db-paperless true 10.10.12.0/24
+hydra-edge true 10.10.13.0/24
 hydra false 10.10.14.0/24
 ai false 10.10.15.0/24
 NETS

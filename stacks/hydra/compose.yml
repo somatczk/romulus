@@ -1,6 +1,9 @@
 networks:
   proxy:
     external: true
+  # internal; only traefik (10.10.13.2) and hydra-engine join it (.github/tests/hydra-network.py)
+  hydra-edge:
+    external: true
   hydra:
     external: true
   monitoring:
@@ -15,9 +18,10 @@ services:
     container_name: hydra-engine
     restart: unless-stopped
     networks:
-      - proxy
-      - hydra
-      - monitoring
+      hydra-edge:
+        ipv4_address: 10.10.13.3
+      hydra: {}
+      monitoring: {}
     depends_on:
       hydra-timescaledb:
         condition: service_healthy
@@ -28,12 +32,16 @@ services:
       DATABASE_URL: postgresql://hydra:${HYDRA_DB_PASSWORD}@hydra-timescaledb:5432/hydra
       REDIS_URL: redis://hydra-redis:6379
       HYDRA_CREDENTIAL_KEY: ${HYDRA_CREDENTIAL_KEY:?}
+      HYDRA_API__AUTH_MODE: proxy
+      HYDRA_API__TRUSTED_PROXY_CIDRS: 10.10.13.2/32
+      HYDRA_API_TOKEN: ${HYDRA_API_TOKEN:?}
     volumes:
       - ${APPDATA}/hydra/config:/app/config
       - ${APPDATA}/hydra/models:/app/models:rw
       - ${APPDATA}/hydra/logs:/app/logs
     labels:
       traefik.enable: "true"
+      traefik.docker.network: "hydra-edge"
       # API routes (behind Authelia 2FA)
       traefik.http.routers.hydra-api.rule: "Host(`trading.${DOMAIN}`) && (PathPrefix(`/api`) || PathPrefix(`/ws`))"
       traefik.http.routers.hydra-api.entrypoints: "websecure"
@@ -63,7 +71,6 @@ services:
     restart: unless-stopped
     networks:
       - proxy
-      - hydra
     environment:
       TZ: ${TZ}
       NEXT_PUBLIC_API_URL: https://trading.${DOMAIN}

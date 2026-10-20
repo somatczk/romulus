@@ -61,7 +61,10 @@ services:
       traefik.http.routers.traefik.entrypoints: "websecure"
       traefik.http.routers.traefik.tls.certresolver: "cloudflare"
       traefik.http.routers.traefik.service: "api@internal"
-      traefik.http.routers.traefik.middlewares: "traefik-dashboard-redirect@file,secure@file"
+      traefik.http.routers.traefik.middlewares: "traefik-dashboard-redirect@file,secure-admin@file"
+      traefik.http.routers.traefik-overview.rule: "Path(`/api/overview`)"
+      traefik.http.routers.traefik-overview.entrypoints: "traefik-api"
+      traefik.http.routers.traefik-overview.service: "api@internal"
     healthcheck:
       test: ["CMD", "traefik", "healthcheck", "--ping"]
       interval: 30s

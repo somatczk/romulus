@@ -56,6 +56,9 @@ PROM
 }
 
 cleanup() {
+    if [ -n "${HYDRA_CID:-}" ]; then
+        docker rm -fv "${HYDRA_CID}" >/dev/null 2>&1 || true
+    fi
     log "Cleaning up restore test directory..."
     rm -rf "${RESTORE_DIR}"
     log "Cleanup complete"
@@ -109,13 +112,57 @@ done
 # Verify database dumps exist and are non-empty
 DUMP_DIR=$(find "${RESTORE_DIR}" -type d -name "db-dumps" | head -1)
 if [ -n "${DUMP_DIR}" ]; then
-    DUMP_COUNT=$(find "${DUMP_DIR}" -name "*.sql" -size +0 | wc -l)
+    DUMP_COUNT=$(find "${DUMP_DIR}" \( -name "*.sql" -o -name "*.dump" \) -size +0 | wc -l)
     if [ "${DUMP_COUNT}" -gt 0 ]; then
         log "  OK: Found ${DUMP_COUNT} non-empty database dump(s)"
     else
         log "  FAIL: No valid database dumps found"
         ERRORS=$((ERRORS + 1))
     fi
+fi
+
+# restore newest hydra dump into a throwaway TimescaleDB; check alembic_version and .counts
+restore_hydra() {
+    local dump counts img table want got version i
+    dump=$(find "${DUMP_DIR:-/nonexistent}" -maxdepth 1 -name 'hydra_*.dump' -size +0 2>/dev/null | sort | tail -1)
+    [ -n "${dump}" ] || { log "  FAIL: no hydra .dump in db-dumps"; return 1; }
+    counts="${dump%.dump}.counts"
+    [ -s "${counts}" ] || { log "  FAIL: $(basename "${counts}") missing"; return 1; }
+    img=$(awk '/^FROM /{print $2}' "${SCRIPT_DIR}/../stacks/hydra/timescaledb/Dockerfile")
+    log "Restoring $(basename "${dump}") into a throwaway ${img}..."
+    HYDRA_CID=$(docker run --rm -d --network none -e POSTGRES_DB=hydra -e POSTGRES_PASSWORD=restore-test \
+        -v "${DUMP_DIR}:/dumps:ro" "${img}") || { log "  FAIL: cannot start ${img}"; return 1; }
+    # TCP only answers once the entrypoint's init server has handed over to the real one
+    for i in $(seq 1 120); do
+        docker exec "${HYDRA_CID}" pg_isready -q -h 127.0.0.1 -U postgres && break
+        [ "${i}" -lt 120 ] || { log "  FAIL: throwaway TimescaleDB not ready in 120s"; return 1; }
+        sleep 1
+    done
+    hsql() { docker exec "${HYDRA_CID}" psql -U postgres -d hydra -v ON_ERROR_STOP=1 -At "$@"; }
+    hsql -c "CREATE EXTENSION IF NOT EXISTS timescaledb" -c "SELECT timescaledb_pre_restore()" >/dev/null \
+        || { log "  FAIL: timescaledb_pre_restore"; return 1; }
+    # shortcut: pg_restore errors are fatal with no benign-error filter, add one after the first on-box run
+    docker exec "${HYDRA_CID}" pg_restore -U postgres -d hydra --no-owner --no-privileges \
+        "/dumps/$(basename "${dump}")" 2>&1 || { log "  FAIL: pg_restore $(basename "${dump}")"; return 1; }
+    hsql -c "SELECT timescaledb_post_restore()" >/dev/null || { log "  FAIL: timescaledb_post_restore"; return 1; }
+    version=$(hsql -c "SELECT version_num FROM alembic_version") || { log "  FAIL: alembic_version missing"; return 1; }
+    [ "$(wc -l <<< "${version}")" -eq 1 ] && [ -n "${version}" ] \
+        || { log "  FAIL: alembic_version must hold one row, got '${version}'"; return 1; }
+    log "  OK: alembic_version ${version}"
+    while read -r table want; do
+        got=$(hsql -c "SELECT count(*) FROM ${table}") || { log "  FAIL: cannot count ${table}"; return 1; }
+        if ! [[ "${want}" =~ ^[0-9]+$ && "${got}" =~ ^[0-9]+$ ]] || (( got < want )); then
+            log "  FAIL: ${table} restored ${got} rows, ${want} counted at dump time"
+            return 1
+        fi
+        log "  OK: ${table} restored ${got} rows (${want} counted at dump time)"
+    done < "${counts}"
+}
+
+if restore_hydra; then
+    log "  OK: hydra dump restored"
+else
+    ERRORS=$((ERRORS + 1))
 fi
 
 # Check restic repository integrity

@@ -86,12 +86,16 @@ docker exec paperless-db pg_dump -U paperless paperless \
 log "Paperless database dump complete"
 
 log "Dumping Hydra database..."
-docker exec hydra-timescaledb pg_dump -U hydra hydra \
-    > "${BACKUP_DIR}/db-dumps/hydra_${TIMESTAMP}.sql"
+# counted just before the dump; restore-test.sh expects at least these rows back
+docker exec hydra-timescaledb psql -U hydra -d hydra -v ON_ERROR_STOP=1 -At -F ' ' -c \
+    "SELECT 'ts.ohlcv_1m', count(*) FROM ts.ohlcv_1m UNION ALL SELECT 'trading_sessions', count(*) FROM trading_sessions" \
+    > "${BACKUP_DIR}/db-dumps/hydra_${TIMESTAMP}.counts"
+docker exec hydra-timescaledb pg_dump -Fc -U hydra hydra \
+    > "${BACKUP_DIR}/db-dumps/hydra_${TIMESTAMP}.dump"
 log "Hydra database dump complete"
 
 # Clean up old database dumps (keep last 7)
-find "${BACKUP_DIR}/db-dumps" -name "*.sql" -mtime +7 -delete
+find "${BACKUP_DIR}/db-dumps" \( -name "*.sql" -o -name "*.dump" -o -name "*.counts" \) -mtime +7 -delete
 
 # Initialize restic repo if needed
 if ! restic snapshots &>/dev/null; then
@@ -105,6 +109,10 @@ restic backup "${APPDATA}" \
     --exclude="${APPDATA}/*/cache" \
     --exclude="${APPDATA}/*/Cache" \
     --exclude="${APPDATA}/**/logs" \
+    --exclude="${APPDATA}/hydra/timescaledb" \
+    --exclude="${APPDATA}/productivity/nextcloud-db" \
+    --exclude="${APPDATA}/productivity/immich/db" \
+    --exclude="${APPDATA}/productivity/paperless-db" \
     --tag "scheduled" \
     --verbose 2>&1
 log "Restic backup complete"

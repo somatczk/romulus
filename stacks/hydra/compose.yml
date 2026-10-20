@@ -37,8 +37,6 @@ services:
       OKX_API_SECRET: ${OKX_API_SECRET}
       OKX_PASSPHRASE: ${OKX_PASSPHRASE}
       HYDRA_TESTNET: ${HYDRA_TESTNET}
-      HYDRA_TELEGRAM_BOT_TOKEN: ${HYDRA_TELEGRAM_BOT_TOKEN}
-      HYDRA_TELEGRAM_CHAT_ID: ${HYDRA_TELEGRAM_CHAT_ID}
       HYDRA_CORS_ORIGINS: https://trading.${DOMAIN}
     volumes:
       - ${APPDATA}/hydra/config:/app/config
@@ -53,13 +51,6 @@ services:
       traefik.http.routers.hydra-api.middlewares: "secure-admin@file"
       traefik.http.routers.hydra-api.service: "hydra-api"
       traefik.http.services.hydra-api.loadbalancer.server.port: "8000"
-      # Health/metrics (no auth — for Prometheus scraping)
-      traefik.http.routers.hydra-metrics.rule: "Host(`trading.${DOMAIN}`) && (Path(`/health`) || Path(`/metrics`))"
-      traefik.http.routers.hydra-metrics.entrypoints: "websecure"
-      traefik.http.routers.hydra-metrics.tls.certresolver: "cloudflare"
-      traefik.http.routers.hydra-metrics.middlewares: "secure@file"
-      traefik.http.routers.hydra-metrics.service: "hydra-api"
-      traefik.http.routers.hydra-metrics.priority: "10"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
@@ -133,10 +124,7 @@ services:
       - ${APPDATA}/hydra/models:/app/models:ro
       - ${APPDATA}/hydra/logs:/app/logs
     healthcheck:
-      test: ["CMD", "python", "-c", "import os; exit(0)"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
+      disable: true
     deploy:
       resources:
         limits:

@@ -27,12 +27,15 @@ jobs:
           GH_REPO: ${{ github.repository }}
           HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
           STATEFUL: 'postgres|mariadb|mysql|redis|timescaledb|immich|nextcloud|paperless|home-assistant|homeassistant'
+          # trading stack: hydra images are bumped by hand at phase end
+          HOLD: 'somatczk/hydra-'
         run: |
           read -r PR TITLE < <(gh pr list --head "$HEAD_BRANCH" --author 'app/dependabot' \
             --json number,title --jq '.[0] | "\(.number) \(.title)"')
           [ -n "${PR:-}" ] || { echo "no open Dependabot PR for $HEAD_BRANCH"; exit 0; }
           hold() { echo "leaving #$PR for review ($1): $TITLE"; exit 0; }
           [[ "$TITLE" =~ $STATEFUL ]] && hold "stateful image"
+          [[ "$TITLE" =~ $HOLD ]] && hold "hydra image"
           # Groups only carry minor/patch github-actions updates (see dependabot.yml).
           if [[ "$TITLE" != *" group "* ]]; then
             [[ "$TITLE" =~ from\ v?([0-9]+)\.([0-9]+)[^\ ]*\ to\ v?([0-9]+)\.([0-9]+) ]] || hold "unparsed version"

@@ -78,8 +78,6 @@ external_secrets:
   BYBIT_API_KEY: op://romulus-deploy/hydra/BYBIT_API_KEY
   BYBIT_API_SECRET: op://romulus-deploy/hydra/BYBIT_API_SECRET
   HYDRA_DB_PASSWORD: op://romulus-deploy/hydra/HYDRA_DB_PASSWORD
-  HYDRA_TELEGRAM_BOT_TOKEN: op://romulus-deploy/hydra/HYDRA_TELEGRAM_BOT_TOKEN
-  HYDRA_TELEGRAM_CHAT_ID: op://romulus-deploy/hydra/HYDRA_TELEGRAM_CHAT_ID
   KRAKEN_API_KEY: op://romulus-deploy/hydra/KRAKEN_API_KEY
   KRAKEN_API_SECRET: op://romulus-deploy/hydra/KRAKEN_API_SECRET
   OKX_API_KEY: op://romulus-deploy/hydra/OKX_API_KEY

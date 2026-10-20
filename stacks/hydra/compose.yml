@@ -28,8 +28,6 @@ services:
       DATABASE_URL: postgresql://hydra:${HYDRA_DB_PASSWORD}@hydra-timescaledb:5432/hydra
       REDIS_URL: redis://hydra-redis:6379
       HYDRA_CREDENTIAL_KEY: ${HYDRA_CREDENTIAL_KEY:?}
-      # JSON array: pydantic-settings parses list fields from env as JSON
-      HYDRA_API__CORS_ORIGINS: '["https://trading.${DOMAIN}"]'
     volumes:
       - ${APPDATA}/hydra/config:/app/config
       - ${APPDATA}/hydra/models:/app/models:rw

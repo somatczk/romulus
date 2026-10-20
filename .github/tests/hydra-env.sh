@@ -35,14 +35,19 @@ $2")
 
 expect_flagged key-ref-missing "sub(doco, '  HYDRA_CREDENTIAL_KEY: op://romulus-deploy/hydra/HYDRA_CREDENTIAL_KEY\n', '')"
 expect_flagged key-ref-wrong-item "sub(doco, 'op://romulus-deploy/hydra/HYDRA_CREDENTIAL_KEY', 'op://romulus-deploy/shared/HYDRA_CREDENTIAL_KEY')"
-expect_flagged worker-key-missing "sub(compose, '      HYDRA_CREDENTIAL_KEY: \${HYDRA_CREDENTIAL_KEY:?}\n    volumes:', '    volumes:')"
+expect_flagged worker-key-missing "sub(compose, '      HYDRA_CREDENTIAL_KEY: \${HYDRA_CREDENTIAL_KEY:?}\n    volumes:\n      - \${APPDATA}/hydra/config:/app/config\n      - \${APPDATA}/hydra/models:/app/models:ro', '    volumes:\n      - \${APPDATA}/hydra/config:/app/config\n      - \${APPDATA}/hydra/models:/app/models:ro')"
 expect_flagged engine-key-unguarded "sub(compose, 'HYDRA_CREDENTIAL_KEY: \${HYDRA_CREDENTIAL_KEY:?}', 'HYDRA_CREDENTIAL_KEY: \${HYDRA_CREDENTIAL_KEY}')"
+expect_flagged engine-key-allows-empty "sub(compose, 'HYDRA_CREDENTIAL_KEY: \${HYDRA_CREDENTIAL_KEY:?}', 'HYDRA_CREDENTIAL_KEY: \${HYDRA_CREDENTIAL_KEY?}')"
+expect_flagged worker-key-allows-empty "sub(compose, 'HYDRA_CREDENTIAL_KEY: \${HYDRA_CREDENTIAL_KEY:?}\n    volumes:\n      - \${APPDATA}/hydra/config:/app/config\n      - \${APPDATA}/hydra/models:/app/models:ro', 'HYDRA_CREDENTIAL_KEY: \${HYDRA_CREDENTIAL_KEY?missing}\n    volumes:\n      - \${APPDATA}/hydra/config:/app/config\n      - \${APPDATA}/hydra/models:/app/models:ro')"
 expect_flagged exchange-secret "sub(doco, 'external_secrets:\n  HYDRA_CREDENTIAL_KEY', 'external_secrets:\n  BINANCE_API_KEY: op://romulus-deploy/hydra/BINANCE_API_KEY\n  HYDRA_CREDENTIAL_KEY')"
 expect_flagged exchange-env "sub(compose, '      REDIS_URL: redis://hydra-redis:6379\n', '      REDIS_URL: redis://hydra-redis:6379\n      OKX_PASSPHRASE: \${OKX_PASSPHRASE}\n')"
+expect_flagged exchange-env-nested "sub(compose, '      REDIS_URL: redis://hydra-redis:6379\n', '      REDIS_URL: redis://hydra-redis:6379\n      HYDRA_EXCHANGES__BINANCE__API_KEY: \${X}\n')"
+expect_flagged exchange-env-nested-any "sub(compose, '      REDIS_URL: redis://hydra-redis:6379\n', '      REDIS_URL: redis://hydra-redis:6379\n      HYDRA_EXCHANGES__COINBASE__API_KEY: \${X}\n')"
+expect_flagged exchange-secret-nested "sub(doco, 'external_secrets:\n  HYDRA_CREDENTIAL_KEY', 'external_secrets:\n  HYDRA_EXCHANGES__OKX__PASSPHRASE: op://romulus-deploy/hydra/X\n  HYDRA_CREDENTIAL_KEY')"
+expect_flagged exchange-host-nested "sub(host, 'TZ=', 'HYDRA_EXCHANGES__KRAKEN__API_SECRET=\nTZ=')"
 expect_flagged testnet-env "sub(compose, '      REDIS_URL: redis://hydra-redis:6379\n', '      REDIS_URL: redis://hydra-redis:6379\n      HYDRA_TESTNET: \${HYDRA_TESTNET}\n')"
 expect_flagged testnet-host "sub(host, 'TZ=', 'HYDRA_TESTNET=\nTZ=')"
-expect_flagged old-cors-name "sub(compose, 'HYDRA_API__CORS_ORIGINS', 'HYDRA_CORS_ORIGINS')"
-expect_flagged cors-plain-string "sub(compose, '''HYDRA_API__CORS_ORIGINS: '[\"https://trading.\${DOMAIN}\"]'\n''', 'HYDRA_API__CORS_ORIGINS: https://trading.\${DOMAIN}\n')"
+expect_flagged old-cors-name "sub(compose, '      REDIS_URL: redis://hydra-redis:6379\n', '      REDIS_URL: redis://hydra-redis:6379\n      HYDRA_CORS_ORIGINS: https://trading.\${DOMAIN}\n')"
 
 if [[ $FAILS -gt 0 ]]; then
   echo "$FAILS case(s) failed"

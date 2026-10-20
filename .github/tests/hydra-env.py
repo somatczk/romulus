@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """Fail unless the hydra stack gets HYDRA_CREDENTIAL_KEY from 1Password in the engine and the backtest worker,
-carries no exchange API key env (keys live encrypted in the hydra DB), and has no dead or mis-typed hydra env."""
+carries no exchange API key env (keys live encrypted in the hydra DB), and has no dead hydra env."""
 
-import json
 import re
 import sys
 from pathlib import Path
@@ -12,9 +11,8 @@ import yaml
 KEY = "HYDRA_CREDENTIAL_KEY"
 KEY_REF = "op://romulus-deploy/hydra/HYDRA_CREDENTIAL_KEY"
 KEY_SERVICES = ("hydra-engine", "hydra-backtest-worker")
-EXCHANGE = re.compile(r"\b(BINANCE|BYBIT|KRAKEN|OKX)_[A-Z_]*", re.IGNORECASE)
+EXCHANGE = re.compile(r"(?<![A-Z0-9])(?:BINANCE|BYBIT|KRAKEN|OKX)_\w*|HYDRA_EXCHANGES__\w*", re.IGNORECASE)
 DEAD = ("HYDRA_TESTNET", "HYDRA_CORS_ORIGINS")
-CORS = "HYDRA_API__CORS_ORIGINS"
 
 
 def env_of(svc):
@@ -43,30 +41,23 @@ def check(root):
         return
     text = files[0].read_text()
     where = files[0].relative_to(root)
-    for m in sorted(set(EXCHANGE.findall(text))):
-        yield f"{where}: references {m}_*; exchange keys live encrypted in the hydra DB"
+    for m in sorted({m.upper() for m in EXCHANGE.findall(text)}):
+        yield f"{where}: references {m}; exchange keys live encrypted in the hydra DB"
     services = (yaml.safe_load(text) or {}).get("services") or {}
     for name in KEY_SERVICES:
         value = env_of(services.get(name) or {}).get(KEY)
-        if not (isinstance(value, str) and re.fullmatch(r"\$\{" + KEY + r":?\?[^}]*\}", value)):
+        if not (isinstance(value, str) and re.fullmatch(r"\$\{" + KEY + r":\?[^}]*\}", value)):
             yield f"{where}:{name}: environment {KEY} must be ${{{KEY}:?}}, got {value!r}"
     for name, svc in services.items():
         env = env_of(svc or {})
         for dead in DEAD:
             if dead in env:
                 yield f"{where}:{name}: {dead} is not read by hydra"
-        if CORS in env:
-            try:
-                ok = isinstance(json.loads(str(env[CORS]).replace("${DOMAIN}", "x")), list)
-            except ValueError:
-                ok = False
-            if not ok:
-                yield f"{where}:{name}: {CORS} must be a JSON array; hydra parses list env as JSON and fails otherwise"
 
     host = root / "stacks/host.env"
     for n, line in enumerate(host.read_text().splitlines(), 1):
         var = line.split("=", 1)[0].strip()
-        if var in DEAD or EXCHANGE.match(var):
+        if var in DEAD or EXCHANGE.search(var):
             yield f"stacks/host.env:{n}: {var} is dead hydra env"
 
 

@@ -73,13 +73,5 @@ working_dir: stacks/hydra
 env_files:
   - ../host.env
 external_secrets:
-  BINANCE_API_KEY: op://romulus-deploy/hydra/BINANCE_API_KEY
-  BINANCE_API_SECRET: op://romulus-deploy/hydra/BINANCE_API_SECRET
-  BYBIT_API_KEY: op://romulus-deploy/hydra/BYBIT_API_KEY
-  BYBIT_API_SECRET: op://romulus-deploy/hydra/BYBIT_API_SECRET
+  HYDRA_CREDENTIAL_KEY: op://romulus-deploy/hydra/HYDRA_CREDENTIAL_KEY
   HYDRA_DB_PASSWORD: op://romulus-deploy/hydra/HYDRA_DB_PASSWORD
-  KRAKEN_API_KEY: op://romulus-deploy/hydra/KRAKEN_API_KEY
-  KRAKEN_API_SECRET: op://romulus-deploy/hydra/KRAKEN_API_SECRET
-  OKX_API_KEY: op://romulus-deploy/hydra/OKX_API_KEY
-  OKX_API_SECRET: op://romulus-deploy/hydra/OKX_API_SECRET
-  OKX_PASSPHRASE: op://romulus-deploy/hydra/OKX_PASSPHRASE

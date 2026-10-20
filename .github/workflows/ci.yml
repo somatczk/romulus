@@ -181,6 +181,9 @@ jobs:
       - name: no public hydra or metrics routers
         run: bash .github/tests/traefik-exposure.sh
 
+      - name: hydra credential key and no exchange env
+        run: bash .github/tests/hydra-env.sh
+
       - name: kubeconform
         run: |
           for d in clusters/romulus kubernetes/infrastructure kubernetes/tenants-source; do

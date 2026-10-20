@@ -39,7 +39,8 @@ Pull-based. [doco-cd](https://doco.cd) on the host polls `master` and deploys ev
 - **Host files:** the checkout on the host is reset to `origin/master` by a systemd timer, which also re-applies the crons and the deployer.
 - **Notifications:** deploy results go to ntfy and Telegram. Prometheus alerts route through Alertmanager to Telegram, with ntfy as fallback.
 - **Rollback:** `git revert` on `master`.
-- **Rotating a secret:** change it in 1Password; the next deploy of that stack picks it up.
+- **Rotating a secret:** change it in 1Password; the next deploy of that stack picks it up. `HYDRA_CREDENTIAL_KEY` is the exception, see below.
+- **Hydra secrets:** the hydra stack reads `HYDRA_DB_PASSWORD` and `HYDRA_CREDENTIAL_KEY` from the hydra item. `HYDRA_CREDENTIAL_KEY` is a Fernet key that encrypts the exchange API keys hydra stores in its database. Exchange keys are entered in hydra's Settings page, never in 1Password or env. Replacing `HYDRA_CREDENTIAL_KEY` with a new value makes every stored exchange key undecryptable. From the hydra P1 engine release on, rotate it as a MultiFernet list: set it to `new,old` (the first key encrypts, all keys decrypt), re-save the exchange keys in Settings, then set it to `new`. Engine 2.2.0 and older accept a single key only, so there a rotation means re-entering the exchange keys.
 
 Host setup is one idempotent script, `scripts/install-gitops.sh` (packages, Docker networks, checkout, deployer, crons). A fresh host needs its storage restored from backup, a 1Password service account token, and that script.
 

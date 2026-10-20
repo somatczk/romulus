@@ -27,17 +27,7 @@ services:
       TZ: ${TZ}
       DATABASE_URL: postgresql://hydra:${HYDRA_DB_PASSWORD}@hydra-timescaledb:5432/hydra
       REDIS_URL: redis://hydra-redis:6379
-      BINANCE_API_KEY: ${BINANCE_API_KEY}
-      BINANCE_API_SECRET: ${BINANCE_API_SECRET}
-      BYBIT_API_KEY: ${BYBIT_API_KEY}
-      BYBIT_API_SECRET: ${BYBIT_API_SECRET}
-      KRAKEN_API_KEY: ${KRAKEN_API_KEY}
-      KRAKEN_API_SECRET: ${KRAKEN_API_SECRET}
-      OKX_API_KEY: ${OKX_API_KEY}
-      OKX_API_SECRET: ${OKX_API_SECRET}
-      OKX_PASSPHRASE: ${OKX_PASSPHRASE}
-      HYDRA_TESTNET: ${HYDRA_TESTNET}
-      HYDRA_CORS_ORIGINS: https://trading.${DOMAIN}
+      HYDRA_CREDENTIAL_KEY: ${HYDRA_CREDENTIAL_KEY:?}
     volumes:
       - ${APPDATA}/hydra/config:/app/config
       - ${APPDATA}/hydra/models:/app/models:rw
@@ -119,6 +109,7 @@ services:
       TZ: ${TZ}
       DATABASE_URL: postgresql://hydra:${HYDRA_DB_PASSWORD}@hydra-timescaledb:5432/hydra
       REDIS_URL: redis://hydra-redis:6379
+      HYDRA_CREDENTIAL_KEY: ${HYDRA_CREDENTIAL_KEY:?}
     volumes:
       - ${APPDATA}/hydra/config:/app/config
       - ${APPDATA}/hydra/models:/app/models:ro

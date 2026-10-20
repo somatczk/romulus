@@ -35,8 +35,10 @@ services:
       HYDRA_API__AUTH_MODE: proxy
       HYDRA_API__TRUSTED_PROXY_CIDRS: 10.10.13.2/32
       HYDRA_API_TOKEN: ${HYDRA_API_TOKEN:?}
+      HYDRA_API__CORS_ORIGINS: https://trading.${DOMAIN}
     volumes:
-      - ${APPDATA}/hydra/config:/app/config
+      # the image's /app/config is authoritative; only UI-saved strategies live on the host
+      - ${APPDATA}/hydra/config/strategies:/app/config/strategies:rw
       - ${APPDATA}/hydra/models:/app/models:rw
       - ${APPDATA}/hydra/logs:/app/logs
     labels:
@@ -50,11 +52,12 @@ services:
       traefik.http.routers.hydra-api.service: "hydra-api"
       traefik.http.services.hydra-api.loadbalancer.server.port: "8000"
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      # liveness only: /readyz drives alerts, autoheal would restart-loop on feed or DB blips
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/livez')"]
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 30s
+      start_period: 60s
     deploy:
       resources:
         limits:
@@ -118,7 +121,7 @@ services:
       REDIS_URL: redis://hydra-redis:6379
       HYDRA_CREDENTIAL_KEY: ${HYDRA_CREDENTIAL_KEY:?}
     volumes:
-      - ${APPDATA}/hydra/config:/app/config
+      - ${APPDATA}/hydra/config/strategies:/app/config/strategies:ro
       - ${APPDATA}/hydra/models:/app/models:ro
       - ${APPDATA}/hydra/logs:/app/logs
     healthcheck:

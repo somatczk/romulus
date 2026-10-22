@@ -125,7 +125,11 @@ services:
       - ${APPDATA}/hydra/models:/app/models:ro
       - ${APPDATA}/hydra/logs:/app/logs
     healthcheck:
-      disable: true
+      test: ["CMD", "python", "-m", "hydra.backtest.worker", "check"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
     deploy:
       resources:
         limits:

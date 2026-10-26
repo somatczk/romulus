@@ -34,6 +34,62 @@ services:
 YML
 expect_exposed old-metrics-router
 
+# D5 pins: the allowlisted hydra-mcp router must keep its secure-mcp chain contents and its /mcp rule scope
+mkdir -p "$TMP/mcp-chain-hollowed/stacks/hydra" "$TMP/mcp-chain-hollowed/configs/traefik/dynamic"
+cat > "$TMP/mcp-chain-hollowed/configs/traefik/dynamic/middlewares.yml" <<'YML'
+http:
+  middlewares:
+    secure-mcp:
+      chain:
+        middlewares:
+          - secure-headers
+          - mcp-rate-limit
+YML
+cat > "$TMP/mcp-chain-hollowed/stacks/hydra/compose.yml" <<'YML'
+services:
+  hydra-engine:
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.hydra-mcp.rule: "Host(`trading.${DOMAIN}`) && PathPrefix(`/mcp`)"
+      traefik.http.routers.hydra-mcp.entrypoints: "websecure"
+      traefik.http.routers.hydra-mcp.middlewares: "secure-mcp@file"
+YML
+expect_exposed mcp-chain-hollowed
+
+mkdir -p "$TMP/mcp-rule-broadened/stacks/hydra" "$TMP/mcp-rule-broadened/configs/traefik/dynamic"
+cat > "$TMP/mcp-rule-broadened/configs/traefik/dynamic/middlewares.yml" <<'YML'
+http:
+  middlewares:
+    secure-mcp:
+      chain:
+        middlewares:
+          - crowdsec-bouncer
+          - secure-headers
+          - mcp-rate-limit
+YML
+cat > "$TMP/mcp-rule-broadened/stacks/hydra/compose.yml" <<'YML'
+services:
+  hydra-engine:
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.hydra-mcp.rule: "Host(`trading.${DOMAIN}`)"
+      traefik.http.routers.hydra-mcp.entrypoints: "websecure"
+      traefik.http.routers.hydra-mcp.middlewares: "secure-mcp@file"
+YML
+expect_exposed mcp-rule-broadened
+
+mkdir -p "$TMP/mcp-chain-missing/stacks/hydra"
+cat > "$TMP/mcp-chain-missing/stacks/hydra/compose.yml" <<'YML'
+services:
+  hydra-engine:
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.hydra-mcp.rule: "Host(`trading.${DOMAIN}`) && PathPrefix(`/mcp`)"
+      traefik.http.routers.hydra-mcp.entrypoints: "websecure"
+      traefik.http.routers.hydra-mcp.middlewares: "secure-mcp@file"
+YML
+expect_exposed mcp-chain-missing
+
 mkdir -p "$TMP/list-labels-catchall/stacks/other"
 cat > "$TMP/list-labels-catchall/stacks/other/compose.yml" <<'YML'
 services:

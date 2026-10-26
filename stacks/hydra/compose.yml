@@ -35,6 +35,9 @@ services:
       HYDRA_API__AUTH_MODE: proxy
       HYDRA_API__TRUSTED_PROXY_CIDRS: 10.10.13.2/32
       HYDRA_API_TOKEN: ${HYDRA_API_TOKEN:?}
+      # MCP bearer token: env-only, >=32 chars, must differ from HYDRA_API_TOKEN (2.5.0 refuses equals)
+      HYDRA_MCP_TOKEN: ${HYDRA_MCP_TOKEN:?}
+      HYDRA_MCP__ALLOWED_HOSTS: trading.${DOMAIN}
       HYDRA_API__CORS_ORIGINS: https://trading.${DOMAIN}
     volumes:
       # the image's /app/config is authoritative; only UI-saved strategies live on the host
@@ -51,6 +54,13 @@ services:
       traefik.http.routers.hydra-api.middlewares: "secure-admin@file"
       traefik.http.routers.hydra-api.service: "hydra-api"
       traefik.http.services.hydra-api.loadbalancer.server.port: "8000"
+      # MCP endpoint (bearer token at the app, no Authelia - D5; secure-mcp = crowdsec + headers + rate limit)
+      traefik.http.routers.hydra-mcp.rule: "Host(`trading.${DOMAIN}`) && PathPrefix(`/mcp`)"
+      traefik.http.routers.hydra-mcp.entrypoints: "websecure"
+      traefik.http.routers.hydra-mcp.tls.certresolver: "cloudflare"
+      traefik.http.routers.hydra-mcp.middlewares: "secure-mcp@file"
+      traefik.http.routers.hydra-mcp.service: "hydra-mcp"
+      traefik.http.services.hydra-mcp.loadbalancer.server.port: "8000"
     healthcheck:
       # liveness only: /readyz drives alerts, autoheal would restart-loop on feed or DB blips
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/livez')"]

@@ -1,1 +1,1 @@
-FROM ghcr.io/openclaw/openclaw:2026.10.5
+FROM ghcr.io/openclaw/openclaw:2026.10.7

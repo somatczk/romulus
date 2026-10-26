@@ -75,4 +75,5 @@ env_files:
 external_secrets:
   HYDRA_CREDENTIAL_KEY: op://romulus-deploy/hydra/HYDRA_CREDENTIAL_KEY
   HYDRA_API_TOKEN: op://romulus-deploy/hydra/HYDRA_API_TOKEN
+  HYDRA_MCP_TOKEN: op://romulus-deploy/hydra/HYDRA_MCP_TOKEN
   HYDRA_DB_PASSWORD: op://romulus-deploy/hydra/HYDRA_DB_PASSWORD

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Fail if a Traefik router reaches hydra, /metrics, /health or the Traefik API without secure-admin@file,
-or if the Traefik API is served insecurely or its internal entrypoint is published."""
+"""Fail if a Traefik router reaches hydra, /metrics, /health or the Traefik API without secure-admin@file
+(the token-authenticated hydra-mcp router is the sole D5 exception), or if the Traefik API is served
+insecurely or its internal entrypoint is published."""
 
 import argparse
 import re
@@ -10,6 +11,11 @@ from pathlib import Path
 import yaml
 
 AUTH = "secure-admin@file"
+# D5 (hydra-build ui2-mcp1 decisions): the hydra-mcp router authenticates non-interactive MCP clients
+# with a bearer token at the app (HYDRA_MCP_TOKEN, constant-time check) behind crowdsec + rate limit;
+# Authelia's interactive 2FA is deliberately absent. It is the only router allowed to skip AUTH, and
+# only while it still carries its token-auth middleware - every other hydra/trading router stays strict.
+TOKEN_AUTH_OK = {"stacks/hydra/compose.yml:hydra-engine:hydra-mcp": "secure-mcp@file"}
 SENSITIVE = re.compile(r"path(prefix)?\(\s*[`\"']/(metrics|health)", re.IGNORECASE)
 ROUTER_KEY = re.compile(r"traefik\.http\.routers\.([^.]+)\.(.+)")
 COMPOSE_GLOBS = ("stacks/*/compose.y*ml", "stacks/*/docker-compose.y*ml", "host/*/compose.y*ml", "host/*/docker-compose.y*ml")
@@ -184,9 +190,10 @@ def main():
         checked += 1
         sensitive = bool(SENSITIVE.search(rule)) or "trading." in rule.lower()
         api = service in API_SERVICES and not api_exempt(rule, eps, mws)
-        if (hydra or sensitive or api) and AUTH not in mws:
+        required = TOKEN_AUTH_OK.get(where, AUTH)
+        if (hydra or sensitive or api) and AUTH not in mws and required not in mws:
             bad += 1
-            print(f"::error::{where} rule={rule!r} entrypoints={eps} middlewares={mws} lacks {AUTH}")
+            print(f"::error::{where} rule={rule!r} entrypoints={eps} middlewares={mws} lacks {required}")
     print(f"checked {checked} router(s), {bad} exposed")
     if checked < args.min_routers:
         bad += 1

@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Fail if a Traefik router reaches hydra, /metrics, /health or the Traefik API without secure-admin@file
-(the token-authenticated hydra-mcp router is the sole D5 exception), or if the Traefik API is served
-insecurely or its internal entrypoint is published."""
+(the token-authenticated hydra-mcp router is the sole D5 exception, valid only while its secure-mcp chain
+still contains crowdsec + the rate limit and its rule stays scoped to /mcp), or if the Traefik API is
+served insecurely or its internal entrypoint is published."""
 
 import argparse
 import re
@@ -14,8 +15,16 @@ AUTH = "secure-admin@file"
 # D5 (hydra-build ui2-mcp1 decisions): the hydra-mcp router authenticates non-interactive MCP clients
 # with a bearer token at the app (HYDRA_MCP_TOKEN, constant-time check) behind crowdsec + rate limit;
 # Authelia's interactive 2FA is deliberately absent. It is the only router allowed to skip AUTH, and
-# only while it still carries its token-auth middleware - every other hydra/trading router stays strict.
-TOKEN_AUTH_OK = {"stacks/hydra/compose.yml:hydra-engine:hydra-mcp": "secure-mcp@file"}
+# only while the whole D5 contract holds - the middleware reference, the chain's contents and the
+# rule's /mcp scope. Broadening the rule would out-prioritize the dashboard router (explicit priority 1,
+# length beats it) and serve every non-/api path through the no-Authelia chain.
+TOKEN_AUTH_OK = {
+    "stacks/hydra/compose.yml:hydra-engine:hydra-mcp": {
+        "middleware": "secure-mcp@file",
+        "chain_members": ("crowdsec-bouncer", "mcp-rate-limit"),
+        "rule_segment": "PathPrefix(`/mcp`)",
+    }
+}
 SENSITIVE = re.compile(r"path(prefix)?\(\s*[`\"']/(metrics|health)", re.IGNORECASE)
 ROUTER_KEY = re.compile(r"traefik\.http\.routers\.([^.]+)\.(.+)")
 COMPOSE_GLOBS = ("stacks/*/compose.y*ml", "stacks/*/docker-compose.y*ml", "host/*/compose.y*ml", "host/*/docker-compose.y*ml")
@@ -145,6 +154,22 @@ def file_routers(root):
             yield f"{f.relative_to(root)}:{r}", rule, mws, hydra, svc.lower(), eps
 
 
+def dynamic_chain(root, ref):
+    """Middleware names a @file chain links, or None when it is not defined in the dynamic config."""
+    name = ref.split("@", 1)[0]
+    for f in sorted(p for p in (root / DYNAMIC).rglob("*") if p.suffix.lower() in (".yml", ".yaml")):
+        doc = yaml.safe_load(f.read_text()) or {}
+        http = {str(k).lower(): v for k, v in doc.items()}.get("http") or {}
+        http = {str(k).lower(): v for k, v in http.items()}
+        defined = {str(k).lower(): v for k, v in (http.get("middlewares") or {}).items()}
+        if name not in defined:
+            continue
+        conf = defined[name] if isinstance(defined[name], dict) else {}
+        chain = conf.get("chain") or {}
+        return [str(m) for m in (chain.get("middlewares") or [])]
+    return None
+
+
 def insecure_errors(root, required):
     static = load_static(root)
     if static is not None:
@@ -190,10 +215,23 @@ def main():
         checked += 1
         sensitive = bool(SENSITIVE.search(rule)) or "trading." in rule.lower()
         api = service in API_SERVICES and not api_exempt(rule, eps, mws)
-        required = TOKEN_AUTH_OK.get(where, AUTH)
+        allow = TOKEN_AUTH_OK.get(where)
+        required = allow["middleware"] if allow else AUTH
         if (hydra or sensitive or api) and AUTH not in mws and required not in mws:
             bad += 1
             print(f"::error::{where} rule={rule!r} entrypoints={eps} middlewares={mws} lacks {required}")
+        if allow and allow["rule_segment"] not in rule:
+            bad += 1
+            print(f"::error::{where} rule={rule!r} no longer scoped to {allow['rule_segment']}")
+        if allow and required in mws:
+            members = dynamic_chain(root, required)
+            if members is None:
+                bad += 1
+                print(f"::error::{where}: {required} is not defined in {DYNAMIC}")
+            else:
+                for lost in (m for m in allow["chain_members"] if m not in members):
+                    bad += 1
+                    print(f"::error::{where}: {required} chain lost {lost}")
     print(f"checked {checked} router(s), {bad} exposed")
     if checked < args.min_routers:
         bad += 1

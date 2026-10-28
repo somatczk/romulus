@@ -111,6 +111,29 @@ services:
 YML
 expect_exposed default-router
 
+# D5's split: the trader is internal-only — no Traefik exposure, not even an authenticated router
+mkdir -p "$TMP/trader-router-authed/stacks/hydra"
+cat > "$TMP/trader-router-authed/stacks/hydra/compose.yml" <<'YML'
+services:
+  hydra-trader:
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.hydra-trader.rule: "Host(`trading.${DOMAIN}`) && PathPrefix(`/api`)"
+      traefik.http.routers.hydra-trader.entrypoints: "websecure"
+      traefik.http.routers.hydra-trader.middlewares: "secure-admin@file"
+      traefik.http.services.hydra-trader.loadbalancer.server.port: "8000"
+YML
+expect_exposed trader-router-authed
+
+mkdir -p "$TMP/trader-default-router/stacks/hydra"
+cat > "$TMP/trader-default-router/stacks/hydra/compose.yml" <<'YML'
+services:
+  hydra-trader:
+    labels:
+      traefik.enable: "true"
+YML
+expect_exposed trader-default-router
+
 mkdir -p "$TMP/file-provider/configs/traefik/dynamic"
 cat > "$TMP/file-provider/configs/traefik/dynamic/hydra.yml" <<'YML'
 http:

@@ -48,6 +48,12 @@ expect_flagged exchange-host-nested "sub(host, 'TZ=', 'HYDRA_EXCHANGES__KRAKEN__
 expect_flagged testnet-env "sub(compose, '      REDIS_URL: redis://hydra-redis:6379\n', '      REDIS_URL: redis://hydra-redis:6379\n      HYDRA_TESTNET: \${HYDRA_TESTNET}\n')"
 expect_flagged testnet-host "sub(host, 'TZ=', 'HYDRA_TESTNET=\nTZ=')"
 expect_flagged old-cors-name "sub(compose, '      REDIS_URL: redis://hydra-redis:6379\n', '      REDIS_URL: redis://hydra-redis:6379\n      HYDRA_CORS_ORIGINS: https://trading.\${DOMAIN}\n')"
+expect_flagged trader-key-missing "sub(compose, '      HYDRA_CREDENTIAL_KEY: \${HYDRA_CREDENTIAL_KEY:?}\n      HYDRA_API_TOKEN: \${HYDRA_API_TOKEN:?}\n    volumes:', '      HYDRA_API_TOKEN: \${HYDRA_API_TOKEN:?}\n    volumes:')"
+expect_flagged trader-token-unguarded "sub(compose, '      HYDRA_CREDENTIAL_KEY: \${HYDRA_CREDENTIAL_KEY:?}\n      HYDRA_API_TOKEN: \${HYDRA_API_TOKEN:?}\n    volumes:', '      HYDRA_CREDENTIAL_KEY: \${HYDRA_CREDENTIAL_KEY:?}\n      HYDRA_API_TOKEN: \${HYDRA_API_TOKEN}\n    volumes:')"
+expect_flagged trader-extra-env "sub(compose, '      HYDRA_API_TOKEN: \${HYDRA_API_TOKEN:?}\n    volumes:', '      HYDRA_API_TOKEN: \${HYDRA_API_TOKEN:?}\n      HYDRA_MCP_TOKEN: \${HYDRA_MCP_TOKEN:?}\n    volumes:')"
+expect_flagged trader-url-missing "sub(compose, '      # the D5 split knob: set = this process is the API only, the trader holds the sessions\n      HYDRA_TRADER__URL: http://hydra-trader:8000\n', '')"
+expect_flagged trader-url-wrong "sub(compose, 'HYDRA_TRADER__URL: http://hydra-trader:8000', 'HYDRA_TRADER__URL: http://localhost:8000')"
+expect_flagged trader-gone "sub(compose, '  hydra-trader:\n    build: ./engine', '  hydra-trader-gone:\n    build: ./engine')"
 
 if [[ $FAILS -gt 0 ]]; then
   echo "$FAILS case(s) failed"

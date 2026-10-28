@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Fail unless hydra-engine is reachable only through hydra-edge: an internal network shared with Traefik alone,
-where both have static addresses and the engine trusts Remote-User from Traefik's /32 only."""
+where both have static addresses and the engine trusts Remote-User from Traefik's /32 only; and the D5 split's
+hydra-trader stays internal-only on exactly hydra + monitoring (never hydra-edge, never proxy)."""
 
 import ipaddress
 import re
@@ -12,6 +13,7 @@ import yaml
 
 EDGE = "hydra-edge"
 ENGINE = ("stacks/hydra", "hydra-engine")
+TRADER = ("stacks/hydra", "hydra-trader")
 TRAEFIK = ("stacks/core", "traefik")
 COMPOSE_GLOBS = ("stacks/*/compose.y*ml", "stacks/*/docker-compose.y*ml", "host/*/compose.y*ml", "host/*/docker-compose.y*ml")
 NETS = "scripts/install-gitops.sh"
@@ -19,6 +21,7 @@ TOKEN = "HYDRA_API_TOKEN"
 TOKEN_REF = "op://romulus-deploy/hydra/HYDRA_API_TOKEN"
 RETIRED = ("HYDRA_AUTH_MODE", "HYDRA_TRUSTED_PROXY_CIDRS")
 ENGINE_NETS = {EDGE, "hydra", "monitoring"}
+TRADER_NETS = {"hydra", "monitoring"}
 DYNAMIC = "configs/traefik/dynamic/*.y*ml"
 SERVICE_TARGET = re.compile(r"traefik\.(http|tcp|udp)\.services\.[^.]+\.loadbalancer\.server\.(url|address)")
 
@@ -144,15 +147,15 @@ def check(root):
                 if mode in (f"container:{target}", f"service:{target}"):
                     yield f"{where}:{name}: network_mode {mode} shares {target}'s network namespace, so it is on {EDGE}"
             on = service_networks(doc, svc)
-            if ident in (ENGINE, TRAEFIK):
+            if ident in (ENGINE, TRADER, TRAEFIK):
                 found[ident] = (where, doc, svc, on)
             elif EDGE in on:
                 yield f"{where}:{name}: joins {EDGE}; only traefik and hydra-engine may"
 
-    for ident in (ENGINE, TRAEFIK):
+    for ident in (ENGINE, TRADER, TRAEFIK):
         if ident not in found:
             yield f"{ident[0]}: service {ident[1]} not found; layout changed?"
-    if len(found) < 2:
+    if len(found) < 3:
         return
 
     where, doc, svc, on = found[TRAEFIK]
@@ -200,6 +203,11 @@ def check(root):
     token = env.get(TOKEN)
     if not (isinstance(token, str) and re.fullmatch(r"\$\{" + TOKEN + r":\?[^}]*\}", token)):
         yield f"{where}:hydra-engine: environment {TOKEN} must be ${{{TOKEN}:?}}, got {token!r}"
+
+    # the D5 split's trader is internal-only: exactly hydra (the engine's calls) + monitoring (scrapes)
+    where, doc, svc, on = found[TRADER]
+    if set(on) != TRADER_NETS:
+        yield f"{where}:hydra-trader: networks must be exactly {sorted(TRADER_NETS)}, got {sorted(on)} (internal-only; never {EDGE})"
 
     hydra = [d for d in yaml.safe_load_all((root / ".doco-cd.yml").read_text()) if d and d.get("name") == "hydra"]
     ref = (hydra[0].get("external_secrets") or {}).get(TOKEN) if len(hydra) == 1 else None

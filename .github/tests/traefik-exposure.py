@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Fail if a Traefik router reaches hydra, /metrics, /health or the Traefik API without secure-admin@file
 (the token-authenticated hydra-mcp router is the sole D5 exception, valid only while its secure-mcp chain
-still contains crowdsec + the rate limit and its rule stays scoped to /mcp), or if the Traefik API is
-served insecurely or its internal entrypoint is published."""
+still contains crowdsec + the rate limit and its rule stays scoped to /mcp), if the Traefik API is
+served insecurely or its internal entrypoint is published, or if the internal hydra-trader exposes
+any Traefik router at all (D5's split; even an authenticated one)."""
 
 import argparse
 import re
@@ -12,6 +13,8 @@ from pathlib import Path
 import yaml
 
 AUTH = "secure-admin@file"
+# the D5 split's trader is internal-only: any Traefik exposure — even an authenticated router — is wrong
+TRADER = "hydra-trader"
 # D5 (hydra-build ui2-mcp1 decisions): the hydra-mcp router authenticates non-interactive MCP clients
 # with a bearer token at the app (HYDRA_MCP_TOKEN, constant-time check) behind crowdsec + rate limit;
 # Authelia's interactive 2FA is deliberately absent. It is the only router allowed to skip AUTH, and
@@ -190,6 +193,20 @@ def insecure_errors(root, required):
             yield f"{where}: publishes the {API_ENTRYPOINT} entrypoint port {port}; it must stay internal"
 
 
+def trader_exposure(root):
+    """The internal trader must expose no Traefik routers, not even authenticated ones."""
+    for f, name, svc in compose_services(root):
+        if name != TRADER:
+            continue
+        where = f"{f.relative_to(root)}:{name}"
+        labels = labels_of(svc)
+        if labels.get("traefik.enable", "false").lower() == "true":
+            yield f"{where}: traefik.enable=true; the trader is internal-only"
+        for key in labels:
+            if ROUTER_KEY.fullmatch(key):
+                yield f"{where}: {key}; the trader is internal-only and must expose no routers"
+
+
 def api_exempt(rule, eps, mws):
     overview = OVERVIEW_ONLY.fullmatch(rule.strip())
     return bool(overview) and not mws and bool(eps) and not PUBLIC_ENTRYPOINTS & set(eps)
@@ -209,6 +226,9 @@ def main():
             bad += 1
             print(f"::error::{f.relative_to(root)}: only YAML dynamic config is checked; convert it")
     for err in insecure_errors(root, args.require_static):
+        bad += 1
+        print(f"::error::{err}")
+    for err in trader_exposure(root):
         bad += 1
         print(f"::error::{err}")
     for where, rule, mws, hydra, service, eps in [*compose_routers(root), *file_routers(root)]:

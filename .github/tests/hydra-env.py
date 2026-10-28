@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Fail unless the hydra stack gets HYDRA_CREDENTIAL_KEY from 1Password in the engine and the backtest worker,
-carries no exchange API key env (keys live encrypted in the hydra DB), and has no dead hydra env."""
+"""Fail unless the hydra stack gets HYDRA_CREDENTIAL_KEY from 1Password in the engine, the backtest worker
+and the trader, carries no exchange API key env (keys live encrypted in the hydra DB), has no dead hydra env,
+declares the D5 split (the engine's HYDRA_TRADER__URL and the trader's minimal env)."""
 
 import re
 import sys
@@ -10,9 +11,15 @@ import yaml
 
 KEY = "HYDRA_CREDENTIAL_KEY"
 KEY_REF = "op://romulus-deploy/hydra/HYDRA_CREDENTIAL_KEY"
-KEY_SERVICES = ("hydra-engine", "hydra-backtest-worker")
+KEY_SERVICES = ("hydra-engine", "hydra-backtest-worker", "hydra-trader")
 EXCHANGE = re.compile(r"(?<![A-Z0-9])(?:BINANCE|BYBIT|KRAKEN|OKX)_\w*|HYDRA_EXCHANGES__\w*", re.IGNORECASE)
 DEAD = ("HYDRA_TESTNET", "HYDRA_CORS_ORIGINS")
+ENGINE = "hydra-engine"
+TRADER = "hydra-trader"
+TRADER_URL = "HYDRA_TRADER__URL"
+TRADER_URL_VALUE = "http://hydra-trader:8000"
+TOKEN = "HYDRA_API_TOKEN"
+TRADER_ENV = ("TZ", "DATABASE_URL", "REDIS_URL", "HYDRA_CREDENTIAL_KEY", TOKEN)
 
 
 def env_of(svc):
@@ -53,6 +60,22 @@ def check(root):
         for dead in DEAD:
             if dead in env:
                 yield f"{where}:{name}: {dead} is not read by hydra"
+
+    # the D5 split: the engine points at the trader, and the trader carries only the env it reads
+    url = env_of(services.get(ENGINE) or {}).get(TRADER_URL)
+    if url != TRADER_URL_VALUE:
+        yield f"{where}:{ENGINE}: environment {TRADER_URL} must be {TRADER_URL_VALUE!r}, got {url!r}"
+    trader = services.get(TRADER)
+    if trader is None:
+        yield f"{where}: service {TRADER} not found; layout changed?"
+    else:
+        env = env_of(trader)
+        missing, extra = sorted(set(TRADER_ENV) - set(env)), sorted(set(env) - set(TRADER_ENV))
+        if missing or extra:
+            yield f"{where}:{TRADER}: environment must be exactly {sorted(TRADER_ENV)}, missing {missing}, extra {extra}"
+        token = env.get(TOKEN)
+        if not (isinstance(token, str) and re.fullmatch(r"\$\{" + TOKEN + r":\?[^}]*\}", token)):
+            yield f"{where}:{TRADER}: environment {TOKEN} must be ${{{TOKEN}:?}}, got {token!r}"
 
     host = root / "stacks/host.env"
     for n, line in enumerate(host.read_text().splitlines(), 1):

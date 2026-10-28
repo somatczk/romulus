@@ -35,6 +35,8 @@ services:
       HYDRA_API__AUTH_MODE: proxy
       HYDRA_API__TRUSTED_PROXY_CIDRS: 10.10.13.2/32
       HYDRA_API_TOKEN: ${HYDRA_API_TOKEN:?}
+      # the D5 split knob: set = this process is the API only, the trader holds the sessions
+      HYDRA_TRADER__URL: http://hydra-trader:8000
       # MCP bearer token: env-only, >=32 chars, must differ from HYDRA_API_TOKEN (2.5.0 refuses equals)
       HYDRA_MCP_TOKEN: ${HYDRA_MCP_TOKEN:?}
       HYDRA_MCP__ALLOWED_HOSTS: trading.${DOMAIN}
@@ -64,6 +66,49 @@ services:
     healthcheck:
       # liveness only: /readyz drives alerts, autoheal would restart-loop on feed or DB blips
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/livez')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          memory: 8g
+    security_opt:
+      - no-new-privileges:true
+
+  # ---------------------------------------------------------------------------
+  # Hydra Trader (the D5 split's engine process; same image, internal-only)
+  # ---------------------------------------------------------------------------
+  hydra-trader:
+    build: ./engine
+    container_name: hydra-trader
+    restart: unless-stopped
+    # the image CMD runs the API; the trader is the same image's other process
+    command: python -m hydra.trader
+    networks:
+      - hydra
+      - monitoring
+    depends_on:
+      hydra-timescaledb:
+        condition: service_healthy
+      hydra-redis:
+        condition: service_healthy
+      # started, not healthy: the trader waits for the schema itself; /livez proves nothing about migrations
+      hydra-engine:
+        condition: service_started
+    environment:
+      TZ: ${TZ}
+      DATABASE_URL: postgresql://hydra:${HYDRA_DB_PASSWORD}@hydra-timescaledb:5432/hydra
+      REDIS_URL: redis://hydra-redis:6379
+      HYDRA_CREDENTIAL_KEY: ${HYDRA_CREDENTIAL_KEY:?}
+      HYDRA_API_TOKEN: ${HYDRA_API_TOKEN:?}
+    volumes:
+      # read-only: the API process owns strategy writes; the trader reads them for recovery and reload
+      - ${APPDATA}/hydra/config/strategies:/app/config/strategies:ro
+    healthcheck:
+      # the heartbeat file, not the image's /livez: it must stay healthy while waiting for the API's migrations
+      test: ["CMD", "python", "-m", "hydra.trader", "check"]
       interval: 30s
       timeout: 5s
       retries: 3

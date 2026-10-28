@@ -91,3 +91,9 @@ scrape_configs:
     static_configs:
       - targets:
           - hydra-engine:8000
+
+  # the D5 split: engine-side session metrics are served by the trader only, not the API
+  - job_name: hydra-trader
+    static_configs:
+      - targets:
+          - hydra-trader:8000

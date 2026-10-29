@@ -56,6 +56,12 @@ expect_flagged trader-url-wrong "sub(compose, 'HYDRA_TRADER__URL: http://hydra-t
 expect_flagged trader-gone "sub(compose, '  hydra-trader:\n    build: ./engine', '  hydra-trader-gone:\n    build: ./engine')"
 # anchors the trader volumes: a removed or flipped models mount goes stale here and aborts, not silently
 expect_flagged trader-token-missing "sub(compose, '      HYDRA_API_TOKEN: \${HYDRA_API_TOKEN:?}\n    volumes:\n      # read-only: the API process owns strategy writes; the trader reads them for recovery and reload\n      - \${APPDATA}/hydra/config/strategies:/app/config/strategies:ro\n      # read-only: the backtest worker ml_train owns artifact writes; the trader reads them for the session ML attach, the P5-C recovery re-validation and the ML overlay Production-model reads (services/sessions.py, execution/session_recovery.py, ml/consumers.py; all via ml/serving.py)\n      - \${APPDATA}/hydra/models:/app/models:ro', '    volumes:\n      # read-only: the API process owns strategy writes; the trader reads them for recovery and reload\n      - \${APPDATA}/hydra/config/strategies:/app/config/strategies:ro\n      # read-only: the backtest worker ml_train owns artifact writes; the trader reads them for the session ML attach, the P5-C recovery re-validation and the ML overlay Production-model reads (services/sessions.py, execution/session_recovery.py, ml/consumers.py; all via ml/serving.py)\n      - \${APPDATA}/hydra/models:/app/models:ro')"
+expect_flagged worker-shared-hostname "sub(compose, '    # (its id) keeps the worker ids unique - never set a shared hostname here\n', '    # (its id) keeps the worker ids unique - never set a shared hostname here\n    hostname: hydra-backtest-worker\n')"
+expect_flagged worker-host-network "sub(compose, '    # (its id) keeps the worker ids unique - never set a shared hostname here\n', '    # (its id) keeps the worker ids unique - never set a shared hostname here\n    network_mode: host\n')"
+expect_flagged worker-budget-multiplied "sub(compose, 'HYDRA_DATA__FETCH_WEIGHT_PER_MIN: \"300\"', 'HYDRA_DATA__FETCH_WEIGHT_PER_MIN: \"900\"')"
+expect_flagged worker-budget-unset "sub(compose, '      HYDRA_DATA__FETCH_WEIGHT_PER_MIN: \"300\"\n', '')"
+expect_flagged worker-more-replicas "sub(compose, '      replicas: 3\n', '      replicas: 4\n')"
+expect_flagged worker-gone "sub(compose, '  hydra-backtest-worker:\n    build: ./backtest-worker', '  hydra-backtest-worker-gone:\n    build: ./backtest-worker')"
 
 if [[ $FAILS -gt 0 ]]; then
   echo "$FAILS case(s) failed"

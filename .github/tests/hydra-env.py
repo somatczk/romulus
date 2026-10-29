@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Fail unless the hydra stack gets HYDRA_CREDENTIAL_KEY from 1Password in the engine, the backtest worker
 and the trader, carries no exchange API key env (keys live encrypted in the hydra DB), has no dead hydra env,
-declares the D5 split (the engine's HYDRA_TRADER__URL and the trader's minimal env)."""
+declares the D5 split (the engine's HYDRA_TRADER__URL and the trader's minimal env), and keeps the backtest worker
+replicas safe: a distinct hostname each (the worker id the job lease fences on) and one shared Binance fetch budget."""
 
 import re
 import sys
@@ -20,6 +21,9 @@ TRADER_URL = "HYDRA_TRADER__URL"
 TRADER_URL_VALUE = "http://hydra-trader:8000"
 TOKEN = "HYDRA_API_TOKEN"
 TRADER_ENV = ("TZ", "DATABASE_URL", "REDIS_URL", "HYDRA_CREDENTIAL_KEY", TOKEN)
+WORKER = "hydra-backtest-worker"
+WEIGHT = "HYDRA_DATA__FETCH_WEIGHT_PER_MIN"
+WORKERS_WEIGHT = 900  # the single worker's default budget; replicas split it instead of multiplying it
 
 
 def env_of(svc):
@@ -76,6 +80,19 @@ def check(root):
         token = env.get(TOKEN)
         if not (isinstance(token, str) and re.fullmatch(r"\$\{" + TOKEN + r":\?[^}]*\}", token)):
             yield f"{where}:{TRADER}: environment {TOKEN} must be ${{{TOKEN}:?}}, got {token!r}"
+
+    # worker id = container hostname + pid 1: a shared hostname would let replicas steal each other's leased jobs
+    worker = services.get(WORKER)
+    if worker is None:
+        yield f"{where}: service {WORKER} not found; layout changed?"
+    else:
+        for key in ("hostname", "network_mode"):
+            if key in worker:
+                yield f"{where}:{WORKER}: {key} is set; every replica needs its own container hostname as its worker id"
+        replicas = int((worker.get("deploy") or {}).get("replicas") or 1)
+        weight = int(env_of(worker).get(WEIGHT) or WORKERS_WEIGHT)
+        if replicas * weight > WORKERS_WEIGHT:
+            yield f"{where}:{WORKER}: {replicas} replicas x {WEIGHT}={weight} exceeds the workers' {WORKERS_WEIGHT} Binance weight/min"
 
     host = root / "stacks/host.env"
     for n, line in enumerate(host.read_text().splitlines(), 1):

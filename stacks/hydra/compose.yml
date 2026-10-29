@@ -159,11 +159,12 @@ services:
       - no-new-privileges:true
 
   # ---------------------------------------------------------------------------
-  # Hydra Backtest Worker (background backtest jobs)
+  # Hydra Backtest Workers (background backtest jobs; replicas share the queue by heartbeat lease)
   # ---------------------------------------------------------------------------
   hydra-backtest-worker:
     build: ./backtest-worker
-    container_name: hydra-backtest-worker
+    # no container_name: replicas need compose's numbered names, and each container's hostname
+    # (its id) keeps the worker ids unique - never set a shared hostname here
     restart: unless-stopped
     networks:
       - hydra
@@ -176,6 +177,8 @@ services:
       TZ: ${TZ}
       DATABASE_URL: postgresql://hydra:${HYDRA_DB_PASSWORD}@hydra-timescaledb:5432/hydra
       REDIS_URL: redis://hydra-redis:6379
+      # the Binance fetch budget is per process: 3 x 300 keeps the workers' share at the single worker's 900
+      HYDRA_DATA__FETCH_WEIGHT_PER_MIN: "300"
       HYDRA_CREDENTIAL_KEY: ${HYDRA_CREDENTIAL_KEY:?}
     volumes:
       - ${APPDATA}/hydra/config/strategies:/app/config/strategies:ro
@@ -188,9 +191,12 @@ services:
       retries: 3
       start_period: 60s
     deploy:
+      replicas: 3
       resources:
         limits:
           memory: 8g
+          # per replica: three concurrent xgboost retrains must not starve the trader of the 32 threads
+          cpus: "4.0"
     security_opt:
       - no-new-privileges:true
 

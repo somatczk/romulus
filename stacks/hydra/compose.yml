@@ -106,6 +106,8 @@ services:
     volumes:
       # read-only: the API process owns strategy writes; the trader reads them for recovery and reload
       - ${APPDATA}/hydra/config/strategies:/app/config/strategies:ro
+      # read-only: the backtest worker ml_train owns artifact writes; the trader reads them for the session ML attach, the P5-C recovery re-validation and the ML overlay Production-model reads (services/sessions.py, execution/session_recovery.py, ml/consumers.py; all via ml/serving.py)
+      - ${APPDATA}/hydra/models:/app/models:ro
     healthcheck:
       # the heartbeat file, not the image's /livez: it must stay healthy while waiting for the API's migrations
       test: ["CMD", "python", "-m", "hydra.trader", "check"]
@@ -177,7 +179,7 @@ services:
       HYDRA_CREDENTIAL_KEY: ${HYDRA_CREDENTIAL_KEY:?}
     volumes:
       - ${APPDATA}/hydra/config/strategies:/app/config/strategies:ro
-      - ${APPDATA}/hydra/models:/app/models:ro
+      - ${APPDATA}/hydra/models:/app/models:rw
       - ${APPDATA}/hydra/logs:/app/logs
     healthcheck:
       test: ["CMD", "python", "-m", "hydra.backtest.worker", "check"]

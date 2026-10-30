@@ -103,6 +103,9 @@ services:
       REDIS_URL: redis://hydra-redis:6379
       HYDRA_CREDENTIAL_KEY: ${HYDRA_CREDENTIAL_KEY:?}
       HYDRA_API_TOKEN: ${HYDRA_API_TOKEN:?}
+      # P7-E: the opt-in event fan-out (Q6 ruling: enabled at the 3.0.0 deploy — Redis is tier-1
+      # from this deploy on: startup fail-fasts on an unreachable server and /readyz requires it)
+      HYDRA_EVENTS__BUS: redis
     volumes:
       # read-only: the API process owns strategy writes; the trader reads them for recovery and reload
       - ${APPDATA}/hydra/config/strategies:/app/config/strategies:ro

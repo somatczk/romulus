@@ -32,7 +32,7 @@ Configuration for a single homelab server (ZimaCube, Ryzen 9 5950X, 128 GB RAM, 
 
 `stacks/ai` is kept but disabled.
 
-Authentik (`sso.${DOMAIN}`) is replacing Authelia in phases: invitations, self-service password and TOTP, groups per app. Every admin route except trading is on Authentik; Authelia guards trading until it moves and phase 4 removes Authelia. First-run steps: `configs/authentik/README.md`.
+Authentik (`sso.${DOMAIN}`) is replacing Authelia in phases: invitations, self-service password and TOTP, groups per app. Every admin route is on Authentik; Authelia still runs but guards nothing until phase 4 removes it. First-run steps: `configs/authentik/README.md`.
 
 ## Deployment
 
@@ -44,7 +44,7 @@ Pull-based. [doco-cd](https://doco.cd) on the host polls `master` and deploys ev
 - **Rollback:** `git revert` on `master`.
 - **Rotating a secret:** change it in 1Password; the next deploy of that stack picks it up. `HYDRA_CREDENTIAL_KEY` is the exception, see below.
 - **Hydra secrets:** the hydra stack reads `HYDRA_DB_PASSWORD`, `HYDRA_CREDENTIAL_KEY` and `HYDRA_API_TOKEN` from the hydra item. `HYDRA_CREDENTIAL_KEY` is a Fernet key that encrypts the exchange API keys hydra stores in its database. Exchange keys are entered in hydra's Settings page, never in 1Password or env. Replacing `HYDRA_CREDENTIAL_KEY` with a new value makes every stored exchange key undecryptable. Rotate it as a MultiFernet list: set it to `new,old` (the first key encrypts, all keys decrypt), re-save the exchange keys in Settings, then set it to `new`.
-- **Hydra network and auth:** `hydra-engine` is not on `proxy`. Traefik reaches it over `hydra-edge`, an internal network (10.10.13.0/24) whose only members are Traefik (static 10.10.13.2) and the engine (static 10.10.13.3); Prometheus scrapes it over `monitoring`. The engine trusts Authelia's `Remote-User` header only from `10.10.13.2/32` (`HYDRA_API__TRUSTED_PROXY_CIDRS`), and services authenticate with `Authorization: Bearer $HYDRA_API_TOKEN` (hydra item in 1Password). `.github/tests/hydra-network.sh` fails CI if anything else joins `hydra-edge` or these settings drift. `HYDRA_API__CORS_ORIGINS` is a comma list (`https://trading.${DOMAIN}`); without it the browser's mutating calls and WebSocket upgrades are refused.
+- **Hydra network and auth:** `hydra-engine` is not on `proxy`. Traefik reaches it over `hydra-edge`, an internal network (10.10.13.0/24) whose only members are Traefik (static 10.10.13.2) and the engine (static 10.10.13.3); Prometheus scrapes it over `monitoring`. The engine trusts the `Remote-User` header (set by Authentik's trading provider; Traefik strips any client-sent one) only from `10.10.13.2/32` (`HYDRA_API__TRUSTED_PROXY_CIDRS`), and services authenticate with `Authorization: Bearer $HYDRA_API_TOKEN` (hydra item in 1Password). `.github/tests/hydra-network.sh` fails CI if anything else joins `hydra-edge` or these settings drift. `HYDRA_API__CORS_ORIGINS` is a comma list (`https://trading.${DOMAIN}`); without it the browser's mutating calls and WebSocket upgrades are refused.
 - **Hydra config, health and backups:** the engine image's `/app/config` is authoritative and only `${APPDATA}/hydra/config/strategies` is mounted (rw for the engine, which saves UI-built strategies; ro for the backtest worker). The engine accepts only `HYDRA_*` variables its config declares, so an unknown one stops startup. Docker probes `/livez`; `/readyz` (DB, schema at the Alembic head, feeds, supervised sessions) drives the `HydraNotReady` alert and is never a healthcheck, because autoheal would restart-loop the engine on a feed or DB blip. The first boot of a release runs Alembic migrations under an advisory lock. The nightly hydra dump is `pg_dump -Fc` (`hydra_<ts>.dump` plus a `.counts` row manifest), and the monthly restore test restores it into a throwaway TimescaleDB on the stack's pinned image and checks `alembic_version` and the row counts. `configs/prometheus/hydra-alert-rules.yml`, its promtool test and `configs/grafana/dashboards/hydra-trading.json` are byte copies of hydra main's `deploy/` (`.github/tests/hydra-sync.sh`).
 
 Host setup is one idempotent script, `scripts/install-gitops.sh` (packages, Docker networks, checkout, deployer, crons). A fresh host needs its storage restored from backup, a 1Password service account token, and that script. Restic skips the live Postgres data directories, so start each database container alone and load `backups/db-dumps` into it before its app starts: `psql` for the `.sql` dumps, `pg_restore` between `timescaledb_pre_restore()` and `timescaledb_post_restore()` for `hydra_*.dump`.
@@ -84,7 +84,7 @@ Bootstrap: `scripts/ci-vm/create.sh` builds the VM, then a 1Password service acc
 
 ## Security
 
-- Reachable on the LAN and over Tailscale only. Admin services sit behind Authentik with 2FA (trading still on Authelia until it moves).
+- Reachable on the LAN and over Tailscale only. Admin services sit behind Authentik with 2FA.
 - Default-deny firewall, including between Docker networks. Most service networks are internal; the CI VM is fenced off the LAN.
 - CrowdSec in front of Traefik, TLS 1.3 only, HSTS everywhere.
 - Containers reach the Docker API only through read-only socket proxies.

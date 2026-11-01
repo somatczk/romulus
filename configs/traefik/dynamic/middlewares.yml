@@ -58,6 +58,9 @@ http:
           - X-authentik-meta-provider
           - X-authentik-meta-app
           - X-authentik-meta-version
+          # only the trading provider's scope mapping emits it (Hydra's principal); strip-auth-headers
+          # removes a client-sent one on every secure-admin-ak route first
+          - Remote-User
 
     # A client-sent identity header must never reach an app: authResponseHeaders only replaces the
     # headers the auth response carries. "" removes the header.

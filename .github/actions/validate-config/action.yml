@@ -66,11 +66,11 @@ runs:
         YAML_ERRORS=0
         YAML_FILES_FOUND=false
 
-        # Validate config YAML files
+        # Validate config YAML files; authentik blueprints use app tags (!KeyOf, !Find), accepted as opaque
         while IFS= read -r file; do
           YAML_FILES_FOUND=true
           echo "Validating: $file"
-          if python3 -c "import yaml; list(yaml.safe_load_all(open('$file')))" 2>/dev/null; then
+          if python3 -c "import yaml; yaml.SafeLoader.add_multi_constructor('!', lambda l, s, n: None); list(yaml.safe_load_all(open('$file')))" 2>/dev/null; then
             echo "  Valid YAML"
           else
             echo "  Invalid YAML"

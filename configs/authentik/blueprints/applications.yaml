@@ -402,7 +402,7 @@ entries:
 
   # hydra-mcp: OAuth 2.1 for Hydra's MCP endpoint (trading/mcp). Hydra is the resource server: it checks these
   # access tokens itself (RS256 against this provider's JWKS, iss = .../application/o/hydra-mcp/, aud = the client
-  # id) and binds a service principal, so a signed-in agent still never approves its own gated actions. A public
+  # id) and binds a service principal, so a signed-in agent never approves its own gated actions. A public
   # client with PKCE keeps a secret out of git; Authentik has no dynamic client registration, so MCP clients are
   # given the client id (Claude Code: --client-id; claude.ai connectors: the advanced OAuth client id field).
   # Not an outpost provider: Hydra validates the tokens, no forward auth sits in front of /mcp.

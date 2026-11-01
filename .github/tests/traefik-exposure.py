@@ -19,9 +19,8 @@ AUTH = "secure-admin-ak@file"
 AUTH_MEMBERS = ("crowdsec-bouncer", "strip-auth-headers", "authentik")
 # the D5 split's trader is internal-only: any Traefik exposure — even an authenticated router — is wrong
 TRADER = "hydra-trader"
-# D5 (hydra-build ui2-mcp1 decisions, OAuth since hydra's mcp-oauth): the hydra-mcp router authenticates MCP
-# clients with an Authentik OAuth access token checked at the app (RS256 via the issuer's JWKS) behind crowdsec +
-# rate limit; forward auth is deliberately absent (the client signs in through Authentik itself). The
+# D5: the hydra-mcp router authenticates MCP clients with an Authentik OAuth access token checked at the app
+# (RS256 via the issuer's JWKS) behind crowdsec + rate limit; forward auth is deliberately absent (the client signs in through Authentik itself). The
 # hydra-mcp-metadata router serves the RFC 9728 metadata that names the issuer, public by design. They are the
 # only routers allowed to skip AUTH, and only while the whole D5 contract holds - the middleware reference, the
 # chain's contents and each rule's scope. Broadening a rule would out-prioritize the dashboard router (explicit

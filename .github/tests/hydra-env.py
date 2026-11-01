@@ -14,7 +14,7 @@ KEY = "HYDRA_CREDENTIAL_KEY"
 KEY_REF = "op://romulus-deploy/hydra/HYDRA_CREDENTIAL_KEY"
 KEY_SERVICES = ("hydra-engine", "hydra-backtest-worker", "hydra-trader")
 EXCHANGE = re.compile(r"(?<![A-Z0-9])(?:BINANCE|BYBIT|KRAKEN|OKX)_\w*|HYDRA_EXCHANGES__\w*", re.IGNORECASE)
-# HYDRA_MCP_TOKEN: retired when MCP moved to Authentik OAuth; hydra refuses it at startup
+# HYDRA_MCP_TOKEN: hydra refuses it at startup (MCP clients sign in through Authentik OAuth)
 DEAD = ("HYDRA_TESTNET", "HYDRA_CORS_ORIGINS", "HYDRA_MCP_TOKEN")
 ENGINE = "hydra-engine"
 TRADER = "hydra-trader"

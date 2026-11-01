@@ -1,0 +1,56 @@
+# One application + forward_single proxy provider per protected host (Traefik forward auth to the
+# embedded outpost); group bindings decide who gets in. Phase 2: speed only.
+version: 1
+metadata:
+  name: Romulus - Applications
+entries:
+  # applied first so the !Find targets below exist
+  - model: authentik_blueprints.metaapplyblueprint
+    attrs:
+      identifiers:
+        name: Default - Provider authorization flow (implicit consent)
+      required: true
+  - model: authentik_blueprints.metaapplyblueprint
+    attrs:
+      identifiers:
+        name: Default - Provider invalidation flow
+      required: true
+  - model: authentik_blueprints.metaapplyblueprint
+    attrs:
+      identifiers:
+        name: Romulus - Groups
+      required: true
+
+  - model: authentik_providers_proxy.proxyprovider
+    id: provider-speed
+    identifiers:
+      name: speed
+    attrs:
+      mode: forward_single
+      external_host: https://speed.romulus.hu
+      authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
+      invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
+      # outpost session; past it the browser is re-checked against the Authentik session (login.yaml)
+      access_token_validity: hours=4
+  - model: authentik_core.application
+    id: app-speed
+    identifiers:
+      slug: speed
+    attrs:
+      name: Speedtest
+      provider: !KeyOf provider-speed
+      meta_launch_url: https://speed.romulus.hu
+      policy_engine_mode: any
+  - model: authentik_policies.policybinding
+    identifiers:
+      target: !KeyOf app-speed
+      group: !Find [authentik_core.group, [name, admins]]
+      order: 0
+
+  # the embedded outpost serves every provider listed here; this list is the full set
+  - model: authentik_outposts.outpost
+    identifiers:
+      managed: goauthentik.io/outposts/embedded
+    attrs:
+      providers:
+        - !KeyOf provider-speed

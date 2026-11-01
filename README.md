@@ -8,7 +8,7 @@ Configuration for a single homelab server (ZimaCube, Ryzen 9 5950X, 128 GB RAM, 
 |------|------|
 | `stacks/<stack>/` | Compose stacks, one single-line Dockerfile per service pinning its image |
 | `stacks/host.env` | Non-secret host settings shared by all stacks |
-| `configs/` | Service configs mounted read-only (Traefik, Authelia, Authentik blueprints, Prometheus, Alertmanager, Grafana, Loki, ...) |
+| `configs/` | Service configs mounted read-only (Traefik, Authelia, Prometheus, Alertmanager, Grafana, Loki, ...) |
 | `.doco-cd.yml` | Which stacks are deployed and which secrets each one gets |
 | `host/doco-cd/` | The deployer itself |
 | `scripts/` | Host setup, firewall, backups, snapshots, cron and systemd units |
@@ -20,7 +20,7 @@ Configuration for a single homelab server (ZimaCube, Ryzen 9 5950X, 128 GB RAM, 
 | Stack | Services |
 |-------|----------|
 | **core** | Traefik, Docker socket proxy, Cloudflare DDNS, AdGuard Home, Tailscale |
-| **security** | Authelia, Authentik (server, worker, PostgreSQL), CrowdSec, CrowdSec bouncer |
+| **security** | Authelia, CrowdSec, CrowdSec bouncer |
 | **media** | Jellyfin, Sonarr, Radarr, Prowlarr, Bazarr, Lidarr, FlareSolverr, qBittorrent, Jellyseerr |
 | **productivity** | Nextcloud, Immich, Home Assistant, Paperless-ngx, Actual Budget, Homebox, with their PostgreSQL and Redis |
 | **monitoring** | Prometheus, Alertmanager, Grafana, Loki, Promtail, cAdvisor, node / GPU / SMART / restic exporters, Uptime Kuma, Glances |
@@ -30,8 +30,6 @@ Configuration for a single homelab server (ZimaCube, Ryzen 9 5950X, 128 GB RAM, 
 | **hydra** | Trading engine, dashboard and backtest worker ([hydra](https://github.com/somatczk/hydra)), TimescaleDB, Redis |
 
 `stacks/ai` is kept but disabled.
-
-Authentik (`sso.${DOMAIN}`) is replacing Authelia in phases: invitations, self-service password and TOTP, groups per app. No route uses it yet; Authelia keeps guarding every admin route until phase 4 removes it. First-run steps: `configs/authentik/README.md`.
 
 ## Deployment
 

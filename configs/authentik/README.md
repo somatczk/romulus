@@ -1,6 +1,7 @@
 # Authentik
 
-Authentik (security stack: `authentik-server`, `authentik-worker`, `authentik-postgresql`) at `https://sso.romulus.hu`
+Authentik (`authentik` stack: `authentik-server`, `authentik-worker`, `authentik-postgresql`; data in
+`${APPDATA}/security/authentik`) at `https://sso.romulus.hu`
 replaces Authelia in phases. **Phase 1: no route uses it yet**; every admin route is still on Authelia
 (`secure-admin`). Authelia stays until phase 4.
 

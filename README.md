@@ -32,7 +32,7 @@ Configuration for a single homelab server (ZimaCube, Ryzen 9 5950X, 128 GB RAM, 
 
 `stacks/ai` is kept but disabled.
 
-Authentik (`sso.${DOMAIN}`) is replacing Authelia in phases: invitations, self-service password and TOTP, groups per app. `speed` is on Authentik; Authelia guards the other admin routes until they move and phase 4 removes it. First-run steps: `configs/authentik/README.md`.
+Authentik (`sso.${DOMAIN}`) is replacing Authelia in phases: invitations, self-service password and TOTP, groups per app. Every admin route except trading is on Authentik; Authelia guards trading until it moves and phase 4 removes Authelia. First-run steps: `configs/authentik/README.md`.
 
 ## Deployment
 
@@ -84,7 +84,7 @@ Bootstrap: `scripts/ci-vm/create.sh` builds the VM, then a 1Password service acc
 
 ## Security
 
-- Reachable on the LAN and over Tailscale only. Admin services sit behind Authelia with 2FA (speed already behind Authentik, the rest follow).
+- Reachable on the LAN and over Tailscale only. Admin services sit behind Authentik with 2FA (trading still on Authelia until it moves).
 - Default-deny firewall, including between Docker networks. Most service networks are internal; the CI VM is fenced off the LAN.
 - CrowdSec in front of Traefik, TLS 1.3 only, HSTS everywhere.
 - Containers reach the Docker API only through read-only socket proxies.

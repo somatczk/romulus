@@ -61,6 +61,9 @@ services:
     depends_on:
       - socket-proxy
     labels:
+      # dynamic/ changes hot-reload (file provider, watch: true) instead of recreating Traefik; doco-cd
+      # mounts its in-place live copy. traefik.yml is not listed: static config still recreates.
+      cd.doco.deployment.recreate.ignore: "{bindMounts: [/dynamic]}"
       traefik.enable: "true"
       traefik.http.routers.traefik.rule: "Host(`traefik.${DOMAIN}`)"
       traefik.http.routers.traefik.entrypoints: "websecure"

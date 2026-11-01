@@ -55,7 +55,7 @@ services:
       - traefik.http.routers.sonarr.rule=Host(`sonarr.${DOMAIN}`)
       - traefik.http.routers.sonarr.entrypoints=websecure
       - traefik.http.routers.sonarr.tls.certresolver=cloudflare
-      - traefik.http.routers.sonarr.middlewares=secure-admin@file
+      - traefik.http.routers.sonarr.middlewares=secure-admin-ak@file
       - traefik.http.services.sonarr.loadbalancer.server.port=8989
     deploy:
       resources:
@@ -84,7 +84,7 @@ services:
       - traefik.http.routers.radarr.rule=Host(`radarr.${DOMAIN}`)
       - traefik.http.routers.radarr.entrypoints=websecure
       - traefik.http.routers.radarr.tls.certresolver=cloudflare
-      - traefik.http.routers.radarr.middlewares=secure-admin@file
+      - traefik.http.routers.radarr.middlewares=secure-admin-ak@file
       - traefik.http.services.radarr.loadbalancer.server.port=7878
     deploy:
       resources:
@@ -127,7 +127,7 @@ services:
       - traefik.http.routers.prowlarr.rule=Host(`prowlarr.${DOMAIN}`)
       - traefik.http.routers.prowlarr.entrypoints=websecure
       - traefik.http.routers.prowlarr.tls.certresolver=cloudflare
-      - traefik.http.routers.prowlarr.middlewares=secure-admin@file
+      - traefik.http.routers.prowlarr.middlewares=secure-admin-ak@file
       - traefik.http.services.prowlarr.loadbalancer.server.port=9696
     deploy:
       resources:
@@ -156,7 +156,7 @@ services:
       - traefik.http.routers.bazarr.rule=Host(`bazarr.${DOMAIN}`)
       - traefik.http.routers.bazarr.entrypoints=websecure
       - traefik.http.routers.bazarr.tls.certresolver=cloudflare
-      - traefik.http.routers.bazarr.middlewares=secure-admin@file
+      - traefik.http.routers.bazarr.middlewares=secure-admin-ak@file
       - traefik.http.services.bazarr.loadbalancer.server.port=6767
     deploy:
       resources:
@@ -185,7 +185,7 @@ services:
       - traefik.http.routers.lidarr.rule=Host(`lidarr.${DOMAIN}`)
       - traefik.http.routers.lidarr.entrypoints=websecure
       - traefik.http.routers.lidarr.tls.certresolver=cloudflare
-      - traefik.http.routers.lidarr.middlewares=secure-admin@file
+      - traefik.http.routers.lidarr.middlewares=secure-admin-ak@file
       - traefik.http.services.lidarr.loadbalancer.server.port=8686
     deploy:
       resources:
@@ -218,7 +218,7 @@ services:
       - traefik.http.routers.qbit.rule=Host(`qbit.${DOMAIN}`)
       - traefik.http.routers.qbit.entrypoints=websecure
       - traefik.http.routers.qbit.tls.certresolver=cloudflare
-      - traefik.http.routers.qbit.middlewares=secure-admin@file
+      - traefik.http.routers.qbit.middlewares=secure-admin-ak@file
       - traefik.http.services.qbit.loadbalancer.server.port=8080
     deploy:
       resources:

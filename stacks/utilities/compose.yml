@@ -44,7 +44,7 @@ services:
       traefik.http.routers.logs.rule: Host(`logs.${DOMAIN}`)
       traefik.http.routers.logs.entrypoints: websecure
       traefik.http.routers.logs.tls.certresolver: cloudflare
-      traefik.http.routers.logs.middlewares: secure-admin@file
+      traefik.http.routers.logs.middlewares: secure-admin-ak@file
       traefik.http.services.logs.loadbalancer.server.port: "8080"
     healthcheck:
       test: ["CMD", "/dozzle", "healthcheck"]
@@ -112,7 +112,7 @@ services:
     restart: unless-stopped
 
   # SECURITY NOTE: Portainer requires direct RW Docker socket access.
-  # Accepted risk — admin-only, behind Authelia 2FA (secure-admin@file).
+  # Accepted risk — admin-only, behind Authentik 2FA (secure-admin-ak@file).
   portainer:
     build: ./portainer
     container_name: portainer
@@ -129,7 +129,7 @@ services:
       traefik.http.routers.portainer.rule: Host(`portainer.${DOMAIN}`)
       traefik.http.routers.portainer.entrypoints: websecure
       traefik.http.routers.portainer.tls.certresolver: cloudflare
-      traefik.http.routers.portainer.middlewares: secure-admin@file
+      traefik.http.routers.portainer.middlewares: secure-admin-ak@file
       traefik.http.services.portainer.loadbalancer.server.port: "9000"
     healthcheck:
       test: ["NONE"]

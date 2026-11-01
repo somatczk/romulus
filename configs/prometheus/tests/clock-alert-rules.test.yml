@@ -1,0 +1,73 @@
+rule_files:
+  - ../alert-rules.yml
+
+evaluation_interval: 30s
+
+tests:
+  - name: unsynchronised clock fires
+    interval: 1m
+    input_series:
+      - series: 'node_timex_sync_status{instance="node-exporter:9100", job="node-exporter"}'
+        values: "0x30"
+      - series: 'node_timex_maxerror_seconds{instance="node-exporter:9100", job="node-exporter"}'
+        values: "16x30"
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: HostClockNotSynchronising
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              instance: node-exporter:9100
+              job: node-exporter
+            exp_annotations:
+              summary: "Host clock is not synchronising"
+              description: "NTP is not synchronising the clock on node-exporter:9100. Check `timedatectl timesync-status`; Authelia stops starting past 3 s of drift."
+
+  - name: synchronised clock does not fire
+    interval: 1m
+    input_series:
+      - series: 'node_timex_sync_status{instance="node-exporter:9100", job="node-exporter"}'
+        values: "1x30"
+      - series: 'node_timex_maxerror_seconds{instance="node-exporter:9100", job="node-exporter"}'
+        values: "0.01x30"
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: HostClockNotSynchronising
+        exp_alerts: []
+
+  - name: steady positive offset fires
+    interval: 1m
+    input_series:
+      - series: 'node_timex_offset_seconds{instance="node-exporter:9100", job="node-exporter"}'
+        values: "0.1x30"
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: HostClockSkew
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              instance: node-exporter:9100
+              job: node-exporter
+            exp_annotations:
+              summary: "Host clock is drifting"
+              description: "Clock offset on node-exporter:9100 is 0.100 s and not shrinking."
+
+  - name: offset that is being corrected does not fire
+    interval: 1m
+    input_series:
+      - series: 'node_timex_offset_seconds{instance="node-exporter:9100", job="node-exporter"}'
+        values: "0.5-0.01x30"
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: HostClockSkew
+        exp_alerts: []
+
+  - name: small offset does not fire
+    interval: 1m
+    input_series:
+      - series: 'node_timex_offset_seconds{instance="node-exporter:9100", job="node-exporter"}'
+        values: "0.01x30"
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: HostClockSkew
+        exp_alerts: []

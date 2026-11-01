@@ -127,6 +127,28 @@ groups:
           summary: "Host reboot detected"
           description: "System uptime is only {{ printf \"%.0f\" $value }} seconds, indicating a recent reboot."
 
+      # node-mixin's clock rules; Authelia refuses to start past 3 s of drift (2026-11-01 outage)
+      - alert: HostClockNotSynchronising
+        expr: min_over_time(node_timex_sync_status[5m]) == 0 and node_timex_maxerror_seconds >= 16
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Host clock is not synchronising"
+          description: "NTP is not synchronising the clock on {{ $labels.instance }}. Check `timedatectl timesync-status`; Authelia stops starting past 3 s of drift."
+
+      - alert: HostClockSkew
+        expr: |
+          (node_timex_offset_seconds > 0.05 and deriv(node_timex_offset_seconds[5m]) >= 0)
+          or
+          (node_timex_offset_seconds < -0.05 and deriv(node_timex_offset_seconds[5m]) <= 0)
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Host clock is drifting"
+          description: "Clock offset on {{ $labels.instance }} is {{ printf \"%.3f\" $value }} s and not shrinking."
+
   - name: network
     rules:
       - alert: HighNetworkErrors

@@ -67,6 +67,12 @@ services:
       traefik.http.routers.authentik.entrypoints: "websecure"
       traefik.http.routers.authentik.tls.certresolver: "cloudflare"
       traefik.http.routers.authentik.middlewares: "secure@file"
+      # forward-auth callbacks (/outpost.goauthentik.io/) on every protected host; the cert comes from that host's router
+      traefik.http.routers.authentik-outpost.rule: 'HostRegexp(`^.+\.${DOMAIN}$$`) && PathPrefix(`/outpost.goauthentik.io/`)'
+      traefik.http.routers.authentik-outpost.priority: "1000"
+      traefik.http.routers.authentik-outpost.entrypoints: "websecure"
+      traefik.http.routers.authentik-outpost.tls: "true"
+      traefik.http.routers.authentik-outpost.middlewares: "secure@file"
       traefik.http.services.authentik.loadbalancer.server.port: "9000"
     deploy:
       resources:

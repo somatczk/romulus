@@ -32,7 +32,7 @@ Configuration for a single homelab server (ZimaCube, Ryzen 9 5950X, 128 GB RAM, 
 
 `stacks/ai` is kept but disabled.
 
-Authentik (`sso.${DOMAIN}`) is replacing Authelia in phases: invitations, self-service password and TOTP, groups per app. No route uses it yet; Authelia keeps guarding every admin route until phase 4 removes it. First-run steps: `configs/authentik/README.md`.
+Authentik (`sso.${DOMAIN}`) is replacing Authelia in phases: invitations, self-service password and TOTP, groups per app. `speed` is on Authentik; Authelia guards the other admin routes until they move and phase 4 removes it. First-run steps: `configs/authentik/README.md`.
 
 ## Deployment
 

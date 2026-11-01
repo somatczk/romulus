@@ -67,6 +67,8 @@ expect_flagged label-missing "sub(hydra, '      traefik.docker.network: \"hydra-
 expect_flagged cidrs-whole-subnet "sub(hydra, 'TRUSTED_PROXY_CIDRS: 10.10.13.2/32', 'TRUSTED_PROXY_CIDRS: 10.10.13.0/24')"
 expect_flagged cidrs-engine-ip "sub(hydra, 'TRUSTED_PROXY_CIDRS: 10.10.13.2/32', 'TRUSTED_PROXY_CIDRS: 10.10.13.3/32')"
 expect_flagged cidrs-extra-entry "sub(hydra, 'TRUSTED_PROXY_CIDRS: 10.10.13.2/32', 'TRUSTED_PROXY_CIDRS: 10.10.13.2/32,10.10.5.0/24')"
+expect_flagged sso-host-missing "sub(hydra, '    extra_hosts:\n      - \"sso.\${DOMAIN}:10.10.13.2\"\n', '')"
+expect_flagged sso-host-not-traefik "sub(hydra, 'sso.\${DOMAIN}:10.10.13.2', 'sso.\${DOMAIN}:10.10.13.3')"
 expect_flagged cidrs-missing "sub(hydra, '      HYDRA_API__TRUSTED_PROXY_CIDRS: 10.10.13.2/32\n', '')"
 expect_flagged traefik-ip-moved "sub(core, 'ipv4_address: 10.10.13.2', 'ipv4_address: 10.10.13.4')"
 expect_flagged traefik-no-static-ip "sub(core, '$TRAEFIK_EDGE', '      hydra-edge: {}\n')"

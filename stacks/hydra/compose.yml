@@ -22,6 +22,10 @@ services:
         ipv4_address: 10.10.13.3
       hydra: {}
       monitoring: {}
+    # sso.${DOMAIN} resolves to the public address, which does not hairpin from containers; Traefik's static
+    # hydra-edge address serves it, so the engine reaches the OAuth issuer's discovery document and JWKS
+    extra_hosts:
+      - "sso.${DOMAIN}:10.10.13.2"
     depends_on:
       hydra-timescaledb:
         condition: service_healthy

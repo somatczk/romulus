@@ -197,6 +197,12 @@ def check(root):
     cidrs = env.get("HYDRA_API__TRUSTED_PROXY_CIDRS")
     if str(cidrs).strip() != want:
         yield f"{where}:hydra-engine: HYDRA_API__TRUSTED_PROXY_CIDRS must be exactly Traefik's {want}, got {cidrs!r}"
+    hosts = svc.get("extra_hosts") or []
+    if isinstance(hosts, dict):
+        hosts = [f"{k}:{v}" for k, v in hosts.items()]
+    sso = f"sso.${{DOMAIN}}:{traefik_ip}" if traefik_ip else "sso.${DOMAIN}:<traefik static address>"
+    if sso not in [str(h).strip() for h in hosts]:
+        yield f"{where}:hydra-engine: extra_hosts must map {sso} (the OAuth issuer is reached through Traefik)"
     for old in RETIRED:
         if old in env:
             yield f"{where}:hydra-engine: {old} is retired; the P1 engine refuses to start with it"

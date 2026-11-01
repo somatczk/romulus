@@ -11,7 +11,6 @@ export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 REPO=https://github.com/somatczk/romulus.git
 STACKS=/DATA/stacks
 DOCO=/DATA/doco-cd
-USERS_DB=/media/SSD-Storage/appdata/security/authelia/users_database.yml
 RESTIC_VERSION=0.17.3
 RESTIC_SHA=5097faeda6aa13167aae6e36efdba636637f8741fed89bbf015678334632d4d3
 
@@ -40,15 +39,6 @@ if [[ ! -d $STACKS/.git ]]; then
     rm -rf "$STACKS.new"
     git clone -q "$REPO" "$STACKS.new"
 fi
-# authelia's users file only exists on the host, it moves next to authelia's data
-if [[ ! -f $USERS_DB ]]; then
-    for src in "$STACKS" "$STACKS.pre-gitops"; do
-        f=$src/configs/authelia/users_database.yml
-        # authelia runs as 999:1000 (PUID/PGID)
-        [[ -f $f ]] && { install -D -m 600 -o 999 -g 1000 "$f" "$USERS_DB"; break; }
-    done
-fi
-[[ -f $USERS_DB ]] || { echo "authelia users file not found, aborting before anything moves"; exit 1; }
 
 echo "== preflight: every secret in .doco-cd.yml resolves"
 src=$STACKS; [[ -d $STACKS.new ]] && src=$STACKS.new

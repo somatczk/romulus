@@ -28,7 +28,7 @@ services:
     labels:
       traefik.enable: "true"
       traefik.http.routers.hydra-api.rule: "Host(`trading.${DOMAIN}`) && PathPrefix(`/api`)"
-      traefik.http.routers.hydra-api.middlewares: "secure-admin@file"
+      traefik.http.routers.hydra-api.middlewares: "secure-admin-ak@file"
       traefik.http.routers.hydra-metrics.rule: "Host(`trading.${DOMAIN}`) && (Path(`/health`) || Path(`/metrics`))"
       traefik.http.routers.hydra-metrics.middlewares: "secure@file"
 YML
@@ -122,6 +122,18 @@ services:
 YML
 expect_exposed ak-chain-missing
 
+# Authelia's chain is retired: a route still on it counts as unauthenticated
+mkdir -p "$TMP/authelia-chain-retired/stacks/hydra"
+cat > "$TMP/authelia-chain-retired/stacks/hydra/compose.yml" <<'YML'
+services:
+  hydra-engine:
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.hydra-api.rule: "Host(`trading.${DOMAIN}`) && PathPrefix(`/api`)"
+      traefik.http.routers.hydra-api.middlewares: "secure-admin@file"
+YML
+expect_exposed authelia-chain-retired
+
 mkdir -p "$TMP/list-labels-catchall/stacks/other"
 cat > "$TMP/list-labels-catchall/stacks/other/compose.yml" <<'YML'
 services:
@@ -152,7 +164,7 @@ services:
       traefik.enable: "true"
       traefik.http.routers.hydra-trader.rule: "Host(`trading.${DOMAIN}`) && PathPrefix(`/api`)"
       traefik.http.routers.hydra-trader.entrypoints: "websecure"
-      traefik.http.routers.hydra-trader.middlewares: "secure-admin@file"
+      traefik.http.routers.hydra-trader.middlewares: "secure-admin-ak@file"
       traefik.http.services.hydra-trader.loadbalancer.server.port: "8000"
 YML
 expect_exposed trader-router-authed
@@ -225,7 +237,7 @@ services:
     labels:
       traefik.enable: "true"
       traefik.http.routers.hydra-api.rule: "Host(`trading.${DOMAIN}`) && PathPrefix(`/api`)"
-      traefik.http.routers.hydra-api.middlewares: "secure-admin@file"
+      traefik.http.routers.hydra-api.middlewares: "secure-admin-ak@file"
       traefik.http.routers.m.entrypoints: "websecure"
 YML
 expect_exposed implicit-router
@@ -275,8 +287,8 @@ expect_exposed api-insecure-env
 
 expect_exposed static-missing --require-static
 
-mkdir -p "$TMP/dashboard-no-authelia/stacks/core"
-cat > "$TMP/dashboard-no-authelia/stacks/core/compose.yml" <<'YML'
+mkdir -p "$TMP/dashboard-no-login/stacks/core"
+cat > "$TMP/dashboard-no-login/stacks/core/compose.yml" <<'YML'
 services:
   traefik:
     labels:
@@ -286,7 +298,7 @@ services:
       traefik.http.routers.traefik.service: "api@internal"
       traefik.http.routers.traefik.middlewares: "traefik-dashboard-redirect@file,secure@file"
 YML
-expect_exposed dashboard-no-authelia
+expect_exposed dashboard-no-login
 
 mkdir -p "$TMP/dashboard-file-provider/configs/traefik/dynamic"
 cat > "$TMP/dashboard-file-provider/configs/traefik/dynamic/api.yml" <<'YML'

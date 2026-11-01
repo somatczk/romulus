@@ -1,5 +1,5 @@
-# Authentik replaces Authelia in phases (configs/authentik/README.md). Its own stack so a slow
-# cold start never holds up the security deploy (Authelia, CrowdSec). Data stays in security/authentik.
+# Authentik (configs/authentik/README.md). Its own stack so a slow
+# cold start never holds up the security deploy (CrowdSec). Data stays in security/authentik.
 networks:
   proxy:
     external: true

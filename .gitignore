@@ -7,10 +7,6 @@ stacks/.env
 # Traefik ACME certificates
 acme.json
 
-# Authelia runtime files
-configs/authelia/users_database.yml
-configs/authelia/notification.txt
-configs/authelia/db.sqlite3
 
 # Local env overrides
 **/.env.local

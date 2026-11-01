@@ -95,7 +95,8 @@ http:
           - authentik
           - secure-headers
 
-    # D5: the MCP router's chain - bearer token at the app, no interactive login (non-interactive clients)
+    # D5: the MCP routers' chain - Authentik OAuth access token checked at the app, no forward auth (the client
+    # signs in through Authentik itself; the RFC 9728 metadata router is public by design)
     secure-mcp:
       chain:
         middlewares:

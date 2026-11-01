@@ -49,14 +49,14 @@ services:
     labels:
       traefik.enable: "true"
       traefik.docker.network: "hydra-edge"
-      # API routes (behind Authelia 2FA)
+      # API routes (behind Authentik)
       traefik.http.routers.hydra-api.rule: "Host(`trading.${DOMAIN}`) && (PathPrefix(`/api`) || PathPrefix(`/ws`))"
       traefik.http.routers.hydra-api.entrypoints: "websecure"
       traefik.http.routers.hydra-api.tls.certresolver: "cloudflare"
       traefik.http.routers.hydra-api.middlewares: "secure-admin-ak@file"
       traefik.http.routers.hydra-api.service: "hydra-api"
       traefik.http.services.hydra-api.loadbalancer.server.port: "8000"
-      # MCP endpoint (bearer token at the app, no Authelia - D5; secure-mcp = crowdsec + headers + rate limit)
+      # MCP endpoint (bearer token at the app, no interactive login - D5; secure-mcp = crowdsec + headers + rate limit)
       traefik.http.routers.hydra-mcp.rule: "Host(`trading.${DOMAIN}`) && PathPrefix(`/mcp`)"
       traefik.http.routers.hydra-mcp.entrypoints: "websecure"
       traefik.http.routers.hydra-mcp.tls.certresolver: "cloudflare"

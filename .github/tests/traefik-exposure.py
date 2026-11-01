@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Fail if a Traefik router reaches hydra, /metrics, /health or the Traefik API without secure-admin@file
-(or secure-admin-ak@file while its chain still strips client identity headers and runs Authentik)
+"""Fail if a Traefik router reaches hydra, /metrics, /health or the Traefik API without secure-admin-ak@file
+(and that chain must still strip client identity headers and run Authentik)
 (the token-authenticated hydra-mcp router is the sole D5 exception, valid only while its secure-mcp chain
 still contains crowdsec + the rate limit and its rule stays scoped to /mcp), if the Traefik API is
 served insecurely or its internal entrypoint is published, or if the internal hydra-trader exposes
@@ -13,18 +13,17 @@ from pathlib import Path
 
 import yaml
 
-AUTH = "secure-admin@file"
-# Authentik's chain counts as AUTH only while it keeps crowdsec, the identity-header strip and the forward auth
-AUTH_AK = "secure-admin-ak@file"
-AUTH_AK_MEMBERS = ("crowdsec-bouncer", "strip-auth-headers", "authentik")
+# Authentik's chain counts as auth only while it keeps crowdsec, the identity-header strip and the forward auth
+AUTH = "secure-admin-ak@file"
+AUTH_MEMBERS = ("crowdsec-bouncer", "strip-auth-headers", "authentik")
 # the D5 split's trader is internal-only: any Traefik exposure — even an authenticated router — is wrong
 TRADER = "hydra-trader"
 # D5 (hydra-build ui2-mcp1 decisions): the hydra-mcp router authenticates non-interactive MCP clients
 # with a bearer token at the app (HYDRA_MCP_TOKEN, constant-time check) behind crowdsec + rate limit;
-# Authelia's interactive 2FA is deliberately absent. It is the only router allowed to skip AUTH, and
+# Authentik's interactive login is deliberately absent. It is the only router allowed to skip AUTH, and
 # only while the whole D5 contract holds - the middleware reference, the chain's contents and the
 # rule's /mcp scope. Broadening the rule would out-prioritize the dashboard router (explicit priority 1,
-# length beats it) and serve every non-/api path through the no-Authelia chain.
+# length beats it) and serve every non-/api path through the no-login chain.
 TOKEN_AUTH_OK = {
     "stacks/hydra/compose.yml:hydra-engine:hydra-mcp": {
         "middleware": "secure-mcp@file",
@@ -241,18 +240,18 @@ def main():
         api = service in API_SERVICES and not api_exempt(rule, eps, mws)
         allow = TOKEN_AUTH_OK.get(where)
         required = allow["middleware"] if allow else AUTH
-        if (hydra or sensitive or api) and AUTH not in mws and AUTH_AK not in mws and required not in mws:
+        if (hydra or sensitive or api) and AUTH not in mws and required not in mws:
             bad += 1
             print(f"::error::{where} rule={rule!r} entrypoints={eps} middlewares={mws} lacks {required}")
-        if AUTH_AK in mws:
-            members = dynamic_chain(root, AUTH_AK)
+        if AUTH in mws:
+            members = dynamic_chain(root, AUTH)
             if members is None:
                 bad += 1
-                print(f"::error::{where}: {AUTH_AK} is not defined in {DYNAMIC}")
+                print(f"::error::{where}: {AUTH} is not defined in {DYNAMIC}")
             else:
-                for lost in (m for m in AUTH_AK_MEMBERS if m not in members):
+                for lost in (m for m in AUTH_MEMBERS if m not in members):
                     bad += 1
-                    print(f"::error::{where}: {AUTH_AK} chain lost {lost}")
+                    print(f"::error::{where}: {AUTH} chain lost {lost}")
         if allow and allow["rule_segment"] not in rule:
             bad += 1
             print(f"::error::{where} rule={rule!r} no longer scoped to {allow['rule_segment']}")

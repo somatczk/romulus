@@ -52,7 +52,6 @@ SSD_DIRS=(
     "${APPDATA}/security/crowdsec/config"
     "${APPDATA}/security/crowdsec/db"
     "${APPDATA}/security/crowdsec/hub"
-    "${APPDATA}/security/authelia"
     # Media
     "${APPDATA}/media/jellyfin/config"
     "${APPDATA}/media/jellyfin/cache"

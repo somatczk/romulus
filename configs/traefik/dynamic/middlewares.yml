@@ -29,16 +29,6 @@ http:
         period: 1s
         burst: 30
 
-    authelia:
-      forwardAuth:
-        address: http://authelia:9091/api/authz/forward-auth
-        trustForwardHeader: true
-        authResponseHeaders:
-          - Remote-User
-          - Remote-Groups
-          - Remote-Email
-          - Remote-Name
-
     # Authentik's embedded outpost, single-application mode (configs/authentik/blueprints/applications.yaml)
     authentik:
       forwardAuth:
@@ -96,14 +86,7 @@ http:
           - crowdsec-bouncer
           - secure-headers
 
-    secure-admin:
-      chain:
-        middlewares:
-          - crowdsec-bouncer
-          - authelia
-          - secure-headers
-
-    # secure-admin on Authentik; routes move here one by one, then secure-admin goes in phase 4
+    # every admin route: crowdsec, then the client's identity headers dropped, then Authentik's forward auth
     secure-admin-ak:
       chain:
         middlewares:
@@ -112,7 +95,7 @@ http:
           - authentik
           - secure-headers
 
-    # D5: the MCP router's chain - bearer token at the app replaces Authelia (non-interactive clients)
+    # D5: the MCP router's chain - bearer token at the app, no interactive login (non-interactive clients)
     secure-mcp:
       chain:
         middlewares:

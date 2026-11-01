@@ -85,7 +85,7 @@ services:
       - traefik.http.routers.openclaw.rule=Host(`ai.${DOMAIN}`)
       - traefik.http.routers.openclaw.entrypoints=websecure
       - traefik.http.routers.openclaw.tls.certresolver=cloudflare
-      - traefik.http.routers.openclaw.middlewares=secure-admin@file
+      - traefik.http.routers.openclaw.middlewares=secure-admin-ak@file
       - traefik.http.services.openclaw.loadbalancer.server.port=18789
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:18789/"]
@@ -118,7 +118,7 @@ services:
       - traefik.http.routers.open-webui.rule=Host(`chat.${DOMAIN}`)
       - traefik.http.routers.open-webui.entrypoints=websecure
       - traefik.http.routers.open-webui.tls.certresolver=cloudflare
-      - traefik.http.routers.open-webui.middlewares=secure-admin@file
+      - traefik.http.routers.open-webui.middlewares=secure-admin-ak@file
       - traefik.http.services.open-webui.loadbalancer.server.port=8080
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]

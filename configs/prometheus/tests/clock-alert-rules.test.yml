@@ -21,7 +21,7 @@ tests:
               job: node-exporter
             exp_annotations:
               summary: "Host clock is not synchronising"
-              description: "NTP is not synchronising the clock on node-exporter:9100. Check `timedatectl timesync-status`; Authelia stops starting past 3 s of drift."
+              description: "NTP is not synchronising the clock on node-exporter:9100. Check `timedatectl timesync-status`; TOTP and token checks fail as it drifts."
 
   - name: synchronised clock does not fire
     interval: 1m

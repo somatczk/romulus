@@ -2,8 +2,7 @@
 
 Authentik (`authentik` stack: `authentik-server`, `authentik-worker`, `authentik-postgresql`; data in
 `${APPDATA}/security/authentik`) at `https://sso.romulus.hu`
-replaces Authelia in phases. **Phase 3: every admin host is on Authentik** (`secure-admin-ak`); nothing uses
-Authelia's `secure-admin` any more, and phase 4 removes Authelia.
+guards every admin host (`secure-admin-ak`). It replaced Authelia (removed 2026-11-01).
 
 ## Forward auth
 

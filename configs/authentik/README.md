@@ -33,6 +33,9 @@ guards every admin host (`secure-admin-ak`).
   (with `HYDRA_MCP__OAUTH_AUDIENCE=hydra-mcp` and `HYDRA_MCP__RESOURCE_URL`). Traefik serves Hydra's RFC 9728
   metadata (`/.well-known/oauth-protected-resource`) on `trading.${DOMAIN}` without forward auth, so clients can find
   the issuer.
+- The hydra engine reaches the issuer through Traefik: `extra_hosts` maps `sso.${DOMAIN}` to Traefik's hydra-edge
+  address (10.10.13.2), because the public address does not hairpin from containers
+  (`.github/tests/hydra-network.py` requires the mapping).
 - Connecting Claude Code or claude.ai: hydra's README, "Connecting an MCP client".
 
 ## Blueprints

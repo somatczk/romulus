@@ -1,0 +1,16 @@
+# Membership is assigned in the Authentik UI; which group reaches which app is phase 2.
+version: 1
+metadata:
+  name: Romulus - Groups
+entries:
+  # superusers, so an admin can disable akadmin without losing the admin interface
+  - model: authentik_core.group
+    identifiers:
+      name: admins
+    attrs:
+      is_superuser: true
+  - model: authentik_core.group
+    identifiers:
+      name: hydra
+    attrs:
+      is_superuser: false

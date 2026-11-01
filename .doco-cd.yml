@@ -12,7 +12,8 @@ external_secrets:
 ---
 name: security
 working_dir: stacks/security
-# Authentik's worker needs ~3-4 min to its first healthy check on a cold start; the 3m default loops
+# 2026-11-01: retries after a timed-out deploy force-recreated the whole stack and left CrowdSec and
+# the bouncer in Created (every route 403); 10m keeps a slow cold start from looping
 timeout: 10m
 env_files:
   - ../host.env
@@ -20,12 +21,21 @@ external_secrets:
   AUTHELIA_JWT_SECRET: op://romulus-deploy/security/AUTHELIA_JWT_SECRET
   AUTHELIA_SESSION_SECRET: op://romulus-deploy/security/AUTHELIA_SESSION_SECRET
   AUTHELIA_STORAGE_ENCRYPTION_KEY: op://romulus-deploy/security/AUTHELIA_STORAGE_ENCRYPTION_KEY
+  CROWDSEC_BOUNCER_API_KEY: op://romulus-deploy/security/CROWDSEC_BOUNCER_API_KEY
+---
+name: authentik
+working_dir: stacks/authentik
+# the worker needs ~3-4 min to its first healthy check on a cold start; the 3m default loops
+timeout: 10m
+env_files:
+  - ../host.env
+# still the security item in 1Password: the stack moved, the secrets did not
+external_secrets:
   AUTHENTIK_BOOTSTRAP_PASSWORD: op://romulus-deploy/security/AUTHENTIK_BOOTSTRAP_PASSWORD
   AUTHENTIK_EMAIL__PASSWORD: op://romulus-deploy/security/AUTHENTIK_EMAIL__PASSWORD
   AUTHENTIK_EMAIL__USERNAME: op://romulus-deploy/security/AUTHENTIK_EMAIL__USERNAME
   AUTHENTIK_PG_PASS: op://romulus-deploy/security/AUTHENTIK_PG_PASS
   AUTHENTIK_SECRET_KEY: op://romulus-deploy/security/AUTHENTIK_SECRET_KEY
-  CROWDSEC_BOUNCER_API_KEY: op://romulus-deploy/security/CROWDSEC_BOUNCER_API_KEY
 ---
 name: notifications
 working_dir: stacks/notifications

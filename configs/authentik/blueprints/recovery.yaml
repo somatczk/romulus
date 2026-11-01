@@ -150,8 +150,4 @@ entries:
     identifiers:
       name: default-authentication-identification
     attrs:
-      # restated: the stage serializer validates user_fields on every apply (the upstream default)
-      user_fields:
-        - email
-        - username
       recovery_flow: !KeyOf flow

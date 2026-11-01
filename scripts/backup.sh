@@ -85,6 +85,11 @@ docker exec paperless-db pg_dump -U paperless paperless \
     > "${BACKUP_DIR}/db-dumps/paperless_${TIMESTAMP}.sql"
 log "Paperless database dump complete"
 
+log "Dumping Authentik database..."
+docker exec authentik-postgresql pg_dump -U authentik authentik \
+    > "${BACKUP_DIR}/db-dumps/authentik_${TIMESTAMP}.sql"
+log "Authentik database dump complete"
+
 log "Dumping Hydra database..."
 # counted just before the dump; restore-test.sh expects at least these rows back
 docker exec hydra-timescaledb psql -U hydra -d hydra -v ON_ERROR_STOP=1 -At -F ' ' -c \
@@ -113,6 +118,7 @@ restic backup "${APPDATA}" \
     --exclude="${APPDATA}/productivity/nextcloud-db" \
     --exclude="${APPDATA}/productivity/immich/db" \
     --exclude="${APPDATA}/productivity/paperless-db" \
+    --exclude="${APPDATA}/security/authentik/postgresql" \
     --tag "scheduled" \
     --verbose 2>&1
 log "Restic backup complete"

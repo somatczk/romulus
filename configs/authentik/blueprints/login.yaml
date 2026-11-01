@@ -1,0 +1,30 @@
+# Every login needs an MFA device; a user without one enrolls TOTP on the spot.
+# Sessions: 4h, or 4h + 30d with "remember me" (Authelia: 4h expiry, 30d remember-me).
+version: 1
+metadata:
+  name: Romulus - Login
+entries:
+  # applied first so the !Find targets below exist
+  - model: authentik_blueprints.metaapplyblueprint
+    attrs:
+      identifiers:
+        name: Default - Authentication flow
+      required: true
+  - model: authentik_blueprints.metaapplyblueprint
+    attrs:
+      identifiers:
+        name: Default - TOTP MFA setup flow
+      required: true
+  - model: authentik_stages_authenticator_validate.authenticatorvalidatestage
+    identifiers:
+      name: default-authentication-mfa-validation
+    attrs:
+      not_configured_action: configure
+      configuration_stages:
+        - !Find [authentik_stages_authenticator_totp.authenticatortotpstage, [name, default-authenticator-totp-setup]]
+  - model: authentik_stages_user_login.userloginstage
+    identifiers:
+      name: default-authentication-login
+    attrs:
+      session_duration: hours=4
+      remember_me_offset: days=30

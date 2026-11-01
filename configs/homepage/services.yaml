@@ -89,6 +89,10 @@
         href: https://auth.romulus.hu
         icon: authelia
         description: Authentication and SSO
+    - Authentik:
+        href: https://sso.romulus.hu
+        icon: authentik
+        description: Identity provider, users and invitations (replacing Authelia)
     - AdGuard:
         href: https://dns.romulus.hu
         icon: adguard-home

@@ -77,6 +77,7 @@ flowchart LR
 - **Identity:** one GitHub App per organisation, no PATs. Keys reach the cluster from 1Password through External Secrets.
 - **Runners:** an ephemeral pod per job with a dind sidecar, per-org cache and BuildKit, a shared Docker Hub pull-through mirror.
 - **Supply chain:** the runner image is built on GitHub-hosted runners with SBOM and provenance, cosign-signed, and deployed by digest.
+- **Disk:** the VM's qcow2 lives on the app SSD (`/media/SSD-Storage/vms`), next to every container's data. `create.sh` caps it at 100 MiB/s and 4000 IOPS (`virsh blkdeviotune --config`); uncapped CI I/O once starved CrowdSec until the bouncer refused every request.
 - **Isolation:** the host firewall fences the VM off the LAN; NetworkPolicies keep each org namespace to itself, DNS, the mirror and the internet. dind is privileged, so all orgs on the cluster share one trust boundary: the VM is the wall between CI and the homelab, not between orgs.
 
 Bootstrap: `scripts/ci-vm/create.sh` builds the VM, then a 1Password service account token goes into the cluster and `kubectl apply -k clusters/romulus` hands over to Flux.

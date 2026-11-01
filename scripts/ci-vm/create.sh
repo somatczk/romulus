@@ -72,4 +72,6 @@ virt-install --name "$NAME" --memory 98304 --vcpus 24 --cpu host-passthrough \
   --disk path="$V/seed.iso",device=cdrom \
   --network network=default,mac=$MAC,model=virtio \
   --os-variant ubuntu24.04 --boot uefi --graphics none --noautoconsole --autostart --import
+# The qcow2 shares the app SSD: uncapped CI reads (410 MB/s) starved CrowdSec and the bouncer 403'd every route.
+virsh blkdeviotune "$NAME" "$V/$NAME.qcow2" --total-bytes-sec $((100 * 1024 * 1024)) --total-iops-sec 4000 --live --config
 echo "$NAME starting at $IP; k3s installs on first boot."

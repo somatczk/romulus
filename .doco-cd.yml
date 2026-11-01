@@ -12,6 +12,8 @@ external_secrets:
 ---
 name: security
 working_dir: stacks/security
+# Authentik's worker needs ~3-4 min to its first healthy check on a cold start; the 3m default loops
+timeout: 10m
 env_files:
   - ../host.env
 external_secrets:

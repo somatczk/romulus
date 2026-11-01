@@ -33,6 +33,13 @@ install -m 644 "${SCRIPTS_DIR}/systemd/homelab-firewall.service" /etc/systemd/sy
 systemctl daemon-reload
 systemctl enable homelab-firewall.service
 
+# Public NTP servers for timesyncd; restarted only when the drop-in changes.
+if ! cmp -s "${SCRIPTS_DIR}/systemd/timesyncd-romulus.conf" /etc/systemd/timesyncd.conf.d/romulus.conf; then
+    install -d -m 755 /etc/systemd/timesyncd.conf.d
+    install -m 644 "${SCRIPTS_DIR}/systemd/timesyncd-romulus.conf" /etc/systemd/timesyncd.conf.d/romulus.conf
+    systemctl try-restart systemd-timesyncd.service || log "WARN systemd-timesyncd not restarted"
+fi
+
 # Backup existing crontab
 EXISTING_CRON=$(crontab -l 2>/dev/null || true)
 if [ -n "${EXISTING_CRON}" ]; then

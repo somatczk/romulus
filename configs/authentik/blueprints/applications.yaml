@@ -1,5 +1,5 @@
 # One application + forward_single proxy provider per protected host (Traefik forward auth to the
-# embedded outpost); group bindings decide who gets in. Phase 3a: every admin host but trading, all bound to admins.
+# embedded outpost); group bindings decide who gets in. Phase 3: every admin host; trading also lets in hydra.
 version: 1
 metadata:
   name: Romulus - Applications
@@ -347,6 +347,53 @@ entries:
       group: !Find [authentik_core.group, [name, admins]]
       order: 0
 
+  # trading: Hydra maps Remote-User to its principal and trusts it only from Traefik's hydra-edge
+  # address (HYDRA_API__TRUSTED_PROXY_CIDRS); the outpost emits it from this mapping, and the
+  # authentik middleware passes it on (configs/traefik/dynamic/middlewares.yml)
+  - model: authentik_providers_oauth2.scopemapping
+    id: scope-remote-user
+    identifiers:
+      name: "Romulus: Remote-User header"
+    attrs:
+      scope_name: ak_proxy_remote_user
+      description: Remote-User = the Authentik username, for Hydra
+      expression: |
+        return {"ak_proxy": {"user_attributes": {"additionalHeaders": {"Remote-User": request.user.username}}}}
+  - model: authentik_providers_proxy.proxyprovider
+    id: provider-trading
+    identifiers:
+      name: trading
+    attrs:
+      mode: forward_single
+      external_host: https://trading.romulus.hu
+      authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
+      invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
+      access_token_validity: hours=4
+      # Authelia bypassed /_next/ on every host for the Next.js dashboard; kept for its immutable build assets only
+      skip_path_regex: ^/_next/static/
+      # set_oauth_defaults() adds the default proxy scopes on every save
+      property_mappings:
+        - !KeyOf scope-remote-user
+  - model: authentik_core.application
+    id: app-trading
+    identifiers:
+      slug: trading
+    attrs:
+      name: Hydra
+      provider: !KeyOf provider-trading
+      meta_launch_url: https://trading.romulus.hu
+      policy_engine_mode: any
+  - model: authentik_policies.policybinding
+    identifiers:
+      target: !KeyOf app-trading
+      group: !Find [authentik_core.group, [name, admins]]
+      order: 0
+  - model: authentik_policies.policybinding
+    identifiers:
+      target: !KeyOf app-trading
+      group: !Find [authentik_core.group, [name, hydra]]
+      order: 1
+
   # the embedded outpost serves every provider listed here; this list is the full set
   - model: authentik_outposts.outpost
     identifiers:
@@ -366,3 +413,4 @@ entries:
         - !KeyOf provider-bazarr
         - !KeyOf provider-lidarr
         - !KeyOf provider-qbit
+        - !KeyOf provider-trading

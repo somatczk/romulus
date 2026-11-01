@@ -5,6 +5,9 @@ networks:
     external: true
   authelia:
     driver: bridge
+  # not internal: the worker sends mail through smtp.gmail.com over it
+  authentik:
+    driver: bridge
 
 services:
   authelia:
@@ -92,5 +95,99 @@ services:
       resources:
         limits:
           memory: 128m
+    security_opt:
+      - no-new-privileges:true
+
+  # Authentik replaces Authelia in phases; no router uses it yet (configs/authentik/README.md)
+  authentik-postgresql:
+    build: ./authentik-postgresql
+    container_name: authentik-postgresql
+    restart: unless-stopped
+    networks:
+      - authentik
+    environment:
+      TZ: ${TZ}
+      POSTGRES_DB: authentik
+      POSTGRES_USER: authentik
+      POSTGRES_PASSWORD: ${AUTHENTIK_PG_PASS}
+    volumes:
+      - ${APPDATA}/security/authentik/postgresql:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d authentik -U authentik"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+    security_opt:
+      - no-new-privileges:true
+
+  # the image's own HEALTHCHECK (ak healthcheck) applies; it runs as uid 1000, so data/ must be owned by 1000
+  authentik-server:
+    build: ./authentik
+    container_name: authentik-server
+    command: server
+    restart: unless-stopped
+    shm_size: 512mb
+    networks:
+      - proxy
+      - authentik
+    depends_on:
+      authentik-postgresql:
+        condition: service_healthy
+    volumes:
+      - ${APPDATA}/security/authentik/data:/data
+      - ../../configs/authentik/blueprints:/blueprints/custom:ro
+    environment: &authentik-env
+      AUTHENTIK_SECRET_KEY: ${AUTHENTIK_SECRET_KEY}
+      AUTHENTIK_POSTGRESQL__HOST: authentik-postgresql
+      AUTHENTIK_POSTGRESQL__NAME: authentik
+      AUTHENTIK_POSTGRESQL__USER: authentik
+      AUTHENTIK_POSTGRESQL__PASSWORD: ${AUTHENTIK_PG_PASS}
+      AUTHENTIK_BOOTSTRAP_PASSWORD: ${AUTHENTIK_BOOTSTRAP_PASSWORD}
+      AUTHENTIK_EMAIL__HOST: smtp.gmail.com
+      AUTHENTIK_EMAIL__PORT: "587"
+      AUTHENTIK_EMAIL__USE_TLS: "true"
+      AUTHENTIK_EMAIL__USERNAME: ${AUTHENTIK_EMAIL__USERNAME}
+      AUTHENTIK_EMAIL__PASSWORD: ${AUTHENTIK_EMAIL__PASSWORD}
+      # Gmail rewrites any other From address
+      AUTHENTIK_EMAIL__FROM: ${AUTHENTIK_EMAIL__USERNAME}
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.authentik.rule: "Host(`sso.${DOMAIN}`)"
+      traefik.http.routers.authentik.entrypoints: "websecure"
+      traefik.http.routers.authentik.tls.certresolver: "cloudflare"
+      traefik.http.routers.authentik.middlewares: "secure@file"
+      traefik.http.services.authentik.loadbalancer.server.port: "9000"
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+    security_opt:
+      - no-new-privileges:true
+
+  # embedded outpost only: no docker.sock and no user: root
+  authentik-worker:
+    build: ./authentik
+    container_name: authentik-worker
+    command: worker
+    restart: unless-stopped
+    shm_size: 512mb
+    networks:
+      - authentik
+    depends_on:
+      authentik-postgresql:
+        condition: service_healthy
+    volumes:
+      - ${APPDATA}/security/authentik/data:/data
+      - ../../configs/authentik/blueprints:/blueprints/custom:ro
+    environment: *authentik-env
+    deploy:
+      resources:
+        limits:
+          memory: 2g
     security_opt:
       - no-new-privileges:true

@@ -18,6 +18,11 @@ external_secrets:
   AUTHELIA_JWT_SECRET: op://romulus-deploy/security/AUTHELIA_JWT_SECRET
   AUTHELIA_SESSION_SECRET: op://romulus-deploy/security/AUTHELIA_SESSION_SECRET
   AUTHELIA_STORAGE_ENCRYPTION_KEY: op://romulus-deploy/security/AUTHELIA_STORAGE_ENCRYPTION_KEY
+  AUTHENTIK_BOOTSTRAP_PASSWORD: op://romulus-deploy/security/AUTHENTIK_BOOTSTRAP_PASSWORD
+  AUTHENTIK_EMAIL__PASSWORD: op://romulus-deploy/security/AUTHENTIK_EMAIL__PASSWORD
+  AUTHENTIK_EMAIL__USERNAME: op://romulus-deploy/security/AUTHENTIK_EMAIL__USERNAME
+  AUTHENTIK_PG_PASS: op://romulus-deploy/security/AUTHENTIK_PG_PASS
+  AUTHENTIK_SECRET_KEY: op://romulus-deploy/security/AUTHENTIK_SECRET_KEY
   CROWDSEC_BOUNCER_API_KEY: op://romulus-deploy/security/CROWDSEC_BOUNCER_API_KEY
 ---
 name: notifications

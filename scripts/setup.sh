@@ -52,6 +52,7 @@ SSD_DIRS=(
     "${APPDATA}/security/crowdsec/config"
     "${APPDATA}/security/crowdsec/db"
     "${APPDATA}/security/crowdsec/hub"
+    "${APPDATA}/security/authentik/data"
     # Media
     "${APPDATA}/media/jellyfin/config"
     "${APPDATA}/media/jellyfin/cache"
@@ -135,6 +136,8 @@ log_info "Directory structure created."
 log_info "Setting ownership to ${PUID}:${PGID}..."
 
 chown -R "${PUID}:${PGID}" "${APPDATA}"
+# authentik runs as 1000 and cannot write a data dir owned by PUID
+chown -R 1000:1000 "${APPDATA}/security/authentik/data"
 chown -R "${PUID}:${PGID}" "${HDD}/media"
 chown -R "${PUID}:${PGID}" "${HDD}/downloads"
 chown -R "${PUID}:${PGID}" "${HDD}/backups"

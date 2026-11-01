@@ -20,6 +20,7 @@ CRON_ENTRIES=(
     "0 5 1 * * ${SCRIPTS_DIR}/btrfs-maintenance.sh balance >> /var/log/homelab/maintenance.log 2>&1"
     "0 6 1 * * ${SCRIPTS_DIR}/restore-test.sh >> /var/log/homelab/restore-test.log 2>&1"
     "0 5 * * 3 /bin/bash -c 'export PATH=\$PATH:/usr/local/bin RESTIC_CACHE_DIR=/var/cache/restic && source /DATA/stacks/scripts/lib/env.sh RESTIC_PASSWORD && export RESTIC_REPOSITORY=/media/HDD-Storage/backups/restic-repo && restic check' >> /var/log/homelab/restic-check.log 2>&1"
+    "* * * * * ${SCRIPTS_DIR}/ci-vm/probe.sh >> /var/log/homelab/ci-vm-probe.log 2>&1"
     "0 3 * * 0 docker image prune -af --filter until=168h >> /var/log/homelab/docker-cleanup.log 2>&1; docker builder prune -af --filter until=168h >> /var/log/homelab/docker-cleanup.log 2>&1"
 )
 
@@ -83,4 +84,5 @@ log "  5:00 Sun    - BTRFS scrub (weekly)"
 log "  5:00 1st    - BTRFS balance (monthly)"
 log "  6:00 1st    - Restore test (monthly, after backup)"
 log "  5:00 Wed    - Restic integrity check (weekly)"
+log "  Every min   - CI VM liveness probe (textfile metric)"
 log "  3:00 Sun    - Docker image and build cache prune (weekly)"

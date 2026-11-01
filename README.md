@@ -84,7 +84,7 @@ Bootstrap: `scripts/ci-vm/create.sh` builds the VM, then a 1Password service acc
 
 ## Security
 
-- Reachable on the LAN and over Tailscale only. Admin services sit behind Authelia with 2FA.
+- Reachable on the LAN and over Tailscale only. Admin services sit behind Authelia with 2FA (speed already behind Authentik, the rest follow).
 - Default-deny firewall, including between Docker networks. Most service networks are internal; the CI VM is fenced off the LAN.
 - CrowdSec in front of Traefik, TLS 1.3 only, HSTS everywhere.
 - Containers reach the Docker API only through read-only socket proxies.

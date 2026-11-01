@@ -415,6 +415,8 @@ entries:
       invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
       client_type: public
       client_id: hydra-mcp
+      # a provider created by a blueprint allows no grant until it is listed here
+      grant_types: [authorization_code, refresh_token]
       redirect_uris:
         # Claude Code's loopback callback, any port (RFC 8252)
         - matching_mode: regex

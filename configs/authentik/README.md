@@ -24,7 +24,7 @@ guards every admin host (`secure-admin-ak`).
 - `applications.yaml` defines the `hydra-mcp` OAuth2/OpenID provider and the "Hydra MCP" application (slug
   `hydra-mcp`, no library tile), bound to `admins` and `hydra`. It is not an outpost provider: no forward auth sits in
   front of `trading.${DOMAIN}/mcp`, and Hydra verifies the access tokens itself.
-- Public client `hydra-mcp` with PKCE, no secret. Redirect URIs: `http://localhost:<port>/callback` and
+- Public client `hydra-mcp` with PKCE, no secret, allowed the `authorization_code` and `refresh_token` grants. Redirect URIs: `http://localhost:<port>/callback` and
   `http://127.0.0.1:<port>/callback` on any port (Claude Code) and `https://claude.ai/api/mcp/auth_callback`
   (claude.ai custom connectors). Authentik has no dynamic client registration, so clients are given the client id.
 - Tokens are RS256-signed with `authentik Self-signed Certificate` (Hydra reads the public keys from the issuer's

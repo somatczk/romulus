@@ -2,8 +2,8 @@
 
 Authentik (`authentik` stack: `authentik-server`, `authentik-worker`, `authentik-postgresql`; data in
 `${APPDATA}/security/authentik`) at `https://sso.romulus.hu`
-replaces Authelia in phases. **Phase 3a: every admin host except `trading` is on Authentik** (`secure-admin-ak`);
-trading is still on Authelia (`secure-admin`) until 3b. Authelia stays until phase 4.
+replaces Authelia in phases. **Phase 3: every admin host is on Authentik** (`secure-admin-ak`); nothing uses
+Authelia's `secure-admin` any more, and phase 4 removes Authelia.
 
 ## Forward auth
 
@@ -32,7 +32,7 @@ hourly. Each file is one blueprint and applies atomically.
 | `login.yaml` | The default login flow's MFA stage is set to `configure` with the default TOTP setup stage: a user without an MFA device enrolls TOTP at login. Sessions last 4h, or 4h + 30d with "remember me". |
 | `enrollment.yaml` | Flow `invitation-enrollment`: invitation → username and password → name and email → user created. No login stage, so the new user then signs in and is forced into TOTP. |
 | `recovery.yaml` | Flow `default-recovery-flow`: identify → emailed link → new password. No login stage, so a reset still ends at password + MFA. Set as the default brand's recovery flow and as the "Forgot password?" link on the login page. |
-| `applications.yaml` | One `forward_single` proxy provider and application per protected host, bound to a group, and the embedded outpost's provider list (the full set). Now: speed, traefik, dns, logs, portainer, prometheus, glances, sonarr, radarr, prowlarr, bazarr, lidarr, qbit → `admins`. |
+| `applications.yaml` | One `forward_single` proxy provider and application per protected host, bound to a group, and the embedded outpost's provider list (the full set). Now: speed, traefik, dns, logs, portainer, prometheus, glances, sonarr, radarr, prowlarr, bazarr, lidarr, qbit → `admins`; trading → `admins` and `hydra`, with a scope mapping that sends `Remote-User` (the Authentik username) to Hydra and `/_next/static/` unauthenticated. |
 
 The files that change defaults (`login.yaml`, `recovery.yaml`) first apply the default blueprints they edit. On a
 first boot one may still show **Error** under Admin → Customization → Blueprints if it ran before the defaults were

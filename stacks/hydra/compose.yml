@@ -53,7 +53,7 @@ services:
       traefik.http.routers.hydra-api.rule: "Host(`trading.${DOMAIN}`) && (PathPrefix(`/api`) || PathPrefix(`/ws`))"
       traefik.http.routers.hydra-api.entrypoints: "websecure"
       traefik.http.routers.hydra-api.tls.certresolver: "cloudflare"
-      traefik.http.routers.hydra-api.middlewares: "secure-admin@file"
+      traefik.http.routers.hydra-api.middlewares: "secure-admin-ak@file"
       traefik.http.routers.hydra-api.service: "hydra-api"
       traefik.http.services.hydra-api.loadbalancer.server.port: "8000"
       # MCP endpoint (bearer token at the app, no Authelia - D5; secure-mcp = crowdsec + headers + rate limit)
@@ -144,7 +144,7 @@ services:
       traefik.http.routers.hydra-dashboard.rule: "Host(`trading.${DOMAIN}`)"
       traefik.http.routers.hydra-dashboard.entrypoints: "websecure"
       traefik.http.routers.hydra-dashboard.tls.certresolver: "cloudflare"
-      traefik.http.routers.hydra-dashboard.middlewares: "secure-admin@file"
+      traefik.http.routers.hydra-dashboard.middlewares: "secure-admin-ak@file"
       traefik.http.routers.hydra-dashboard.service: "hydra-dashboard"
       traefik.http.routers.hydra-dashboard.priority: "1"
       traefik.http.services.hydra-dashboard.loadbalancer.server.port: "3000"

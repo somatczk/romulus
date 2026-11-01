@@ -2,8 +2,20 @@
 
 Authentik (`authentik` stack: `authentik-server`, `authentik-worker`, `authentik-postgresql`; data in
 `${APPDATA}/security/authentik`) at `https://sso.romulus.hu`
-replaces Authelia in phases. **Phase 1: no route uses it yet**; every admin route is still on Authelia
-(`secure-admin`). Authelia stays until phase 4.
+replaces Authelia in phases. **Phase 2: only `speed` is on Authentik** (`secure-admin-ak`); every other admin
+route is still on Authelia (`secure-admin`). Authelia stays until phase 4.
+
+## Forward auth
+
+- `secure-admin-ak` (`configs/traefik/dynamic/middlewares.yml`): crowdsec-bouncer → `strip-auth-headers` (empties
+  `Remote-*` and `X-authentik-*` a client may send) → `authentik` (forwardAuth to the embedded outpost) →
+  secure-headers.
+- Router `authentik-outpost` on `authentik-server` sends `/outpost.goauthentik.io/` on every `*.${DOMAIN}` host to
+  Authentik (login callback, sign-out); priority 1000 so it wins over the app's own router.
+- Moving a host: add its provider, application and group binding to `applications.yaml`, add the provider to the
+  embedded outpost's list there, then switch the router's middleware to `secure-admin-ak@file`.
+- The embedded outpost's `authentik_host` must be `https://sso.romulus.hu` (Applications → Outposts). Authentik
+  sets it from the first admin visit; the blueprint leaves the outpost config alone.
 
 ## Blueprints
 
@@ -17,6 +29,7 @@ hourly. Each file is one blueprint and applies atomically.
 | `login.yaml` | The default login flow's MFA stage is set to `configure` with the default TOTP setup stage: a user without an MFA device enrolls TOTP at login. Sessions last 4h, or 4h + 30d with "remember me". |
 | `enrollment.yaml` | Flow `invitation-enrollment`: invitation → username and password → name and email → user created. No login stage, so the new user then signs in and is forced into TOTP. |
 | `recovery.yaml` | Flow `default-recovery-flow`: identify → emailed link → new password. No login stage, so a reset still ends at password + MFA. Set as the default brand's recovery flow and as the "Forgot password?" link on the login page. |
+| `applications.yaml` | One `forward_single` proxy provider and application per protected host, bound to a group, and the embedded outpost's provider list (the full set). Now: `speed` → `admins`. |
 
 The files that change defaults (`login.yaml`, `recovery.yaml`) first apply the default blueprints they edit. On a
 first boot one may still show **Error** under Admin → Customization → Blueprints if it ran before the defaults were

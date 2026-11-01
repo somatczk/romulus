@@ -96,7 +96,7 @@ services:
       traefik.http.routers.speed.rule: Host(`speed.${DOMAIN}`)
       traefik.http.routers.speed.entrypoints: websecure
       traefik.http.routers.speed.tls.certresolver: cloudflare
-      traefik.http.routers.speed.middlewares: secure-admin@file
+      traefik.http.routers.speed.middlewares: secure-admin-ak@file
       traefik.http.services.speed.loadbalancer.server.port: "80"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:80"]

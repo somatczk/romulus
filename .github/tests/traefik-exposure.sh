@@ -90,6 +90,38 @@ services:
 YML
 expect_exposed mcp-chain-missing
 
+# the Authentik chain counts as auth only while it keeps the identity-header strip and the forward auth
+mkdir -p "$TMP/ak-chain-hollowed/stacks/hydra" "$TMP/ak-chain-hollowed/configs/traefik/dynamic"
+cat > "$TMP/ak-chain-hollowed/configs/traefik/dynamic/middlewares.yml" <<'YML'
+http:
+  middlewares:
+    secure-admin-ak:
+      chain:
+        middlewares:
+          - crowdsec-bouncer
+          - secure-headers
+YML
+cat > "$TMP/ak-chain-hollowed/stacks/hydra/compose.yml" <<'YML'
+services:
+  hydra-engine:
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.hydra-api.rule: "Host(`trading.${DOMAIN}`) && PathPrefix(`/api`)"
+      traefik.http.routers.hydra-api.middlewares: "secure-admin-ak@file"
+YML
+expect_exposed ak-chain-hollowed
+
+mkdir -p "$TMP/ak-chain-missing/stacks/hydra"
+cat > "$TMP/ak-chain-missing/stacks/hydra/compose.yml" <<'YML'
+services:
+  hydra-engine:
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.hydra-api.rule: "Host(`trading.${DOMAIN}`) && PathPrefix(`/api`)"
+      traefik.http.routers.hydra-api.middlewares: "secure-admin-ak@file"
+YML
+expect_exposed ak-chain-missing
+
 mkdir -p "$TMP/list-labels-catchall/stacks/other"
 cat > "$TMP/list-labels-catchall/stacks/other/compose.yml" <<'YML'
 services:

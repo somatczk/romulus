@@ -69,7 +69,7 @@ services:
       traefik.http.routers.traefik.entrypoints: "websecure"
       traefik.http.routers.traefik.tls.certresolver: "cloudflare"
       traefik.http.routers.traefik.service: "api@internal"
-      traefik.http.routers.traefik.middlewares: "traefik-dashboard-redirect@file,secure-admin@file"
+      traefik.http.routers.traefik.middlewares: "traefik-dashboard-redirect@file,secure-admin-ak@file"
       traefik.http.routers.traefik-overview.rule: "Path(`/api/overview`)"
       traefik.http.routers.traefik-overview.entrypoints: "traefik-api"
       traefik.http.routers.traefik-overview.service: "api@internal"
@@ -122,7 +122,7 @@ services:
       traefik.http.routers.adguard.entrypoints: "websecure"
       traefik.http.routers.adguard.tls.certresolver: "cloudflare"
       traefik.http.routers.adguard.service: "adguard"
-      traefik.http.routers.adguard.middlewares: "secure-admin@file"
+      traefik.http.routers.adguard.middlewares: "secure-admin-ak@file"
       traefik.http.services.adguard.loadbalancer.server.port: "80"
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:80"]

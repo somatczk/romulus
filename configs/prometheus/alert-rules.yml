@@ -294,3 +294,24 @@ groups:
         annotations:
           summary: "doco-cd is down, merges to master are not deploying"
           description: "Check: docker logs doco-cd; restart with sudo bash /DATA/stacks/scripts/install-gitops.sh"
+
+  - name: ci-vm
+    rules:
+      # scripts/ci-vm/probe.sh; the VM hung on 2026-11-01 while virsh still showed it running
+      - alert: CiVmUnresponsive
+        expr: homelab_ci_vm_up == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "The CI VM is not answering"
+          description: "romulus-ci's k3s API has not replied for 5 minutes; GitHub Actions runners are offline. Check: sudo virsh domstate romulus-ci; sudo virsh reset romulus-ci if it is hung."
+
+      - alert: CiVmProbeStale
+        expr: time() - homelab_ci_vm_probe_timestamp > 600
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "The CI VM probe is not running"
+          description: "scripts/ci-vm/probe.sh has not written a result in 10 minutes. Check: sudo crontab -l"

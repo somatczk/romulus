@@ -22,6 +22,10 @@ services:
         ipv4_address: 10.10.13.3
       hydra: {}
       monitoring: {}
+    # sso.${DOMAIN} resolves to the public address, which does not hairpin from containers; Traefik's static
+    # hydra-edge address serves it, so the engine reaches the OAuth issuer's discovery document and JWKS
+    extra_hosts:
+      - "sso.${DOMAIN}:10.10.13.2"
     depends_on:
       hydra-timescaledb:
         condition: service_healthy
@@ -37,8 +41,11 @@ services:
       HYDRA_API_TOKEN: ${HYDRA_API_TOKEN:?}
       # the D5 split knob: set = this process is the API only, the trader holds the sessions
       HYDRA_TRADER__URL: http://hydra-trader:8000
-      # MCP bearer token: env-only, >=32 chars, must differ from HYDRA_API_TOKEN (2.5.0 refuses equals)
-      HYDRA_MCP_TOKEN: ${HYDRA_MCP_TOKEN:?}
+      # MCP is an OAuth 2.1 resource server: Authentik's hydra-mcp provider issues the access tokens
+      # (configs/authentik/blueprints/applications.yaml); the issuer keeps its trailing slash (exact match)
+      HYDRA_MCP__OAUTH_ISSUER: https://sso.${DOMAIN}/application/o/hydra-mcp/
+      HYDRA_MCP__OAUTH_AUDIENCE: hydra-mcp
+      HYDRA_MCP__RESOURCE_URL: https://trading.${DOMAIN}/mcp
       HYDRA_MCP__ALLOWED_HOSTS: trading.${DOMAIN}
       HYDRA_API__CORS_ORIGINS: https://trading.${DOMAIN}
     volumes:
@@ -56,13 +63,20 @@ services:
       traefik.http.routers.hydra-api.middlewares: "secure-admin-ak@file"
       traefik.http.routers.hydra-api.service: "hydra-api"
       traefik.http.services.hydra-api.loadbalancer.server.port: "8000"
-      # MCP endpoint (bearer token at the app, no interactive login - D5; secure-mcp = crowdsec + headers + rate limit)
+      # MCP endpoint (Authentik OAuth access token checked at the app, no forward auth - D5; secure-mcp = crowdsec + headers + rate limit)
       traefik.http.routers.hydra-mcp.rule: "Host(`trading.${DOMAIN}`) && PathPrefix(`/mcp`)"
       traefik.http.routers.hydra-mcp.entrypoints: "websecure"
       traefik.http.routers.hydra-mcp.tls.certresolver: "cloudflare"
       traefik.http.routers.hydra-mcp.middlewares: "secure-mcp@file"
       traefik.http.routers.hydra-mcp.service: "hydra-mcp"
       traefik.http.services.hydra-mcp.loadbalancer.server.port: "8000"
+      # OAuth discovery for MCP clients (RFC 9728): public metadata naming the issuer, so it skips forward auth
+      # like the MCP router; its longer rule out-prioritizes the dashboard router (priority 1)
+      traefik.http.routers.hydra-mcp-metadata.rule: "Host(`trading.${DOMAIN}`) && PathPrefix(`/.well-known/oauth-protected-resource`)"
+      traefik.http.routers.hydra-mcp-metadata.entrypoints: "websecure"
+      traefik.http.routers.hydra-mcp-metadata.tls.certresolver: "cloudflare"
+      traefik.http.routers.hydra-mcp-metadata.middlewares: "secure-mcp@file"
+      traefik.http.routers.hydra-mcp-metadata.service: "hydra-mcp"
     healthcheck:
       # liveness only: /readyz drives alerts, autoheal would restart-loop on feed or DB blips
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/livez')"]

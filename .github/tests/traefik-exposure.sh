@@ -90,6 +90,29 @@ services:
 YML
 expect_exposed mcp-chain-missing
 
+# the public OAuth metadata router stays scoped to the RFC 9728 path
+mkdir -p "$TMP/mcp-metadata-broadened/stacks/hydra" "$TMP/mcp-metadata-broadened/configs/traefik/dynamic"
+cat > "$TMP/mcp-metadata-broadened/configs/traefik/dynamic/middlewares.yml" <<'YML'
+http:
+  middlewares:
+    secure-mcp:
+      chain:
+        middlewares:
+          - crowdsec-bouncer
+          - secure-headers
+          - mcp-rate-limit
+YML
+cat > "$TMP/mcp-metadata-broadened/stacks/hydra/compose.yml" <<'YML'
+services:
+  hydra-engine:
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.hydra-mcp-metadata.rule: "Host(`trading.${DOMAIN}`) && PathPrefix(`/.well-known`)"
+      traefik.http.routers.hydra-mcp-metadata.entrypoints: "websecure"
+      traefik.http.routers.hydra-mcp-metadata.middlewares: "secure-mcp@file"
+YML
+expect_exposed mcp-metadata-broadened
+
 # the Authentik chain counts as auth only while it keeps the identity-header strip and the forward auth
 mkdir -p "$TMP/ak-chain-hollowed/stacks/hydra" "$TMP/ak-chain-hollowed/configs/traefik/dynamic"
 cat > "$TMP/ak-chain-hollowed/configs/traefik/dynamic/middlewares.yml" <<'YML'

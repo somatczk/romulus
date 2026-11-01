@@ -2,7 +2,7 @@
 
 Authentik (`authentik` stack: `authentik-server`, `authentik-worker`, `authentik-postgresql`; data in
 `${APPDATA}/security/authentik`) at `https://sso.romulus.hu`
-guards every admin host (`secure-admin-ak`). It replaced Authelia (removed 2026-11-01).
+guards every admin host (`secure-admin-ak`).
 
 ## Forward auth
 
@@ -19,6 +19,25 @@ guards every admin host (`secure-admin-ak`). It replaced Authelia (removed 2026-
 - The embedded outpost's `authentik_host` must be `https://sso.romulus.hu` (Applications → Outposts). Authentik
   sets it from the first admin visit; the blueprint leaves the outpost config alone.
 
+## OAuth for Hydra's MCP endpoint
+
+- `applications.yaml` defines the `hydra-mcp` OAuth2/OpenID provider and the "Hydra MCP" application (slug
+  `hydra-mcp`, no library tile), bound to `admins` and `hydra`. It is not an outpost provider: no forward auth sits in
+  front of `trading.${DOMAIN}/mcp`, and Hydra verifies the access tokens itself.
+- Public client `hydra-mcp` with PKCE, no secret. Redirect URIs: `http://localhost:<port>/callback` and
+  `http://127.0.0.1:<port>/callback` on any port (Claude Code) and `https://claude.ai/api/mcp/auth_callback`
+  (claude.ai custom connectors). Authentik has no dynamic client registration, so clients are given the client id.
+- Tokens are RS256-signed with `authentik Self-signed Certificate` (Hydra reads the public keys from the issuer's
+  JWKS). Access tokens last 10 minutes, refresh tokens 30 days; scopes openid, profile, email and offline_access.
+- Issuer: `https://sso.romulus.hu/application/o/hydra-mcp/`, set on the hydra engine as `HYDRA_MCP__OAUTH_ISSUER`
+  (with `HYDRA_MCP__OAUTH_AUDIENCE=hydra-mcp` and `HYDRA_MCP__RESOURCE_URL`). Traefik serves Hydra's RFC 9728
+  metadata (`/.well-known/oauth-protected-resource`) on `trading.${DOMAIN}` without forward auth, so clients can find
+  the issuer.
+- The hydra engine reaches the issuer through Traefik: `extra_hosts` maps `sso.${DOMAIN}` to Traefik's hydra-edge
+  address (10.10.13.2), because the public address does not hairpin from containers
+  (`.github/tests/hydra-network.py` requires the mapping).
+- Connecting Claude Code or claude.ai: hydra's README, "Connecting an MCP client".
+
 ## Blueprints
 
 `blueprints/` is mounted read-only at `/blueprints/custom` in the server and the worker. Authentik finds every
@@ -31,7 +50,7 @@ hourly. Each file is one blueprint and applies atomically.
 | `login.yaml` | The default login flow's MFA stage is set to `configure` with the default TOTP setup stage: a user without an MFA device enrolls TOTP at login. Sessions last 4h, or 4h + 30d with "remember me". |
 | `enrollment.yaml` | Flow `invitation-enrollment`: invitation → username and password → name and email → user created. No login stage, so the new user then signs in and is forced into TOTP. |
 | `recovery.yaml` | Flow `default-recovery-flow`: identify → emailed link → new password. No login stage, so a reset still ends at password + MFA. Set as the default brand's recovery flow and as the "Forgot password?" link on the login page. |
-| `applications.yaml` | One `forward_single` proxy provider and application per protected host, bound to a group, and the embedded outpost's provider list (the full set). Now: speed, traefik, dns, logs, portainer, prometheus, glances, sonarr, radarr, prowlarr, bazarr, lidarr, qbit → `admins`; trading → `admins` and `hydra`, with a scope mapping that sends `Remote-User` (the Authentik username) to Hydra and `/_next/static/` unauthenticated. |
+| `applications.yaml` | One `forward_single` proxy provider and application per protected host, bound to a group, and the embedded outpost's provider list (the full set). Hosts: speed, traefik, dns, logs, portainer, prometheus, glances, sonarr, radarr, prowlarr, bazarr, lidarr, qbit → `admins`; trading → `admins` and `hydra`, with a scope mapping that sends `Remote-User` (the Authentik username) to Hydra and `/_next/static/` unauthenticated. Also the `hydra-mcp` OAuth2/OpenID provider for Hydra's MCP endpoint (see below). |
 
 The files that change defaults (`login.yaml`, `recovery.yaml`) first apply the default blueprints they edit. On a
 first boot one may still show **Error** under Admin → Customization → Blueprints if it ran before the defaults were

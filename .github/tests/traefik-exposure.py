@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Fail if a Traefik router reaches hydra, /metrics, /health or the Traefik API without secure-admin-ak@file
 (and that chain must still strip client identity headers and run Authentik)
-(the token-authenticated hydra-mcp router is the sole D5 exception, valid only while its secure-mcp chain
-still contains crowdsec + the rate limit and its rule stays scoped to /mcp), if the Traefik API is
+(the OAuth-authenticated hydra-mcp router and its public RFC 9728 metadata router are the D5 exceptions, valid
+only while their secure-mcp chain still contains crowdsec + the rate limit and their rules stay scoped to /mcp and
+/.well-known/oauth-protected-resource), if the Traefik API is
 served insecurely or its internal entrypoint is published, or if the internal hydra-trader exposes
 any Traefik router at all (D5's split; even an authenticated one)."""
 
@@ -18,18 +19,23 @@ AUTH = "secure-admin-ak@file"
 AUTH_MEMBERS = ("crowdsec-bouncer", "strip-auth-headers", "authentik")
 # the D5 split's trader is internal-only: any Traefik exposure — even an authenticated router — is wrong
 TRADER = "hydra-trader"
-# D5 (hydra-build ui2-mcp1 decisions): the hydra-mcp router authenticates non-interactive MCP clients
-# with a bearer token at the app (HYDRA_MCP_TOKEN, constant-time check) behind crowdsec + rate limit;
-# Authentik's interactive login is deliberately absent. It is the only router allowed to skip AUTH, and
-# only while the whole D5 contract holds - the middleware reference, the chain's contents and the
-# rule's /mcp scope. Broadening the rule would out-prioritize the dashboard router (explicit priority 1,
-# length beats it) and serve every non-/api path through the no-login chain.
+# D5: the hydra-mcp router authenticates MCP clients with an Authentik OAuth access token checked at the app
+# (RS256 via the issuer's JWKS) behind crowdsec + rate limit; forward auth is deliberately absent (the client signs in through Authentik itself). The
+# hydra-mcp-metadata router serves the RFC 9728 metadata that names the issuer, public by design. They are the
+# only routers allowed to skip AUTH, and only while the whole D5 contract holds - the middleware reference, the
+# chain's contents and each rule's scope. Broadening a rule would out-prioritize the dashboard router (explicit
+# priority 1, length beats it) and serve every non-/api path through the no-login chain.
 TOKEN_AUTH_OK = {
     "stacks/hydra/compose.yml:hydra-engine:hydra-mcp": {
         "middleware": "secure-mcp@file",
         "chain_members": ("crowdsec-bouncer", "mcp-rate-limit"),
         "rule_segment": "PathPrefix(`/mcp`)",
-    }
+    },
+    "stacks/hydra/compose.yml:hydra-engine:hydra-mcp-metadata": {
+        "middleware": "secure-mcp@file",
+        "chain_members": ("crowdsec-bouncer", "mcp-rate-limit"),
+        "rule_segment": "PathPrefix(`/.well-known/oauth-protected-resource`)",
+    },
 }
 SENSITIVE = re.compile(r"path(prefix)?\(\s*[`\"']/(metrics|health)", re.IGNORECASE)
 ROUTER_KEY = re.compile(r"traefik\.http\.routers\.([^.]+)\.(.+)")

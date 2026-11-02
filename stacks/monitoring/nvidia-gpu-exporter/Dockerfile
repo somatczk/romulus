@@ -1,1 +1,1 @@
-FROM utkuozdemir/nvidia_gpu_exporter:1.15.1
+FROM utkuozdemir/nvidia_gpu_exporter:1.16.0

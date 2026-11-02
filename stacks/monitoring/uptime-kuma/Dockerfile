@@ -1,1 +1,1 @@
-FROM louislam/uptime-kuma:2.5.6
+FROM louislam/uptime-kuma:2.5.7

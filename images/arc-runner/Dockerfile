@@ -1,7 +1,7 @@
 # ARC runner image: GitHub's official runner plus the toolchain the org workflows expect
 # (Node 24, Corretto 25, Maven, AWS CLI, GitHub CLI, docker compose). Docker comes from the dind sidecar via DOCKER_HOST.
 # libatomic1: setup-node downloads Node builds (26+) that link against it.
-FROM ghcr.io/actions/actions-runner:2.338.1@sha256:e275409999c37162649aa050ca573f03eab2eabcb3a1e7fcc47548de6b4f9690
+FROM ghcr.io/actions/actions-runner:2.338.2@sha256:759a1d94a15b05941aba5196974ff43fe15b4cbba29b694b35cbc32a1166b232
 
 USER root
 

@@ -22,13 +22,16 @@ groups:
   - name: containers
     rules:
       - alert: ContainerOOM
-        expr: increase(container_oom_events_total[5m]) > 0
+        # 1h window + keep_firing_for: a container OOM-looping every few hours stays one
+        # firing alert instead of a new fire/resolve pair per kill.
+        expr: increase(container_oom_events_total{name!=""}[1h]) > 0
         for: 0m
+        keep_firing_for: 2h
         labels:
-          severity: critical
+          severity: warning
         annotations:
           summary: "Container OOM kill detected"
-          description: "Container {{ $labels.name }} experienced an OOM kill."
+          description: "Container {{ $labels.name }} had {{ printf \"%.0f\" $value }} OOM kill(s) in the last hour."
 
       - alert: ContainerHighCPU
         expr: sum(rate(container_cpu_usage_seconds_total{name!="",name!~"gh-runner-.*|buildx_buildkit.*|ci-.*"}[5m])) by (name) > 0.9
@@ -100,14 +103,16 @@ groups:
           summary: "Host memory usage above 85%"
           description: "Memory usage on {{ $labels.instance }} is {{ printf \"%.1f\" $value }}%."
 
-      - alert: HostHighSwap
-        expr: (1 - node_memory_SwapFree_bytes / node_memory_SwapTotal_bytes) * 100 > 80
-        for: 5m
+      # Swap fullness only says cold pages were evicted (the CI VM never hands memory back).
+      # PSI says tasks are actually stalling on memory; 7d baseline peak is ~1.3%.
+      - alert: HostMemoryPressure
+        expr: rate(node_pressure_memory_waiting_seconds_total[5m]) * 100 > 10
+        for: 10m
         labels:
           severity: warning
         annotations:
-          summary: "Swap usage above 80%"
-          description: "Swap usage on {{ $labels.instance }} is {{ printf \"%.1f\" $value }}%. High swap usually means physical memory is exhausted."
+          summary: "Host memory pressure"
+          description: "Tasks on {{ $labels.instance }} spent {{ printf \"%.1f\" $value }}% of the last 5m stalled on memory (reclaim or swap-in)."
 
       - alert: HostHighCPU
         expr: 100 - avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100 > 85

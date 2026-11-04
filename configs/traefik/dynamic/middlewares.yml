@@ -96,10 +96,13 @@ http:
           - secure-headers
 
     # D5: the MCP routers' chain - Authentik OAuth access token checked at the app, no forward auth (the client
-    # signs in through Authentik itself; the RFC 9728 metadata router is public by design)
+    # signs in through Authentik itself; the RFC 9728 metadata router is public by design). The identity headers
+    # are still stripped: PathPrefix(`/mcp`) also matches /mcpfoo, which Hydra routes through its Remote-User
+    # check, and Traefik is a trusted proxy there. Authorization is not in the strip list, so bearer tokens pass.
     secure-mcp:
       chain:
         middlewares:
           - crowdsec-bouncer
+          - strip-auth-headers
           - secure-headers
           - mcp-rate-limit

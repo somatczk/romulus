@@ -28,12 +28,12 @@ TRADER = "hydra-trader"
 TOKEN_AUTH_OK = {
     "stacks/hydra/compose.yml:hydra-engine:hydra-mcp": {
         "middleware": "secure-mcp@file",
-        "chain_members": ("crowdsec-bouncer", "mcp-rate-limit"),
+        "chain_members": ("crowdsec-bouncer", "strip-auth-headers", "mcp-rate-limit"),
         "rule_segment": "PathPrefix(`/mcp`)",
     },
     "stacks/hydra/compose.yml:hydra-engine:hydra-mcp-metadata": {
         "middleware": "secure-mcp@file",
-        "chain_members": ("crowdsec-bouncer", "mcp-rate-limit"),
+        "chain_members": ("crowdsec-bouncer", "strip-auth-headers", "mcp-rate-limit"),
         "rule_segment": "PathPrefix(`/.well-known/oauth-protected-resource`)",
     },
 }

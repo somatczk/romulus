@@ -249,7 +249,8 @@ services:
       - QBT_WEBUI_PASSWORD=${QBIT_WEBUI_PASSWORD}
     volumes:
       - ${APPDATA}/media/qbittorrent:/config
-      - ${HDD}/data:/data
+      # downloads only: the library stays out of reach of the torrent client
+      - ${HDD}/data/downloads:/data/downloads
       # ponytail: legacy path for torrents added before the /data move; drop once they finish seeding
       - ${HDD}/data/downloads:/downloads
     # fails when gluetun restarts and leaves qbittorrent in a dead network namespace; autoheal then restarts it
@@ -281,7 +282,8 @@ services:
       - UN_LIDARR_0_URL=http://lidarr:8686
       - UN_LIDARR_0_API_KEY=${LIDARR_API_KEY}
     volumes:
-      - ${HDD}/data:/data
+      # downloads only: extraction of untrusted archives can't touch the library
+      - ${HDD}/data/downloads:/data/downloads
       # ponytail: legacy path for torrents added before the /data move; drop once they finish seeding
       - ${HDD}/data/downloads:/downloads
     networks:

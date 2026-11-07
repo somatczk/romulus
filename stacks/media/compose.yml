@@ -15,6 +15,9 @@ services:
       - ${HDD}/data/media/movies:/data/movies
       - ${HDD}/data/media/series:/data/series
       - ${HDD}/data/media/music:/data/music
+    # plain http for TV apps on the LAN; bound to the LAN address so it never faces the internet
+    ports:
+      - "192.168.0.3:8096:8096"
     networks:
       - proxy
       - media

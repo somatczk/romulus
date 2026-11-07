@@ -12,9 +12,9 @@ services:
     volumes:
       - ${APPDATA}/media/jellyfin/config:/config
       - ${APPDATA}/media/jellyfin/cache:/cache
-      - ${HDD}/media/movies:/data/movies
-      - ${HDD}/media/series:/data/series
-      - ${HDD}/media/music:/data/music
+      - ${HDD}/data/media/movies:/data/movies
+      - ${HDD}/data/media/series:/data/series
+      - ${HDD}/data/media/music:/data/music
     networks:
       - proxy
       - media
@@ -45,8 +45,9 @@ services:
       - TZ=${TZ}
     volumes:
       - ${APPDATA}/media/sonarr:/config
-      - ${HDD}/media/series:/tv
-      - ${HDD}/downloads:/downloads
+      - ${HDD}/data:/data
+      # ponytail: legacy path for torrents added before the /data move; drop once they finish seeding
+      - ${HDD}/data/downloads:/downloads
     networks:
       - proxy
       - media
@@ -74,8 +75,9 @@ services:
       - TZ=${TZ}
     volumes:
       - ${APPDATA}/media/radarr:/config
-      - ${HDD}/media/movies:/movies
-      - ${HDD}/downloads:/downloads
+      - ${HDD}/data:/data
+      # ponytail: legacy path for torrents added before the /data move; drop once they finish seeding
+      - ${HDD}/data/downloads:/downloads
     networks:
       - proxy
       - media
@@ -146,8 +148,7 @@ services:
       - TZ=${TZ}
     volumes:
       - ${APPDATA}/media/bazarr:/config
-      - ${HDD}/media/movies:/movies
-      - ${HDD}/media/series:/tv
+      - ${HDD}/data/media:/data/media
     networks:
       - proxy
       - media
@@ -175,8 +176,9 @@ services:
       - TZ=${TZ}
     volumes:
       - ${APPDATA}/media/lidarr:/config
-      - ${HDD}/media/music:/music
-      - ${HDD}/downloads:/downloads
+      - ${HDD}/data:/data
+      # ponytail: legacy path for torrents added before the /data move; drop once they finish seeding
+      - ${HDD}/data/downloads:/downloads
     networks:
       - proxy
       - media
@@ -247,11 +249,49 @@ services:
       - QBT_WEBUI_PASSWORD=${QBIT_WEBUI_PASSWORD}
     volumes:
       - ${APPDATA}/media/qbittorrent:/config
-      - ${HDD}/downloads:/downloads
+      # downloads only: the library stays out of reach of the torrent client
+      - ${HDD}/data/downloads:/data/downloads
+      # ponytail: legacy path for torrents added before the /data move; drop once they finish seeding
+      - ${HDD}/data/downloads:/downloads
+    # fails when gluetun restarts and leaves qbittorrent in a dead network namespace; autoheal then restarts it
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "--max-time", "10", "-o", "/dev/null", "https://1.1.1.1"]
+      interval: 60s
+      timeout: 15s
+      retries: 3
+      start_period: 60s
     deploy:
       resources:
         limits:
           memory: 2G
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+  # extracts rar'd releases so sonarr/radarr/lidarr can import them
+  unpackerr:
+    build: ./unpackerr
+    container_name: unpackerr
+    user: ${PUID}:${PGID}
+    environment:
+      - TZ=${TZ}
+      - UN_SONARR_0_URL=http://sonarr:8989
+      - UN_SONARR_0_API_KEY=${SONARR_API_KEY}
+      - UN_RADARR_0_URL=http://radarr:7878
+      - UN_RADARR_0_API_KEY=${RADARR_API_KEY}
+      - UN_LIDARR_0_URL=http://lidarr:8686
+      - UN_LIDARR_0_API_KEY=${LIDARR_API_KEY}
+    volumes:
+      # downloads only: extraction of untrusted archives can't touch the library
+      - ${HDD}/data/downloads:/data/downloads
+      # ponytail: legacy path for torrents added before the /data move; drop once they finish seeding
+      - ${HDD}/data/downloads:/downloads
+    networks:
+      - media
+    deploy:
+      resources:
+        limits:
+          memory: 512M
     security_opt:
       - no-new-privileges:true
     restart: unless-stopped

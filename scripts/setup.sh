@@ -113,13 +113,13 @@ SSD_DIRS=(
 
 # HDD directories
 HDD_DIRS=(
-    "${HDD}/media/movies"
-    "${HDD}/media/series"
-    "${HDD}/media/music"
+    "${HDD}/data/media/movies"
+    "${HDD}/data/media/series"
+    "${HDD}/data/media/music"
     "${HDD}/media/photos"
-    "${HDD}/downloads/complete"
-    "${HDD}/downloads/incomplete"
-    "${HDD}/downloads/torrents"
+    "${HDD}/data/downloads/complete"
+    "${HDD}/data/downloads/incomplete"
+    "${HDD}/data/downloads/torrents"
     "${HDD}/backups/restic-repo"
     "${HDD}/snapshots"
 )
@@ -139,7 +139,7 @@ chown -R "${PUID}:${PGID}" "${APPDATA}"
 # authentik runs as 1000 and cannot write a data dir owned by PUID
 chown -R 1000:1000 "${APPDATA}/security/authentik/data"
 chown -R "${PUID}:${PGID}" "${HDD}/media"
-chown -R "${PUID}:${PGID}" "${HDD}/downloads"
+chown -R "${PUID}:${PGID}" "${HDD}/data"
 chown -R "${PUID}:${PGID}" "${HDD}/backups"
 chown -R "${PUID}:${PGID}" "${HDD}/snapshots"
 

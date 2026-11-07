@@ -60,6 +60,7 @@ env_files:
   - ../host.env
 external_secrets:
   QBIT_WEBUI_PASSWORD: op://romulus-deploy/media/QBIT_WEBUI_PASSWORD
+  NORDVPN_WIREGUARD_PRIVATE_KEY: op://romulus-deploy/media/NORDVPN_WIREGUARD_PRIVATE_KEY
 ---
 name: utilities
 working_dir: stacks/utilities

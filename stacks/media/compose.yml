@@ -195,9 +195,50 @@ services:
       - no-new-privileges:true
     restart: unless-stopped
 
+  # VPN gateway for qbittorrent: its kill switch blocks any traffic outside the tunnel.
+  # NordVPN has no port forwarding, so there is no inbound torrent port.
+  gluetun:
+    build: ./gluetun
+    container_name: gluetun
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      - TZ=${TZ}
+      - VPN_SERVICE_PROVIDER=nordvpn
+      - VPN_TYPE=wireguard
+      - WIREGUARD_PRIVATE_KEY=${NORDVPN_WIREGUARD_PRIVATE_KEY}
+      - SERVER_COUNTRIES=Netherlands
+    networks:
+      proxy:
+      media:
+        # the arrs and prowlarr reach qbittorrent:8080 through this alias
+        aliases:
+          - qbittorrent
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.qbit.rule=Host(`qbit.${DOMAIN}`)
+      - traefik.http.routers.qbit.entrypoints=websecure
+      - traefik.http.routers.qbit.tls.certresolver=cloudflare
+      - traefik.http.routers.qbit.middlewares=secure-admin-ak@file
+      - traefik.http.services.qbit.loadbalancer.server.port=8080
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
   qbittorrent:
     build: ./qbittorrent
     container_name: qbittorrent
+    network_mode: service:gluetun
+    depends_on:
+      gluetun:
+        condition: service_healthy
+        restart: true
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
@@ -207,19 +248,6 @@ services:
     volumes:
       - ${APPDATA}/media/qbittorrent:/config
       - ${HDD}/downloads:/downloads
-    ports:
-      - 6881:6881
-      - 6881:6881/udp
-    networks:
-      - proxy
-      - media
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.qbit.rule=Host(`qbit.${DOMAIN}`)
-      - traefik.http.routers.qbit.entrypoints=websecure
-      - traefik.http.routers.qbit.tls.certresolver=cloudflare
-      - traefik.http.routers.qbit.middlewares=secure-admin-ak@file
-      - traefik.http.services.qbit.loadbalancer.server.port=8080
     deploy:
       resources:
         limits:

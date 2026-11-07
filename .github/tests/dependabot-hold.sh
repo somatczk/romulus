@@ -57,6 +57,8 @@ check "hydra image" "docker: bump somatczk/hydra-dashboard from 2.1.10 to 2.2.0 
 check "hydra image" "docker: bump somatczk/hydra-backtest from 2.1.10 to 2.1.11 in /stacks/hydra/backtest-worker"
 check "hydra image" "docker: bump ghcr.io/somatczk/hydra-engine from 2.1.10 to 2.1.11 in /stacks/hydra/engine"
 check "stateful image" "docker: bump timescale/timescaledb from 2.30.0-pg16 to 2.30.2-pg16 in /stacks/hydra/timescaledb"
+check "stateful image" "docker: bump jellyfin/jellyfin from 12.3.20261023-013714 to 12.4.20261106-010203 in /stacks/media/jellyfin"
+check "stateful image" "docker: bump seerr-team/seerr from v3.5.1 to v3.6.0 in /stacks/media/jellyseerr"
 check "major" "docker: bump amir20/dozzle from 10.6.10 to 11.0.0 in /stacks/utilities/dozzle"
 check merge "docker: bump amir20/dozzle from 10.6.10 to 10.6.11 in /stacks/utilities/dozzle"
 check merge "ci: bump the actions group across 2 directories with 3 updates"

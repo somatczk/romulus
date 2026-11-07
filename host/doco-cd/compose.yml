@@ -4,7 +4,7 @@ name: doco-cd
 
 services:
   doco-cd:
-    image: ghcr.io/kimdre/doco-cd:0.130.0@sha256:174e1a8d6c239d67e127e89f9a89842119b7a6c13be8e16bfe468e31b1dd6240
+    image: ghcr.io/kimdre/doco-cd:0.132.0@sha256:ed22583456c60c88c5cabdb47803aa0ab51284f00d70d5bb63fa56b223fa250a
     container_name: doco-cd
     restart: unless-stopped
     depends_on:

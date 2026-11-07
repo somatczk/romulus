@@ -231,6 +231,7 @@ services:
   jellyseerr:
     build: ./jellyseerr
     container_name: jellyseerr
+    init: true
     environment:
       - TZ=${TZ}
     volumes:

@@ -1,1 +1,1 @@
-FROM fallenbagel/jellyseerr:2.7.3
+FROM ghcr.io/seerr-team/seerr:v3.5.1

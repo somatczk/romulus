@@ -10,4 +10,6 @@ git fetch -q origin master
 git reset -q --hard origin/master
 echo "synced to $(git rev-parse --short HEAD)"
 bash scripts/install-crons.sh >/dev/null
+# a missing bind source would be created as a directory and break doco-cd; keep the old one running
+[[ -s /DATA/doco-cd/git-token ]] || { echo "/DATA/doco-cd/git-token missing, doco-cd not updated"; exit 1; }
 docker compose -f host/doco-cd/compose.yml up -d --remove-orphans

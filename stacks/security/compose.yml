@@ -1,6 +1,8 @@
 networks:
   proxy:
     external: true
+  socket:
+    external: true
   monitoring:
     external: true
 
@@ -12,8 +14,12 @@ services:
     networks:
       - proxy
       - monitoring
+      # docker log acquisition (configs/crowdsec/acquis.yaml); unreachable docker is fatal at start
+      - socket
     volumes:
       - ${APPDATA}/security/crowdsec/config:/etc/crowdsec
+      - ../../configs/crowdsec/acquis.yaml:/etc/crowdsec/acquis.yaml:ro
+      - ../../configs/crowdsec/home-whitelist.yaml:/etc/crowdsec/parsers/s02-enrich/home-whitelist.yaml:ro
       - ${APPDATA}/security/crowdsec/db:/var/lib/crowdsec/data
       - ${APPDATA}/security/crowdsec/hub:/etc/crowdsec/hub
       - /var/log:/var/log:ro

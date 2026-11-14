@@ -28,6 +28,12 @@ services:
       SECRET_PROVIDER: 1password
       SECRET_PROVIDER_CONNECT_HOST: http://connect-api:8080
       SECRET_PROVIDER_CONNECT_TOKEN_FILE: /run/secrets/connect-token
+      # per-stack commit statuses (doco-cd/<stack>) on master commits; fine-grained PAT scoped to
+      # somatczk/romulus: Contents read, Commit statuses read/write. The repo stays public, the token only reports.
+      GIT_ACCESS_TOKEN_FILE: /run/secrets/git-token
+      GIT_AUTH_DOMAINS: github.com
+      GIT_SCM_PROVIDER: github
+      GIT_COMMIT_STATUS: "true"
       APPRISE_API_URL: http://apprise:8000/notify
       APPRISE_NOTIFY_URLS_FILE: /run/secrets/apprise-urls
       # minimum level: success also sends warnings and failures
@@ -37,6 +43,7 @@ services:
       - /DATA/doco-cd/data:/data
       - /DATA/doco-cd/connect-token:/run/secrets/connect-token:ro
       - /DATA/doco-cd/apprise-urls:/run/secrets/apprise-urls:ro
+      - /DATA/doco-cd/git-token:/run/secrets/git-token:ro
     cap_drop:
       - ALL
     security_opt:

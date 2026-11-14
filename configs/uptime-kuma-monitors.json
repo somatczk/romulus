@@ -9,7 +9,9 @@
       "maxretries": 3,
       "retryInterval": 60,
       "active": true,
-      "accepted_statuscodes": ["200-299"]
+      "accepted_statuscodes": [
+        "200-299"
+      ]
     },
     {
       "type": "http",
@@ -19,7 +21,9 @@
       "maxretries": 3,
       "retryInterval": 60,
       "active": true,
-      "accepted_statuscodes": ["200-299"]
+      "accepted_statuscodes": [
+        "200-299"
+      ]
     },
     {
       "type": "http",
@@ -29,7 +33,9 @@
       "maxretries": 3,
       "retryInterval": 60,
       "active": true,
-      "accepted_statuscodes": ["200-299"]
+      "accepted_statuscodes": [
+        "200-299"
+      ]
     },
     {
       "type": "http",
@@ -39,7 +45,9 @@
       "maxretries": 3,
       "retryInterval": 60,
       "active": true,
-      "accepted_statuscodes": ["200-299"]
+      "accepted_statuscodes": [
+        "200-299"
+      ]
     },
     {
       "type": "http",
@@ -49,17 +57,9 @@
       "maxretries": 3,
       "retryInterval": 60,
       "active": true,
-      "accepted_statuscodes": ["200-299"]
-    },
-    {
-      "type": "http",
-      "name": "Lidarr",
-      "url": "https://lidarr.romulus.hu",
-      "interval": 60,
-      "maxretries": 3,
-      "retryInterval": 60,
-      "active": true,
-      "accepted_statuscodes": ["200-299"]
+      "accepted_statuscodes": [
+        "200-299"
+      ]
     },
     {
       "type": "http",
@@ -69,7 +69,9 @@
       "maxretries": 3,
       "retryInterval": 60,
       "active": true,
-      "accepted_statuscodes": ["200-299"]
+      "accepted_statuscodes": [
+        "200-299"
+      ]
     },
     {
       "type": "http",
@@ -79,7 +81,9 @@
       "maxretries": 3,
       "retryInterval": 60,
       "active": true,
-      "accepted_statuscodes": ["200-299"]
+      "accepted_statuscodes": [
+        "200-299"
+      ]
     },
     {
       "type": "http",
@@ -89,7 +93,9 @@
       "maxretries": 3,
       "retryInterval": 60,
       "active": true,
-      "accepted_statuscodes": ["200-299"]
+      "accepted_statuscodes": [
+        "200-299"
+      ]
     },
     {
       "type": "http",
@@ -99,7 +105,9 @@
       "maxretries": 3,
       "retryInterval": 60,
       "active": true,
-      "accepted_statuscodes": ["200-299"]
+      "accepted_statuscodes": [
+        "200-299"
+      ]
     },
     {
       "type": "http",
@@ -109,7 +117,9 @@
       "maxretries": 3,
       "retryInterval": 60,
       "active": true,
-      "accepted_statuscodes": ["200-299"]
+      "accepted_statuscodes": [
+        "200-299"
+      ]
     },
     {
       "type": "http",
@@ -119,17 +129,9 @@
       "maxretries": 3,
       "retryInterval": 60,
       "active": true,
-      "accepted_statuscodes": ["200-299"]
-    },
-    {
-      "type": "http",
-      "name": "Portainer",
-      "url": "https://portainer.romulus.hu",
-      "interval": 60,
-      "maxretries": 3,
-      "retryInterval": 60,
-      "active": true,
-      "accepted_statuscodes": ["200-299"]
+      "accepted_statuscodes": [
+        "200-299"
+      ]
     },
     {
       "type": "http",
@@ -139,7 +141,9 @@
       "maxretries": 3,
       "retryInterval": 60,
       "active": true,
-      "accepted_statuscodes": ["200-299"]
+      "accepted_statuscodes": [
+        "200-299"
+      ]
     },
     {
       "type": "http",
@@ -149,7 +153,9 @@
       "maxretries": 3,
       "retryInterval": 60,
       "active": true,
-      "accepted_statuscodes": ["200-299"]
+      "accepted_statuscodes": [
+        "200-299"
+      ]
     },
     {
       "type": "http",
@@ -159,17 +165,9 @@
       "maxretries": 3,
       "retryInterval": 60,
       "active": true,
-      "accepted_statuscodes": ["200-299"]
-    },
-    {
-      "type": "http",
-      "name": "Speedtest Tracker",
-      "url": "https://speed.romulus.hu",
-      "interval": 60,
-      "maxretries": 3,
-      "retryInterval": 60,
-      "active": true,
-      "accepted_statuscodes": ["200-299"]
+      "accepted_statuscodes": [
+        "200-299"
+      ]
     },
     {
       "type": "http",
@@ -179,7 +177,9 @@
       "maxretries": 3,
       "retryInterval": 60,
       "active": true,
-      "accepted_statuscodes": ["200-299"]
+      "accepted_statuscodes": [
+        "200-299"
+      ]
     },
     {
       "type": "http",
@@ -189,7 +189,9 @@
       "maxretries": 3,
       "retryInterval": 60,
       "active": true,
-      "accepted_statuscodes": ["200-299"]
+      "accepted_statuscodes": [
+        "200-299"
+      ]
     },
     {
       "type": "http",
@@ -199,7 +201,9 @@
       "maxretries": 3,
       "retryInterval": 60,
       "active": true,
-      "accepted_statuscodes": ["200-299"]
+      "accepted_statuscodes": [
+        "200-299"
+      ]
     }
   ]
 }

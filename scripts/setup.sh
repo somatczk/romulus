@@ -60,7 +60,6 @@ SSD_DIRS=(
     "${APPDATA}/media/radarr"
     "${APPDATA}/media/prowlarr"
     "${APPDATA}/media/bazarr"
-    "${APPDATA}/media/lidarr"
     "${APPDATA}/media/qbittorrent"
     "${APPDATA}/media/jellyseerr"
     # Productivity
@@ -90,17 +89,11 @@ SSD_DIRS=(
     # Dashboard
     "${APPDATA}/dashboard/homepage"
     # Utilities
-    "${APPDATA}/utilities/speedtest"
-    "${APPDATA}/utilities/portainer"
     "${APPDATA}/utilities/teamspeak"
     "${APPDATA}/utilities/teamspeak-db"
     # Backups
     "${APPDATA}/backups/db-dumps"
     # AI
-    "${APPDATA}/ai/ollama"
-    "${APPDATA}/ai/openclaw"
-    "${APPDATA}/ai/openclaw-workspace"
-    "${APPDATA}/ai/open-webui"
     # Hydra Trading
     "${APPDATA}/hydra/config"
     "${APPDATA}/hydra/models"

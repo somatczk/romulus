@@ -19,10 +19,6 @@
         href: https://bazarr.romulus.hu
         icon: bazarr
         description: Subtitle management
-    - Lidarr:
-        href: https://lidarr.romulus.hu
-        icon: lidarr
-        description: Music management
     - qBittorrent:
         href: https://qbit.romulus.hu
         icon: qbittorrent
@@ -58,19 +54,6 @@
         icon: homebox
         description: Home inventory management
 
-- AI:
-    - OpenClaw:
-        href: https://ai.romulus.hu
-        icon: mdi-robot
-        description: AI agent and assistant
-    - Open WebUI:
-        href: https://chat.romulus.hu
-        icon: open-webui
-        description: Chat interface for LLMs
-    - Ollama:
-        icon: ollama
-        description: Local LLM inference server
-
 - Trading:
     - Hydra:
         href: https://trading.romulus.hu
@@ -96,10 +79,6 @@
     - CrowdSec:
         icon: crowdsec
         description: Collaborative security engine
-    - Portainer:
-        href: https://portainer.romulus.hu
-        icon: portainer
-        description: Container management
 
 - Monitoring:
     - Grafana:
@@ -117,18 +96,10 @@
         href: https://status.romulus.hu
         icon: uptime-kuma
         description: Service uptime monitoring
-    - Glances:
-        href: https://glances.romulus.hu
-        icon: glances
-        description: System monitoring
     - Dozzle:
         href: https://logs.romulus.hu
         icon: dozzle
         description: Container log viewer
-    - Speedtest:
-        href: https://speed.romulus.hu
-        icon: speedtest-tracker
-        description: Network speed tracking
 
 - Utilities:
     - TeamSpeak:

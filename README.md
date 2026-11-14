@@ -22,15 +22,14 @@ Configuration for a single homelab server (ZimaCube, Ryzen 9 5950X, 128 GB RAM, 
 | **core** | Traefik, Docker socket proxy, Cloudflare DDNS, AdGuard Home, Tailscale |
 | **security** | CrowdSec, CrowdSec bouncer |
 | **authentik** | Authentik server, worker and PostgreSQL (data under `security/authentik`) |
-| **media** | Jellyfin, Sonarr, Radarr, Prowlarr, Bazarr, Lidarr, FlareSolverr, qBittorrent, Jellyseerr |
+| **media** | Jellyfin, Sonarr, Radarr, Prowlarr, Bazarr, FlareSolverr, qBittorrent, Jellyseerr |
 | **productivity** | Nextcloud, Immich, Home Assistant, Paperless-ngx, Actual Budget, Homebox, with their PostgreSQL and Redis |
-| **monitoring** | Prometheus, Alertmanager, Grafana, Loki, Promtail, cAdvisor, node / GPU / SMART / restic exporters, Uptime Kuma, Glances |
+| **monitoring** | Prometheus, Alertmanager, Grafana, Loki, Promtail, cAdvisor, node / GPU / SMART / restic exporters, Uptime Kuma |
 | **notifications** | ntfy |
-| **utilities** | Dozzle, Portainer, Speedtest, TeamSpeak, Autoheal |
+| **utilities** | Dozzle, speedtest-exporter, TeamSpeak, Autoheal |
 | **dashboard** | Homepage |
 | **hydra** | Trading engine, dashboard and backtest worker ([hydra](https://github.com/somatczk/hydra)), TimescaleDB, Redis |
 
-`stacks/ai` is kept but disabled.
 
 Authentik (`sso.${DOMAIN}`, `authentik` stack) guards every admin route: invitations, self-service password and TOTP, groups per app. First-run steps: `configs/authentik/README.md`.
 

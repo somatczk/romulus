@@ -170,36 +170,6 @@ services:
       - no-new-privileges:true
     restart: unless-stopped
 
-  lidarr:
-    build: ./lidarr
-    container_name: lidarr
-    environment:
-      - PUID=${PUID}
-      - PGID=${PGID}
-      - TZ=${TZ}
-    volumes:
-      - ${APPDATA}/media/lidarr:/config
-      - ${HDD}/data:/data
-      # ponytail: legacy path for torrents added before the /data move; drop once they finish seeding
-      - ${HDD}/data/downloads:/downloads
-    networks:
-      - proxy
-      - media
-    labels:
-      - traefik.enable=true
-      - traefik.http.routers.lidarr.rule=Host(`lidarr.${DOMAIN}`)
-      - traefik.http.routers.lidarr.entrypoints=websecure
-      - traefik.http.routers.lidarr.tls.certresolver=cloudflare
-      - traefik.http.routers.lidarr.middlewares=secure-admin-ak@file
-      - traefik.http.services.lidarr.loadbalancer.server.port=8686
-    deploy:
-      resources:
-        limits:
-          memory: 1G
-    security_opt:
-      - no-new-privileges:true
-    restart: unless-stopped
-
   # VPN gateway for qbittorrent: its kill switch blocks any traffic outside the tunnel.
   # NordVPN has no port forwarding, so there is no inbound torrent port.
   gluetun:
@@ -271,7 +241,7 @@ services:
       - no-new-privileges:true
     restart: unless-stopped
 
-  # extracts rar'd releases so sonarr/radarr/lidarr can import them
+  # extracts rar'd releases so sonarr/radarr can import them
   unpackerr:
     build: ./unpackerr
     container_name: unpackerr
@@ -282,8 +252,6 @@ services:
       - UN_SONARR_0_API_KEY=${SONARR_API_KEY}
       - UN_RADARR_0_URL=http://radarr:7878
       - UN_RADARR_0_API_KEY=${RADARR_API_KEY}
-      - UN_LIDARR_0_URL=http://lidarr:8686
-      - UN_LIDARR_0_API_KEY=${LIDARR_API_KEY}
     volumes:
       # downloads only: extraction of untrusted archives can't touch the library
       - ${HDD}/data/downloads:/data/downloads

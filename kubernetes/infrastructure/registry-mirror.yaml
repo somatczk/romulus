@@ -16,6 +16,26 @@ spec:
     requests:
       storage: 40Gi
 ---
+# Public-repo read-only token: every runner can pull whatever it can read through the mirror.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: dockerhub
+  namespace: ci-shared
+spec:
+  refreshInterval: 24h
+  secretStoreRef:
+    kind: ClusterSecretStore
+    name: onepassword-romulus-ci
+  target:
+    name: dockerhub
+    creationPolicy: Owner
+  data:
+    - secretKey: username
+      remoteRef: {key: dockerhub/username}
+    - secretKey: token
+      remoteRef: {key: dockerhub/token}
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -42,6 +62,13 @@ spec:
           image: registry:3.1.2@sha256:ddf754342cfc8acc51a56d5d0ab6af06826461864460636d8bd5c546dab2a7b8
           env:
             - {name: REGISTRY_PROXY_REMOTEURL, value: https://registry-1.docker.io}
+            # authenticated pulls dodge the anonymous rate limit; anonymous until the item exists
+            - name: REGISTRY_PROXY_USERNAME
+              valueFrom:
+                secretKeyRef: {name: dockerhub, key: username, optional: true}
+            - name: REGISTRY_PROXY_PASSWORD
+              valueFrom:
+                secretKeyRef: {name: dockerhub, key: token, optional: true}
             - {name: REGISTRY_STORAGE_DELETE_ENABLED, value: "true"}
             # registry 3 exports traces by default, there is no collector
             - {name: OTEL_TRACES_EXPORTER, value: none}

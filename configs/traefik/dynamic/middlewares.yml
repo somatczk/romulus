@@ -22,6 +22,8 @@ http:
       forwardAuth:
         address: http://crowdsec-bouncer:8080/api/v1/forwardAuth
         trustForwardHeader: true
+        # the bouncer answers with an empty body; unset, traefik warns on every router at each reload
+        maxResponseBodySize: 65536
 
     mcp-rate-limit:
       rateLimit:

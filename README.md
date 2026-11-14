@@ -26,7 +26,7 @@ Configuration for a single homelab server (ZimaCube, Ryzen 9 5950X, 128 GB RAM, 
 | **productivity** | Nextcloud, Immich, Home Assistant, Paperless-ngx, Actual Budget, Homebox, with their PostgreSQL and Redis |
 | **monitoring** | Prometheus, Alertmanager, Grafana, Loki, Promtail, cAdvisor, node / GPU / SMART / restic exporters, Uptime Kuma, Glances |
 | **notifications** | ntfy |
-| **utilities** | Dozzle, Portainer, Speedtest, TeamSpeak, Watchtower (monitor only), Autoheal |
+| **utilities** | Dozzle, Portainer, Speedtest, TeamSpeak, Autoheal |
 | **dashboard** | Homepage |
 | **hydra** | Trading engine, dashboard and backtest worker ([hydra](https://github.com/somatczk/hydra)), TimescaleDB, Redis |
 

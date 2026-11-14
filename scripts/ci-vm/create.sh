@@ -67,10 +67,12 @@ cloud-localds seed.iso seed/user-data seed/meta-data
 # Fixed address: the host firewall and the kubeconfig tunnel point at it.
 virsh net-update default add ip-dhcp-host "<host mac='$MAC' name='$NAME' ip='$IP'/>" --live --config || true
 
+# freePageReporting: without it qemu keeps every page the guest ever touched (89 of 96 GiB held while k3s used 4)
 virt-install --name "$NAME" --memory 98304 --vcpus 24 --cpu host-passthrough \
   --disk path="$V/$NAME.qcow2",format=qcow2,bus=virtio,cache=none,discard=unmap \
   --disk path="$V/seed.iso",device=cdrom \
   --network network=default,mac=$MAC,model=virtio \
+  --memballoon model=virtio,freePageReporting=on \
   --os-variant ubuntu24.04 --boot uefi --graphics none --noautoconsole --autostart --import
 # The qcow2 shares the app SSD: uncapped CI reads (410 MB/s) starved CrowdSec and the bouncer 403'd every route.
 virsh blkdeviotune "$NAME" "$V/$NAME.qcow2" --total-bytes-sec $((100 * 1024 * 1024)) --total-iops-sec 4000 --live --config

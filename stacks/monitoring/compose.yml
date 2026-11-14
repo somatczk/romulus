@@ -299,6 +299,8 @@ services:
     build: ./smartctl-exporter
     container_name: smartctl-exporter
     restart: unless-stopped
+    # v0.15 runs as nobody, which cannot open the disks even when privileged
+    user: root
     privileged: true
     networks:
       - monitoring

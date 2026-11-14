@@ -163,7 +163,7 @@ jobs:
           IMG=$(awk '/^FROM /{print $2}' stacks/monitoring/prometheus/Dockerfile)
           promtool() { docker run --rm -v "$PWD/configs/prometheus:/p:ro" --entrypoint promtool "$IMG" "$@"; }
           promtool check rules /p/alert-rules.yml /p/hydra-alert-rules.yml
-          promtool test rules /p/tests/hydra-alert-rules.test.yml /p/tests/clock-alert-rules.test.yml /p/tests/ci-vm-alert-rules.test.yml
+          promtool test rules /p/tests/hydra-alert-rules.test.yml /p/tests/clock-alert-rules.test.yml /p/tests/ci-vm-alert-rules.test.yml /p/tests/smart-alert-rules.test.yml
 
       # hydra main owns these files; fails on drift when the PR touches one or bumps a hydra image
       - name: hydra rules and dashboard in sync

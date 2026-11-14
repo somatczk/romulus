@@ -61,6 +61,46 @@ groups:
           summary: "Container restart loop detected"
           description: "Container {{ $labels.name }} has restarted more than 3 times in the last 30 minutes."
 
+  - name: smart
+    rules:
+      - alert: SmartDeviceFailing
+        expr: smartctl_device_smart_status == 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "SMART health check failed on {{ $labels.device }}"
+          description: "{{ $labels.device }} reports a failing SMART overall-health status. Back up and replace the disk. Check: sudo smartctl -a /dev/{{ $labels.device }}"
+
+      - alert: NvmeCriticalWarning
+        expr: smartctl_device_critical_warning > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "NVMe critical warning on {{ $labels.device }}"
+          description: "{{ $labels.device }} raised critical warning bits {{ $value }} (spare, temperature, reliability or read-only). Check: sudo smartctl -a /dev/{{ $labels.device }}"
+
+      - alert: SmartMediaErrors
+        expr: increase(smartctl_device_media_errors[1h]) > 0
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "New media errors on {{ $labels.device }}"
+          description: "{{ $labels.device }} logged {{ printf \"%.0f\" $value }} new media error(s) in the last hour."
+
+      # 2026-10-12 to 2026-11-14 the exporter ran as nobody and exported no device metrics, unnoticed;
+      # sda and nvme0 never sleep, so no smart_status at all means the exporter is blind, not idle disks
+      - alert: SmartMetricsMissing
+        expr: absent(smartctl_device_smart_status)
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "No SMART data from smartctl-exporter"
+          description: "Disk health alerts cannot fire. Check: docker logs smartctl-exporter (permission denied means it is not running as root)."
+
   - name: gpu
     rules:
       - alert: GPUTempWarning

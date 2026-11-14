@@ -9,27 +9,6 @@ networks:
     driver: bridge
 
 services:
-  watchtower:
-    build: ./watchtower
-    container_name: watchtower
-    networks:
-      - proxy
-      - socket
-    environment:
-      TZ: ${TZ}
-      DOCKER_HOST: tcp://socket-proxy:2375
-      WATCHTOWER_NOTIFICATION_URL: "generic+http://ntfy/updates"
-      WATCHTOWER_MONITOR_ONLY: "true"
-      WATCHTOWER_SCHEDULE: "0 0 4 * * *"
-      WATCHTOWER_CLEANUP: "true"
-    deploy:
-      resources:
-        limits:
-          memory: 256M
-    security_opt:
-      - no-new-privileges:true
-    restart: unless-stopped
-
   dozzle:
     build: ./dozzle
     container_name: dozzle
@@ -190,6 +169,8 @@ services:
       TS3SERVER_DB_NAME: teamspeak
       TS3SERVER_DB_WAITUNTILREADY: "30"
       TS3SERVER_LICENSE: accept
+      # WebQuery (REST ServerQuery, x-api-key) on 10080, served at teamspeak.${DOMAIN}
+      TS3SERVER_QUERY_PROTOCOLS: raw,http
     volumes:
       - ${APPDATA}/utilities/teamspeak:/var/ts3server
     tmpfs:
@@ -199,7 +180,7 @@ services:
       traefik.http.routers.teamspeak.rule: Host(`teamspeak.${DOMAIN}`)
       traefik.http.routers.teamspeak.entrypoints: websecure
       traefik.http.routers.teamspeak.tls.certresolver: cloudflare
-      traefik.http.routers.teamspeak.middlewares: secure-headers@file
+      traefik.http.routers.teamspeak.middlewares: secure@file
       traefik.http.services.teamspeak.loadbalancer.server.port: "10080"
     healthcheck:
       test: ["CMD", "nc", "-z", "localhost", "10011"]

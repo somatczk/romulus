@@ -72,12 +72,6 @@ SSD_DIRS=(
     "${APPDATA}/productivity/immich/ml-cache"
     "${APPDATA}/productivity/immich/upload"
     "${APPDATA}/productivity/homeassistant"
-    "${APPDATA}/productivity/paperless/data"
-    "${APPDATA}/productivity/paperless/media"
-    "${APPDATA}/productivity/paperless/consume"
-    "${APPDATA}/productivity/paperless-db"
-    "${APPDATA}/productivity/actual-budget"
-    "${APPDATA}/productivity/homebox"
     # Monitoring
     "${APPDATA}/monitoring/prometheus/data"
     "${APPDATA}/monitoring/grafana"

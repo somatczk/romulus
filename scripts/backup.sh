@@ -80,11 +80,6 @@ docker exec teamspeak-db mariadb-dump -u teamspeak -p"${TEAMSPEAK_DB_PASSWORD}" 
     > "${BACKUP_DIR}/db-dumps/teamspeak_${TIMESTAMP}.sql"
 log "TeamSpeak database dump complete"
 
-log "Dumping Paperless database..."
-docker exec paperless-db pg_dump -U paperless paperless \
-    > "${BACKUP_DIR}/db-dumps/paperless_${TIMESTAMP}.sql"
-log "Paperless database dump complete"
-
 log "Dumping Authentik database..."
 docker exec authentik-postgresql pg_dump -U authentik authentik \
     > "${BACKUP_DIR}/db-dumps/authentik_${TIMESTAMP}.sql"
@@ -117,7 +112,6 @@ restic backup "${APPDATA}" \
     --exclude="${APPDATA}/hydra/timescaledb" \
     --exclude="${APPDATA}/productivity/nextcloud-db" \
     --exclude="${APPDATA}/productivity/immich/db" \
-    --exclude="${APPDATA}/productivity/paperless-db" \
     --exclude="${APPDATA}/security/authentik/postgresql" \
     --tag "scheduled" \
     --verbose 2>&1

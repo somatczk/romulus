@@ -23,7 +23,7 @@ Configuration for a single homelab server (ZimaCube, Ryzen 9 5950X, 128 GB RAM, 
 | **security** | CrowdSec, CrowdSec bouncer |
 | **authentik** | Authentik server, worker and PostgreSQL (data under `security/authentik`) |
 | **media** | Jellyfin, Sonarr, Radarr, Prowlarr, Bazarr, FlareSolverr, qBittorrent, Jellyseerr |
-| **productivity** | Nextcloud, Immich, Home Assistant, Paperless-ngx, Actual Budget, Homebox, with their PostgreSQL and Redis |
+| **productivity** | Nextcloud, Immich, Home Assistant, with their PostgreSQL and Redis |
 | **monitoring** | Prometheus, Alertmanager, Grafana, Loki, Promtail, cAdvisor, node / GPU / SMART / restic exporters, Uptime Kuma |
 | **notifications** | ntfy |
 | **utilities** | Dozzle, speedtest-exporter, TeamSpeak, Autoheal |

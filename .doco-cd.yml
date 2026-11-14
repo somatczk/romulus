@@ -76,13 +76,9 @@ working_dir: stacks/productivity
 env_files:
   - ../host.env
 external_secrets:
-  HBOX_AUTH_API_KEY_PEPPER: op://romulus-deploy/productivity/HBOX_AUTH_API_KEY_PEPPER
   IMMICH_DB_PASSWORD: op://romulus-deploy/productivity/IMMICH_DB_PASSWORD
   NEXTCLOUD_DB_PASSWORD: op://romulus-deploy/productivity/NEXTCLOUD_DB_PASSWORD
   NEXTCLOUD_REDIS_PASSWORD: op://romulus-deploy/productivity/NEXTCLOUD_REDIS_PASSWORD
-  PAPERLESS_ADMIN_PASSWORD: op://romulus-deploy/productivity/PAPERLESS_ADMIN_PASSWORD
-  PAPERLESS_DB_PASSWORD: op://romulus-deploy/productivity/PAPERLESS_DB_PASSWORD
-  PAPERLESS_SECRET_KEY: op://romulus-deploy/productivity/PAPERLESS_SECRET_KEY
 ---
 name: hydra
 working_dir: stacks/hydra

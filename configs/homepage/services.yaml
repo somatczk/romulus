@@ -17,18 +17,6 @@
       href: https://cloud.romulus.hu
       icon: nextcloud
       description: Files and sync
-  - Paperless-ngx:
-      href: https://paperless.romulus.hu
-      icon: paperless-ngx
-      description: Scanned documents
-  - Actual Budget:
-      href: https://budget.romulus.hu
-      icon: actual-budget
-      description: Budgeting
-  - Homebox:
-      href: https://homebox.romulus.hu
-      icon: homebox
-      description: Home inventory
   - Home Assistant:
       href: https://home.romulus.hu
       icon: home-assistant

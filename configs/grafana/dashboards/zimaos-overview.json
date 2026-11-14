@@ -411,57 +411,6 @@
 
     {
       "collapsed": false,
-      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 48 },
-      "id": 110,
-      "title": "AI Stack (Ollama / OpenClaw / Open WebUI)",
-      "type": "row"
-    },
-    {
-      "datasource": { "type": "prometheus" },
-      "fieldConfig": {
-        "defaults": { "unit": "percent", "custom": { "fillOpacity": 20, "lineWidth": 2 } }
-      },
-      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 49 },
-      "id": 200,
-      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi", "sort": "desc" } },
-      "title": "AI Container CPU",
-      "type": "timeseries",
-      "targets": [
-        { "expr": "sum(rate(container_cpu_usage_seconds_total{name=~\"ollama|openclaw|open-webui|ai-socket-proxy\"}[5m])) by (name) * 100", "legendFormat": "{{name}}" }
-      ]
-    },
-    {
-      "datasource": { "type": "prometheus" },
-      "fieldConfig": {
-        "defaults": { "unit": "bytes", "custom": { "fillOpacity": 20, "lineWidth": 2 } }
-      },
-      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 49 },
-      "id": 201,
-      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi", "sort": "desc" } },
-      "title": "AI Container Memory",
-      "type": "timeseries",
-      "targets": [
-        { "expr": "container_memory_working_set_bytes{name=~\"ollama|openclaw|open-webui|ai-socket-proxy\"}", "legendFormat": "{{name}}" }
-      ]
-    },
-    {
-      "datasource": { "type": "prometheus" },
-      "fieldConfig": {
-        "defaults": { "unit": "Bps", "custom": { "fillOpacity": 15, "lineWidth": 2 } }
-      },
-      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 49 },
-      "id": 202,
-      "options": { "legend": { "displayMode": "list", "placement": "bottom" }, "tooltip": { "mode": "multi", "sort": "desc" } },
-      "title": "AI Container Network I/O",
-      "type": "timeseries",
-      "targets": [
-        { "expr": "sum(rate(container_network_receive_bytes_total{name=~\"ollama|openclaw|open-webui\"}[5m])) by (name)", "legendFormat": "{{name}} RX" },
-        { "expr": "sum(rate(container_network_transmit_bytes_total{name=~\"ollama|openclaw|open-webui\"}[5m])) by (name)", "legendFormat": "{{name}} TX" }
-      ]
-    },
-
-    {
-      "collapsed": false,
       "gridPos": { "h": 1, "w": 24, "x": 0, "y": 57 },
       "id": 105,
       "title": "Docker Containers",

@@ -1,1 +1,1 @@
-FROM prom/alertmanager:v0.34.1
+FROM prom/alertmanager:v0.34.2

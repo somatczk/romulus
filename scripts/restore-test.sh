@@ -10,7 +10,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/lib/env.sh" RESTIC_PASSWORD
 
 : "${HDD:?HDD must be set in stacks/host.env}"
-NTFY_URL="https://notify.${DOMAIN}/backups"
 mkdir -p "${HDD}/restore-test"
 RESTORE_DIR=$(mktemp -d "${HDD}/restore-test/run-XXXXXX")
 METRICS_DIR="/var/lib/node_exporter/textfile_collector"
@@ -21,13 +20,6 @@ export RESTIC_PASSWORD="${RESTIC_PASSWORD}"
 
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] [restore-test] $1"
-}
-
-notify() {
-    local title="$1"
-    local message="$2"
-    local priority="${3:-default}"
-    curl -sf -H "Title: ${title}" -H "Priority: ${priority}" -d "${message}" "${NTFY_URL}" || true
 }
 
 write_metrics() {
@@ -94,7 +86,7 @@ log "Validating restored data..."
 
 EXPECTED_DIRS=(
     "backups/db-dumps"
-    "notifications"
+    "security"
     "utilities"
 )
 

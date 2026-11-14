@@ -78,8 +78,6 @@ SSD_DIRS=(
     "${APPDATA}/monitoring/loki"
     "${APPDATA}/monitoring/uptime-kuma"
     # Notifications
-    "${APPDATA}/notifications/ntfy/cache"
-    "${APPDATA}/notifications/ntfy/etc"
     # Dashboard
     "${APPDATA}/dashboard/homepage"
     # Utilities

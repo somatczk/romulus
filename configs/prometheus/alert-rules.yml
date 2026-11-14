@@ -303,9 +303,6 @@ groups:
           summary: "Disk I/O saturated on {{ $labels.device }}"
           description: "Disk {{ $labels.device }} is busy {{ $value | humanizePercentage }} of the time."
 
-  - name: ntfy
-    rules:
-
   - name: speedtest
     rules:
       - alert: SpeedtestSlow
@@ -319,7 +316,7 @@ groups:
 
   - name: alerting
     rules:
-      # routed to ntfy by alertmanager, so a broken telegram path still reaches someone
+      # telegram is the only receiver: if it is the failing one, this shows only in prometheus/grafana
       - alert: AlertmanagerNotificationsFailing
         expr: sum(rate(alertmanager_notifications_failed_total[10m])) by (integration) > 0
         for: 10m

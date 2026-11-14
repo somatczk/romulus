@@ -34,11 +34,6 @@ external_secrets:
   AUTHENTIK_PG_PASS: op://romulus-deploy/security/AUTHENTIK_PG_PASS
   AUTHENTIK_SECRET_KEY: op://romulus-deploy/security/AUTHENTIK_SECRET_KEY
 ---
-name: notifications
-working_dir: stacks/notifications
-env_files:
-  - ../host.env
----
 name: dashboard
 working_dir: stacks/dashboard
 env_files:

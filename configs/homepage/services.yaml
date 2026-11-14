@@ -26,10 +26,6 @@
       href: ts3server://romulus.hu
       icon: teamspeak
       description: Voice server, connect to romulus.hu
-  - ntfy:
-      href: https://notify.romulus.hu
-      icon: ntfy
-      description: Push notifications
 - Media Automation:
   - Sonarr:
       href: https://sonarr.romulus.hu

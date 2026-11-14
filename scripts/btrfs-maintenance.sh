@@ -14,7 +14,6 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 ACTION="${1:-}"
-NTFY_URL="https://notify.${DOMAIN}/maintenance"
 # whole-filesystem mount, scrub and balance cover every subvolume
 SSD="/mnt/btrfs-ssd"
 HDD="/media/HDD-Storage"
@@ -28,13 +27,6 @@ fi
 
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] [${ACTION}] $1"
-}
-
-notify() {
-    local title="$1"
-    local message="$2"
-    local priority="${3:-default}"
-    curl -sf -H "Title: ${title}" -H "Priority: ${priority}" -d "${message}" "${NTFY_URL}" || true
 }
 
 write_metrics() {

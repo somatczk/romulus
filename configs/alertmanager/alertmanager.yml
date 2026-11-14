@@ -7,9 +7,6 @@ route:
   group_interval: 5m
   repeat_interval: 12h
   routes:
-    - matchers: [alertname="AlertmanagerNotificationsFailing"]
-      receiver: ntfy
-      repeat_interval: 1h
     - matchers: [severity="critical"]
       receiver: telegram
       repeat_interval: 1h
@@ -29,7 +26,4 @@ receivers:
         chat_id: __TELEGRAM_CHAT_ID__
         parse_mode: HTML
         send_resolved: true
-  - name: ntfy
-    webhook_configs:
-      - url: http://ntfy:80/alerts
   - name: blackhole

@@ -12,9 +12,6 @@ layout:
   Productivity:
     style: row
     columns: 3
-  AI:
-    style: row
-    columns: 3
   Trading:
     style: row
     columns: 1

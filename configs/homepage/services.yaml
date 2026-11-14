@@ -23,10 +23,10 @@
         href: https://qbit.romulus.hu
         icon: qbittorrent
         description: Torrent client
-    - Jellyseerr:
+    - Seerr:
         href: https://requests.romulus.hu
         icon: jellyseerr
-        description: Media request management
+        description: Request movies and series
 
 - Productivity:
     - Nextcloud:
@@ -103,9 +103,9 @@
 
 - Utilities:
     - TeamSpeak:
-        href: https://teamspeak.romulus.hu
+        href: ts3server://romulus.hu
         icon: teamspeak
-        description: Voice communication server
+        description: Voice server, connect to romulus.hu
 
 - Notifications:
     - ntfy:

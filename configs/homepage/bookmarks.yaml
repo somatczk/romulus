@@ -5,6 +5,6 @@
     - GitHub:
         - href: https://github.com
           icon: github
-    - ZeroTier:
-        - href: https://my.zerotier.com
-          icon: zerotier
+    - Tailscale:
+        - href: https://login.tailscale.com/admin/machines
+          icon: tailscale

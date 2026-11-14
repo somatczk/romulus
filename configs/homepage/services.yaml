@@ -1,114 +1,109 @@
-- Media:
-    - Jellyfin:
-        href: https://jellyfin.romulus.hu
-        icon: jellyfin
-        description: Media streaming server
-    - Sonarr:
-        href: https://sonarr.romulus.hu
-        icon: sonarr
-        description: TV series management
-    - Radarr:
-        href: https://radarr.romulus.hu
-        icon: radarr
-        description: Movie management
-    - Prowlarr:
-        href: https://prowlarr.romulus.hu
-        icon: prowlarr
-        description: Indexer management
-    - Bazarr:
-        href: https://bazarr.romulus.hu
-        icon: bazarr
-        description: Subtitle management
-    - qBittorrent:
-        href: https://qbit.romulus.hu
-        icon: qbittorrent
-        description: Torrent client
-    - Jellyseerr:
-        href: https://requests.romulus.hu
-        icon: jellyseerr
-        description: Media request management
-
-- Productivity:
-    - Nextcloud:
-        href: https://cloud.romulus.hu
-        icon: nextcloud
-        description: File sync and collaboration
-    - Immich:
-        href: https://photos.romulus.hu
-        icon: immich
-        description: Photo and video management
-    - Home Assistant:
-        href: https://home.romulus.hu
-        icon: home-assistant
-        description: Home automation
-    - Paperless-ngx:
-        href: https://paperless.romulus.hu
-        icon: paperless-ngx
-        description: Document management
-    - Actual Budget:
-        href: https://budget.romulus.hu
-        icon: actual-budget
-        description: Personal budgeting
-    - Homebox:
-        href: https://homebox.romulus.hu
-        icon: homebox
-        description: Home inventory management
-
-- Trading:
-    - Hydra:
-        href: https://trading.romulus.hu
-        icon: mdi-chart-line
-        description: Bitcoin auto-trading platform
-
-- Infrastructure:
-    - Traefik:
-        href: https://traefik.romulus.hu
-        icon: traefik
-        description: Reverse proxy and load balancer
-        widget:
-          type: traefik
-          url: http://traefik:8080
-    - Authentik:
-        href: https://sso.romulus.hu
-        icon: authentik
-        description: Identity provider, SSO, users and invitations
-    - AdGuard:
-        href: https://dns.romulus.hu
-        icon: adguard-home
-        description: DNS and ad blocking
-    - CrowdSec:
-        icon: crowdsec
-        description: Collaborative security engine
-
+# household apps first, admin tools below; group order and columns live in settings.yaml
+- Watch:
+  - Jellyfin:
+      href: https://jellyfin.romulus.hu
+      icon: jellyfin
+      description: Movies and series
+  - Seerr:
+      href: https://requests.romulus.hu
+      icon: jellyseerr
+      description: Request movies and series
+- Home:
+  - Immich:
+      href: https://photos.romulus.hu
+      icon: immich
+      description: Photos and videos
+  - Nextcloud:
+      href: https://cloud.romulus.hu
+      icon: nextcloud
+      description: Files and sync
+  - Paperless-ngx:
+      href: https://paperless.romulus.hu
+      icon: paperless-ngx
+      description: Scanned documents
+  - Actual Budget:
+      href: https://budget.romulus.hu
+      icon: actual-budget
+      description: Budgeting
+  - Homebox:
+      href: https://homebox.romulus.hu
+      icon: homebox
+      description: Home inventory
+  - Home Assistant:
+      href: https://home.romulus.hu
+      icon: home-assistant
+      description: Home automation
+- Talk:
+  - TeamSpeak:
+      href: ts3server://romulus.hu
+      icon: teamspeak
+      description: Voice server, connect to romulus.hu
+  - ntfy:
+      href: https://notify.romulus.hu
+      icon: ntfy
+      description: Push notifications
+- Media Automation:
+  - Sonarr:
+      href: https://sonarr.romulus.hu
+      icon: sonarr
+      description: Series downloads
+  - Radarr:
+      href: https://radarr.romulus.hu
+      icon: radarr
+      description: Movie downloads
+  - Prowlarr:
+      href: https://prowlarr.romulus.hu
+      icon: prowlarr
+      description: Indexers
+  - Bazarr:
+      href: https://bazarr.romulus.hu
+      icon: bazarr
+      description: Subtitles (hu, en)
+  - qBittorrent:
+      href: https://qbit.romulus.hu
+      icon: qbittorrent
+      description: Torrent client (VPN)
 - Monitoring:
-    - Grafana:
-        href: https://grafana.romulus.hu
-        icon: grafana
-        description: Metrics visualization
-    - Prometheus:
-        href: https://prometheus.romulus.hu
-        icon: prometheus
-        description: Metrics collection
-        widget:
-          type: prometheus
-          url: http://prometheus:9090
-    - Uptime Kuma:
-        href: https://status.romulus.hu
-        icon: uptime-kuma
-        description: Service uptime monitoring
-    - Dozzle:
-        href: https://logs.romulus.hu
-        icon: dozzle
-        description: Container log viewer
-
-- Utilities:
-    - TeamSpeak:
-        href: https://teamspeak.romulus.hu
-        icon: teamspeak
-        description: Voice communication server
-
-- Notifications:
-    - ntfy:
-        href: https://notify.romulus.hu
-        icon: ntfy
-        description: Push notifications
+  - Grafana:
+      href: https://grafana.romulus.hu
+      icon: grafana
+      description: Dashboards
+  - Prometheus:
+      href: https://prometheus.romulus.hu
+      icon: prometheus
+      description: Metrics and alerts
+      widget:
+        type: prometheus
+        url: http://prometheus:9090
+  - Uptime Kuma:
+      href: https://status.romulus.hu
+      icon: uptime-kuma
+      description: Uptime and status page
+  - Dozzle:
+      href: https://logs.romulus.hu
+      icon: dozzle
+      description: Container logs
+- Infrastructure:
+  - Authentik:
+      href: https://sso.romulus.hu
+      icon: authentik
+      description: Login, users and invitations
+  - Traefik:
+      href: https://traefik.romulus.hu
+      icon: traefik
+      description: Reverse proxy
+      widget:
+        type: traefik
+        url: http://traefik:8080
+  - AdGuard:
+      href: https://dns.romulus.hu
+      icon: adguard-home
+      description: DNS and ad blocking
+  - CrowdSec:
+      icon: crowdsec
+      description: Intrusion prevention
+- Trading:
+  - Hydra:
+      href: https://trading.romulus.hu
+      icon: mdi-chart-line
+      description: Bitcoin trading

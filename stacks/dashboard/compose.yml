@@ -14,7 +14,7 @@ services:
     environment:
       PUID: ${PUID}
       PGID: ${PGID}
-      HOMEPAGE_ALLOWED_HOSTS: "romulus.hu,www.romulus.hu,192.168.0.3"
+      HOMEPAGE_ALLOWED_HOSTS: "romulus.hu,www.romulus.hu,192.168.0.3,homepage:3000"
       DOCKER_HOST: tcp://socket-proxy:2375
     volumes:
       - ${APPDATA}/dashboard/homepage:/app/config

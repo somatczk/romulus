@@ -4,26 +4,25 @@ theme: dark
 color: slate
 headerStyle: clean
 hideVersion: true
-
 layout:
-  Media:
+  Watch:
     style: row
-    columns: 4
-  Productivity:
+    columns: 2
+  Home:
     style: row
     columns: 3
-  Trading:
+  Talk:
     style: row
-    columns: 1
-  Infrastructure:
+    columns: 2
+  Media Automation:
     style: row
     columns: 5
   Monitoring:
     style: row
-    columns: 3
-  Utilities:
+    columns: 4
+  Infrastructure:
     style: row
-    columns: 1
-  Notifications:
+    columns: 4
+  Trading:
     style: row
     columns: 1

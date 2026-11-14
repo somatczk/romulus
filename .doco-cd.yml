@@ -2,7 +2,9 @@
 # shared networks are created by scripts/install-gitops.sh.
 # name must stay equal to the existing compose project name, doco-cd adopts by name.
 # Secrets come from the romulus-deploy vault; host.env holds the non-secret settings.
-# Stacks not listed here are not deployed.
+# Stacks not listed here are not deployed, and dropping an entry does not stop a running stack.
+# To remove one: keep the entry with `destroy: {enabled: true, remove_volumes: false}`, merge, wait for
+# the doco-cd/<stack> status, then delete the entry. remove_volumes defaults to true: it deletes the data.
 name: core
 working_dir: stacks/core
 env_files:

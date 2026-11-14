@@ -15,5 +15,7 @@ if [[ ${1:-} != --apply ]]; then
 fi
 bash scripts/install-crons.sh >/dev/null
 # a missing bind source would be created as a directory and break doco-cd; keep the old one running
-[[ -f /DATA/doco-cd/git-token && -s /DATA/doco-cd/git-token ]] || { echo "/DATA/doco-cd/git-token missing, doco-cd not updated"; exit 1; }
+for f in git-token api-keys; do
+    [[ -f /DATA/doco-cd/$f && -s /DATA/doco-cd/$f ]] || { echo "/DATA/doco-cd/$f missing, doco-cd not updated"; exit 1; }
+done
 docker compose -f host/doco-cd/compose.yml up -d --remove-orphans

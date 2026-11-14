@@ -31,7 +31,8 @@ services:
       # per-stack commit statuses (doco-cd/<stack>) on master commits; fine-grained PAT scoped to
       # somatczk/romulus: Contents read, Commit statuses read/write. The repo stays public, the token only reports.
       GIT_ACCESS_TOKEN_FILE: /run/secrets/git-token
-      GIT_AUTH_DOMAINS: github.com
+      # a YAML list of {domains: [...]}; a bare hostname fails config parsing and doco-cd crash-loops
+      GIT_AUTH_DOMAINS: "- domains: [github.com]"
       GIT_SCM_PROVIDER: github
       GIT_COMMIT_STATUS: "true"
       APPRISE_API_URL: http://apprise:8000/notify

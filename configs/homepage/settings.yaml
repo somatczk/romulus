@@ -13,7 +13,7 @@ layout:
     columns: 3
   Talk:
     style: row
-    columns: 2
+    columns: 1
   Media Automation:
     style: row
     columns: 5

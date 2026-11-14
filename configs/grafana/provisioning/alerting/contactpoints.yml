@@ -11,12 +11,7 @@ contactPoints:
           parse_mode: HTML
           disable_web_page_preview: true
         disableResolveMessage: false
+# removed contact points stay in grafana unless deleted here
+deleteContactPoints:
   - orgId: 1
-    name: ntfy
-    receivers:
-      - uid: ntfy-infra
-        type: webhook
-        settings:
-          url: "http://ntfy:80/grafana-alerts"
-          httpMethod: POST
-        disableResolveMessage: false
+    uid: ntfy-infra

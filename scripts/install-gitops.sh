@@ -50,9 +50,11 @@ while read -r ref; do
 done < <(grep -oE 'op://[^ ]+' "$src/.doco-cd.yml" | sort -u)
 install -d -m 700 "$DOCO/data"
 ( umask 077
-  printf 'ntfy://ntfy:80/deployments,tgram://%s/%s\n' \
-      "$(op read op://romulus-deploy/shared/TELEGRAM_BOT_TOKEN)" "$(op read op://romulus-deploy/shared/TELEGRAM_CHAT_ID)" \
-      > "$DOCO/apprise-urls" )
+  tg_token=$(op read op://romulus-deploy/shared/TELEGRAM_BOT_TOKEN)
+  tg_chat=$(op read op://romulus-deploy/shared/TELEGRAM_CHAT_ID)
+  printf 'tgram://%s/%s\n' "$tg_token" "$tg_chat" > "$DOCO/apprise-urls"
+  # host scripts' notify (lib/env.sh) reads this, so alerts need no vault access
+  printf '%s\n%s\n' "$tg_token" "$tg_chat" > "$DOCO/telegram" )
 unset OP_SERVICE_ACCOUNT_TOKEN
 
 echo "== docker networks"

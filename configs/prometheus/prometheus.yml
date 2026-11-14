@@ -76,12 +76,6 @@ scrape_configs:
       - targets:
           - speedtest-exporter:9798
 
-  - job_name: ntfy
-    metrics_path: /metrics
-    static_configs:
-      - targets:
-          - ntfy:80
-
   - job_name: smartctl
     static_configs:
       - targets:

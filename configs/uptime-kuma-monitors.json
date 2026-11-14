@@ -171,18 +171,6 @@
     },
     {
       "type": "http",
-      "name": "ntfy",
-      "url": "https://notify.romulus.hu",
-      "interval": 60,
-      "maxretries": 3,
-      "retryInterval": 60,
-      "active": true,
-      "accepted_statuscodes": [
-        "200-299"
-      ]
-    },
-    {
-      "type": "http",
       "name": "Homepage",
       "url": "https://romulus.hu",
       "interval": 60,

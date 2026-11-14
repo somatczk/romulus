@@ -25,7 +25,6 @@ Configuration for a single homelab server (ZimaCube, Ryzen 9 5950X, 128 GB RAM, 
 | **media** | Jellyfin, Sonarr, Radarr, Prowlarr, Bazarr, FlareSolverr, qBittorrent, Jellyseerr |
 | **productivity** | Nextcloud, Immich, Home Assistant, with their PostgreSQL and Redis |
 | **monitoring** | Prometheus, Alertmanager, Grafana, Loki, Promtail, cAdvisor, node / GPU / SMART / restic exporters, Uptime Kuma |
-| **notifications** | ntfy |
 | **utilities** | Dozzle, speedtest-exporter, TeamSpeak, Autoheal |
 | **dashboard** | Homepage |
 | **hydra** | Trading engine, dashboard and backtest worker ([hydra](https://github.com/somatczk/hydra)), TimescaleDB, Redis |
@@ -39,7 +38,7 @@ Pull-based. [doco-cd](https://doco.cd) on the host polls `master` and deploys ev
 
 - **Secrets** live in 1Password, one item per stack. doco-cd reads them through a local 1Password Connect server (no API rate limits, a rotated secret lands on the next poll); host scripts use a read-only service account. Each stack gets only the secrets it lists, each container only the variables its service maps. Nothing secret is in git.
 - **Host files:** the checkout on the host is reset to `origin/master` by a systemd timer, which also re-applies the crons and the deployer.
-- **Notifications:** deploy results go to ntfy and Telegram. Prometheus alerts route through Alertmanager to Telegram, with ntfy as fallback.
+- **Notifications:** everything goes to Telegram: deploy results (doco-cd via Apprise), Prometheus alerts (Alertmanager), Grafana alerts, and host scripts (backup, btrfs maintenance, restore test) through `notify` in `scripts/lib/env.sh`.
 - **Rollback:** `git revert` on `master`.
 - **Rotating a secret:** change it in 1Password; the next deploy of that stack picks it up. `HYDRA_CREDENTIAL_KEY` is the exception, see below.
 - **Hydra secrets:** the hydra stack reads `HYDRA_DB_PASSWORD`, `HYDRA_CREDENTIAL_KEY` and `HYDRA_API_TOKEN` from the hydra item. `HYDRA_CREDENTIAL_KEY` is a Fernet key that encrypts the exchange API keys hydra stores in its database. Exchange keys are entered in hydra's Settings page, never in 1Password or env. Replacing `HYDRA_CREDENTIAL_KEY` with a new value makes every stored exchange key undecryptable. Rotate it as a MultiFernet list: set it to `new,old` (the first key encrypts, all keys decrypt), re-save the exchange keys in Settings, then set it to `new`.

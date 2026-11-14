@@ -10,6 +10,21 @@ set -a
 source "${_repo}/stacks/host.env"
 set +a
 
+# notify TITLE MESSAGE [low|default|high|urgent]: Telegram via the bot in /DATA/doco-cd/telegram
+# (root 600; line 1 token, line 2 chat id, written by install-gitops.sh). It reads no vault, so
+# it still works when 1Password is down. The token goes in through stdin, not argv (ps).
+notify() {
+    local token chat icon="" silent=false
+    { read -r token && read -r chat; } < /DATA/doco-cd/telegram 2>/dev/null \
+        || { echo "notify: no telegram credentials, not sent: $1" >&2; return 0; }
+    case ${3:-default} in low) silent=true ;; high|urgent) icon="⚠️ " ;; esac
+    printf 'url = "https://api.telegram.org/bot%s/sendMessage"\n' "$token" |
+        curl -s --max-time 10 -o /dev/null -K - \
+            --data-urlencode "chat_id=${chat}" \
+            --data-urlencode "text=${icon}${1} ($(hostname -s))"$'\n'"${2}" \
+            -d "disable_notification=${silent}" || true
+}
+
 [[ ${1:-} == -- ]] && shift
 if (( $# )); then
     declare -A _item=(
@@ -19,8 +34,7 @@ if (( $# )); then
     # a vault outage must not fail a backup silently
     _fail() {
         echo "env.sh: $1" >&2
-        curl -s --max-time 10 -H "Title: $(basename "$0") cannot start" -H "Tags: warning" \
-            -d "$1" "https://notify.${DOMAIN}/alerts" >/dev/null || true
+        notify "$(basename "$0") cannot start" "$1" high
         exit 1
     }
     OP_SERVICE_ACCOUNT_TOKEN="$(cat /DATA/doco-cd/op-token)" || _fail "cannot read the 1Password token"

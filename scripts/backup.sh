@@ -11,7 +11,6 @@ source "${SCRIPT_DIR}/lib/env.sh" RESTIC_PASSWORD TEAMSPEAK_DB_PASSWORD
 
 BACKUP_DIR="${APPDATA}/backups"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-NTFY_URL="https://notify.${DOMAIN}/backups"
 METRICS_DIR="/var/lib/node_exporter/textfile_collector"
 START_TIME=$(date +%s)
 
@@ -22,13 +21,6 @@ mkdir -p "${BACKUP_DIR}/db-dumps"
 
 log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
-}
-
-notify() {
-    local title="$1"
-    local message="$2"
-    local priority="${3:-default}"
-    curl -sf -H "Title: ${title}" -H "Priority: ${priority}" -d "${message}" "${NTFY_URL}" || true
 }
 
 write_metrics() {

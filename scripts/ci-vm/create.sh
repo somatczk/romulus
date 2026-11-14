@@ -11,6 +11,7 @@ MAC=52:54:00:c1:00:01
 IP=192.168.122.10
 IMG_URL=https://cloud-images.ubuntu.com/resolute/current
 K3S_VERSION=v1.36.5+k3s1
+APPARMOR="$(cd "$(dirname "$0")/../../configs/ci-vm/apparmor" && pwd)/cri-containerd.apparmor.d"
 
 virsh dominfo "$NAME" >/dev/null 2>&1 && { echo "$NAME exists; virsh undefine it first"; exit 1; }
 mkdir -p "$V/seed" && cd "$V"
@@ -51,6 +52,10 @@ write_files:
         - system-reserved=cpu=1,memory=2Gi
         - kube-reserved=cpu=1,memory=2Gi
         - eviction-hard=memory.available<2Gi,nodefs.available<10%,imagefs.available<10%
+  # containerd's own profile denies signals to the stacked peer label kernel 7.0.0-43 reports
+  - path: /etc/apparmor.d/cri-containerd.apparmor.d
+    encoding: b64
+    content: $(base64 -w0 "$APPARMOR")
   - path: /etc/sysctl.d/90-ci.conf
     content: |
       fs.inotify.max_user_instances=8192
@@ -58,6 +63,7 @@ write_files:
       vm.max_map_count=262144
 runcmd:
   - sysctl --system
+  - apparmor_parser -r -W /etc/apparmor.d/cri-containerd.apparmor.d
   - systemctl enable --now qemu-guest-agent
   - curl -sfL https://get.k3s.io -o /tmp/k3s-install.sh
   - INSTALL_K3S_VERSION=$K3S_VERSION sh /tmp/k3s-install.sh

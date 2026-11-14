@@ -143,7 +143,8 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/bin"; cd "$RUNNER_TEMP"
-          fetch() { curl -fsSLo "$1" "$2" && echo "$3  $1" | sha256sum -c - && tar -xzf "$1" -C bin "$4"; }
+          # retries: a single 504 from github release downloads failed every dependabot pr on 2026-11-09
+          fetch() { curl -fsSL --retry 4 --retry-all-errors --retry-delay 5 -o "$1" "$2" && echo "$3  $1" | sha256sum -c - && tar -xzf "$1" -C bin "$4"; }
           fetch al.tgz "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT}/actionlint_${ACTIONLINT}_linux_amd64.tar.gz" "$ACTIONLINT_SHA" actionlint
           fetch kc.tgz "https://github.com/yannh/kubeconform/releases/download/v${KUBECONFORM}/kubeconform-linux-amd64.tar.gz" "$KUBECONFORM_SHA" kubeconform
           fetch gl.tgz "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS}/gitleaks_${GITLEAKS}_linux_x64.tar.gz" "$GITLEAKS_SHA" gitleaks

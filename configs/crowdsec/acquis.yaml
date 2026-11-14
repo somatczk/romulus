@@ -1,15 +1,10 @@
 # Mounted at /etc/crowdsec/acquis.yaml. Container logs come through socket-proxy (read-only API);
 # the host has no /var/log/syslog or auth.log (journald only), so there are no file sources.
+# Nextcloud's container output is Apache access lines, already in Traefik's log; the nextcloud
+# parser wants nextcloud.log JSON, so the container is not a source.
 source: docker
 docker_host: tcp://socket-proxy:2375
 container_name:
   - traefik
 labels:
   type: traefik
----
-source: docker
-docker_host: tcp://socket-proxy:2375
-container_name:
-  - nextcloud
-labels:
-  type: nextcloud

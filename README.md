@@ -36,6 +36,15 @@ Authentik (`sso.${DOMAIN}`, `authentik` stack) guards every admin route: invitat
 
 Pull-based. [doco-cd](https://doco.cd) on the host polls `master` and deploys every stack listed in `.doco-cd.yml`; only services whose config changed are recreated. CI never touches the host.
 
+Manual control goes through doco-cd's REST API (role `write`, no deletes), from the host:
+
+```bash
+KEY=$(op read op://romulus-deploy/doco-cd/API_KEY)
+IP=$(docker inspect doco-cd --format '{{(index .NetworkSettings.Networks "doco-cd").IPAddress}}')
+curl -s -H "x-api-key: $KEY" http://$IP/v1/api/runs                      # recent deployment runs
+curl -s -H "x-api-key: $KEY" -X POST http://$IP/v1/api/project/media/recreate   # redeploy one stack at its recorded revision
+```
+
 - **Secrets** live in 1Password, one item per stack. doco-cd reads them through a local 1Password Connect server (no API rate limits, a rotated secret lands on the next poll); host scripts use a read-only service account. Each stack gets only the secrets it lists, each container only the variables its service maps. Nothing secret is in git.
 - **Host files:** the checkout on the host is reset to `origin/master` by a systemd timer, which also re-applies the crons and the deployer.
 - **Notifications:** everything goes to Telegram: deploy results (doco-cd via Apprise), Prometheus alerts (Alertmanager), Grafana alerts, and host scripts (backup, btrfs maintenance, restore test) through `notify` in `scripts/lib/env.sh`.

@@ -35,16 +35,28 @@ services:
       GIT_AUTH_DOMAINS: "- domains: [github.com]"
       GIT_SCM_PROVIDER: github
       GIT_COMMIT_STATUS: "true"
+      # REST API on :80 (x-api-key header). one key, role write: runs, poll/redeploy, start/stop/recreate;
+      # no project/volume deletes (full role). key in 1Password romulus-deploy/doco-cd API_KEY
+      API_KEYS_FILE: /run/secrets/api-keys
       APPRISE_API_URL: http://apprise:8000/notify
       APPRISE_NOTIFY_URLS_FILE: /run/secrets/apprise-urls
-      # minimum level: success also sends warnings and failures
-      APPRISE_NOTIFY_LEVEL: success
+      # successes show as doco-cd/<stack> commit statuses on github; telegram only for warnings and failures
+      APPRISE_NOTIFY_LEVEL: warning
+      # backup.sh dumps the databases at 03:00 (done by ~03:04); a deploy recreating a db mid-dump breaks it.
+      # a blocked deploy is skipped, not queued: the first poll after the window deploys the latest commit
+      SYNC_WINDOWS: |
+        - name: nightly-backup
+          kind: deny
+          schedule: "55 2 * * *"
+          duration: 25m
+          timezone: Europe/Budapest
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /DATA/doco-cd/data:/data
       - /DATA/doco-cd/connect-token:/run/secrets/connect-token:ro
       - /DATA/doco-cd/apprise-urls:/run/secrets/apprise-urls:ro
       - /DATA/doco-cd/git-token:/run/secrets/git-token:ro
+      - /DATA/doco-cd/api-keys:/run/secrets/api-keys:ro
     cap_drop:
       - ALL
     security_opt:

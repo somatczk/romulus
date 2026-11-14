@@ -6,7 +6,8 @@
 # Expects /DATA/doco-cd/op-token (romulus-deploy service account, read-only).
 # and for doco-cd, a 1Password Connect server: /DATA/doco-cd/1password-credentials.json (owner 999, 600)
 # and /DATA/doco-cd/connect-token, both from `op connect server create` / `op connect token create`,
-# and /DATA/doco-cd/git-token (root, 600): GitHub PAT doco-cd posts commit statuses with (1Password romulus-deploy/doco-cd).
+# and /DATA/doco-cd/git-token (root, 600): GitHub PAT doco-cd posts commit statuses with (1Password romulus-deploy/doco-cd),
+# and /DATA/doco-cd/api-keys (root, 600): `- key: <romulus-deploy/doco-cd API_KEY>` + `  role: write` (REST API).
 set -euo pipefail
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 REPO=https://github.com/somatczk/romulus.git
@@ -17,7 +18,7 @@ RESTIC_SHA=5097faeda6aa13167aae6e36efdba636637f8741fed89bbf015678334632d4d3
 
 [[ $EUID -eq 0 ]] || { echo "run as root"; exit 1; }
 [[ -s $DOCO/op-token ]] || { echo "$DOCO/op-token missing"; exit 1; }
-for f in 1password-credentials.json connect-token git-token; do [[ -f $DOCO/$f && -s $DOCO/$f ]] || { echo "$DOCO/$f missing"; exit 1; }; done
+for f in 1password-credentials.json connect-token git-token api-keys; do [[ -f $DOCO/$f && -s $DOCO/$f ]] || { echo "$DOCO/$f missing"; exit 1; }; done
 
 echo "== packages"
 if ! command -v op >/dev/null; then

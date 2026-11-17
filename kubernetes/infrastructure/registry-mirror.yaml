@@ -70,6 +70,9 @@ spec:
               valueFrom:
                 secretKeyRef: {name: dockerhub, key: token, optional: true}
             - {name: REGISTRY_STORAGE_DELETE_ENABLED, value: "true"}
+            # proxy TTL expiry deletes a blob shared by several repos while their links stay, so the
+            # surviving repo serves 0 bytes ("short read"); "0" disables expiry, the cache only grows
+            - {name: REGISTRY_PROXY_TTL, value: "0"}
             # registry 3 exports traces by default, there is no collector
             - {name: OTEL_TRACES_EXPORTER, value: none}
             - {name: REGISTRY_LOG_LEVEL, value: info}

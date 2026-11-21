@@ -44,8 +44,6 @@ services:
     networks:
       - monitoring
       - proxy
-    ports:
-      - "9798:9798"
     healthcheck:
       test: ["NONE"]
     deploy:

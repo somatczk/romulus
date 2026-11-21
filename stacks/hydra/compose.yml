@@ -60,14 +60,14 @@ services:
       traefik.http.routers.hydra-api.rule: "Host(`trading.${DOMAIN}`) && (PathPrefix(`/api`) || PathPrefix(`/ws`))"
       traefik.http.routers.hydra-api.entrypoints: "websecure"
       traefik.http.routers.hydra-api.tls.certresolver: "cloudflare"
-      traefik.http.routers.hydra-api.middlewares: "secure-admin-ak@file"
+      traefik.http.routers.hydra-api.middlewares: "local-only@file,secure-admin-ak@file"
       traefik.http.routers.hydra-api.service: "hydra-api"
       traefik.http.services.hydra-api.loadbalancer.server.port: "8000"
       # MCP endpoint (Authentik OAuth access token checked at the app, no forward auth - D5; secure-mcp = crowdsec + headers + rate limit)
       traefik.http.routers.hydra-mcp.rule: "Host(`trading.${DOMAIN}`) && PathPrefix(`/mcp`)"
       traefik.http.routers.hydra-mcp.entrypoints: "websecure"
       traefik.http.routers.hydra-mcp.tls.certresolver: "cloudflare"
-      traefik.http.routers.hydra-mcp.middlewares: "secure-mcp@file"
+      traefik.http.routers.hydra-mcp.middlewares: "local-only@file,secure-mcp@file"
       traefik.http.routers.hydra-mcp.service: "hydra-mcp"
       traefik.http.services.hydra-mcp.loadbalancer.server.port: "8000"
       # OAuth discovery for MCP clients (RFC 9728): public metadata naming the issuer, so it skips forward auth
@@ -75,7 +75,7 @@ services:
       traefik.http.routers.hydra-mcp-metadata.rule: "Host(`trading.${DOMAIN}`) && PathPrefix(`/.well-known/oauth-protected-resource`)"
       traefik.http.routers.hydra-mcp-metadata.entrypoints: "websecure"
       traefik.http.routers.hydra-mcp-metadata.tls.certresolver: "cloudflare"
-      traefik.http.routers.hydra-mcp-metadata.middlewares: "secure-mcp@file"
+      traefik.http.routers.hydra-mcp-metadata.middlewares: "local-only@file,secure-mcp@file"
       traefik.http.routers.hydra-mcp-metadata.service: "hydra-mcp"
     healthcheck:
       # liveness only: /readyz drives alerts, autoheal would restart-loop on feed or DB blips
@@ -158,7 +158,7 @@ services:
       traefik.http.routers.hydra-dashboard.rule: "Host(`trading.${DOMAIN}`)"
       traefik.http.routers.hydra-dashboard.entrypoints: "websecure"
       traefik.http.routers.hydra-dashboard.tls.certresolver: "cloudflare"
-      traefik.http.routers.hydra-dashboard.middlewares: "secure-admin-ak@file"
+      traefik.http.routers.hydra-dashboard.middlewares: "local-only@file,secure-admin-ak@file"
       traefik.http.routers.hydra-dashboard.service: "hydra-dashboard"
       traefik.http.routers.hydra-dashboard.priority: "1"
       traefik.http.services.hydra-dashboard.loadbalancer.server.port: "3000"

@@ -62,30 +62,15 @@ entries:
       group: !Find [authentik_core.group, [name, admins]]
       order: 0
 
+  # AdGuard removed; absent deletes the provider/app (and its binding) blueprints already created
   - model: authentik_providers_proxy.proxyprovider
-    id: provider-dns
+    state: absent
     identifiers:
       name: dns
-    attrs:
-      mode: forward_single
-      external_host: https://dns.romulus.hu
-      authorization_flow: !Find [authentik_flows.flow, [slug, default-provider-authorization-implicit-consent]]
-      invalidation_flow: !Find [authentik_flows.flow, [slug, default-provider-invalidation-flow]]
-      access_token_validity: hours=4
   - model: authentik_core.application
-    id: app-dns
+    state: absent
     identifiers:
       slug: dns
-    attrs:
-      name: AdGuard Home
-      provider: !KeyOf provider-dns
-      meta_launch_url: https://dns.romulus.hu
-      policy_engine_mode: any
-  - model: authentik_policies.policybinding
-    identifiers:
-      target: !KeyOf app-dns
-      group: !Find [authentik_core.group, [name, admins]]
-      order: 0
 
   - model: authentik_providers_proxy.proxyprovider
     id: provider-logs
@@ -400,7 +385,6 @@ entries:
     attrs:
       providers:
         - !KeyOf provider-traefik
-        - !KeyOf provider-dns
         - !KeyOf provider-logs
         - !KeyOf provider-prometheus
         - !KeyOf provider-sonarr

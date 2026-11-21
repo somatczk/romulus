@@ -19,7 +19,7 @@ Configuration for a single homelab server (ZimaCube, Ryzen 9 5950X, 128 GB RAM, 
 
 | Stack | Services |
 |-------|----------|
-| **core** | Traefik, Docker socket proxy, Cloudflare DDNS, AdGuard Home, Tailscale |
+| **core** | Traefik, Docker socket proxy, Cloudflare DDNS, Tailscale |
 | **security** | CrowdSec, CrowdSec bouncer |
 | **authentik** | Authentik server, worker and PostgreSQL (data under `security/authentik`) |
 | **media** | Jellyfin, Sonarr, Radarr, Prowlarr, Bazarr, FlareSolverr, qBittorrent, Jellyseerr |
@@ -93,7 +93,8 @@ Bootstrap: `scripts/ci-vm/create.sh` builds the VM, then a 1Password service acc
 
 ## Security
 
-- Reachable on the LAN and over Tailscale only. Admin services sit behind Authentik with 2FA.
+- Port 443 is forwarded, but routes are LAN and tailnet only (`local-only` allowlist) unless they opt out: Jellyfin, Seerr, Home Assistant and Authentik (`secure-public`), Hydra's dashboard and API (Authentik 2FA, `secure-admin-ak`) and its MCP endpoint (`secure-mcp`, OAuth checked by the app). Admin services also sit behind Authentik with 2FA.
+- DNS: `romulus.hu` and `*.romulus.hu` are static Cloudflare records to romulus's tailnet IP (100.78.135.62); DDNS publishes only the public hosts. A new host is unreachable from the internet unless it is added to the DDNS list.
 - Default-deny firewall, including between Docker networks. Most service networks are internal; the CI VM is fenced off the LAN.
 - CrowdSec in front of Traefik, TLS 1.3 only, HSTS everywhere.
 - Containers reach the Docker API only through read-only socket proxies.

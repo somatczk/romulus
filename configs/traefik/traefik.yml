@@ -39,7 +39,6 @@ providers:
 certificatesResolvers:
   cloudflare:
     acme:
-      email: "somatczk@gmail.com"
       dnsChallenge:
         provider: cloudflare
         delayBeforeCheck: 10

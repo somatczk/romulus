@@ -1,0 +1,9 @@
+# LAN clients reach Traefik through the router's NAT loopback, so the home public IP carries all household
+# traffic; a ban on it locks everyone out. The IP is dynamic, so resolve it from the DDNS record at ban time.
+# Postoverflow, not parser: the DNS lookup runs only when a scenario fires, not on every log line.
+name: romulus/home-ip-whitelist
+description: "home public IP, resolved from cloudflare-ddns"
+whitelist:
+  reason: "home network"
+  expression:
+    - evt.Overflow.Alert.Source.IP in LookupHost("wan.romulus.hu")

@@ -17,6 +17,8 @@ http:
           - "192.168.0.0/24"
           - "172.22.0.0/16"
           - "10.10.0.0/16"
+          - "100.64.0.0/10"
+          - "fd7a:115c:a1e0::/48"
 
     crowdsec-bouncer:
       forwardAuth:
@@ -82,7 +84,16 @@ http:
         replacement: "${1}/dashboard/"
         permanent: true
 
+    # default for every route: LAN and tailnet only. Internet-facing routes opt into secure-public or secure-mcp.
     secure:
+      chain:
+        middlewares:
+          - local-only
+          - crowdsec-bouncer
+          - secure-headers
+
+    # internet-facing: jellyfin, requests, home assistant, authentik (MCP OAuth)
+    secure-public:
       chain:
         middlewares:
           - crowdsec-bouncer

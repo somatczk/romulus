@@ -79,10 +79,6 @@
       widget:
         type: traefik
         url: http://traefik:8080
-  - AdGuard:
-      href: https://dns.romulus.hu
-      icon: adguard-home
-      description: DNS and ad blocking
   - CrowdSec:
       icon: crowdsec
       description: Intrusion prevention

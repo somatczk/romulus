@@ -69,7 +69,7 @@ services:
       traefik.http.routers.traefik.entrypoints: "websecure"
       traefik.http.routers.traefik.tls.certresolver: "cloudflare"
       traefik.http.routers.traefik.service: "api@internal"
-      traefik.http.routers.traefik.middlewares: "traefik-dashboard-redirect@file,secure-admin-ak@file"
+      traefik.http.routers.traefik.middlewares: "traefik-dashboard-redirect@file,local-only@file,secure-admin-ak@file"
       traefik.http.routers.traefik-overview.rule: "Path(`/api/overview`)"
       traefik.http.routers.traefik-overview.entrypoints: "traefik-api"
       traefik.http.routers.traefik-overview.service: "api@internal"
@@ -91,7 +91,8 @@ services:
     restart: unless-stopped
     environment:
       CF_API_TOKEN: ${CF_API_TOKEN}
-      DOMAINS: "${DOMAIN},*.${DOMAIN}"
+      # public hosts only (wan = home IP for the crowdsec whitelist, no router); the apex and *.${DOMAIN} are static A records to the tailnet IP, so new hosts are tailnet-only
+      DOMAINS: "wan.${DOMAIN},jellyfin.${DOMAIN},requests.${DOMAIN},home.${DOMAIN},sso.${DOMAIN},trading.${DOMAIN},teamspeak.${DOMAIN}"
       PROXIED: "false"
       IP6_PROVIDER: none
       UPDATE_CRON: "*/5 * * * *"
@@ -99,40 +100,6 @@ services:
       resources:
         limits:
           memory: 64m
-    security_opt:
-      - no-new-privileges:true
-
-  adguard:
-    build: ./adguard
-    container_name: adguard
-    restart: unless-stopped
-    environment:
-      TZ: ${TZ}
-    networks:
-      - proxy
-    ports:
-      - "192.168.0.3:53:53/tcp"
-      - "192.168.0.3:53:53/udp"
-    volumes:
-      - ${APPDATA}/core/adguard/work:/opt/adguardhome/work
-      - ${APPDATA}/core/adguard/conf:/opt/adguardhome/conf
-    labels:
-      traefik.enable: "true"
-      traefik.http.routers.adguard.rule: "Host(`dns.${DOMAIN}`)"
-      traefik.http.routers.adguard.entrypoints: "websecure"
-      traefik.http.routers.adguard.tls.certresolver: "cloudflare"
-      traefik.http.routers.adguard.service: "adguard"
-      traefik.http.routers.adguard.middlewares: "secure-admin-ak@file"
-      traefik.http.services.adguard.loadbalancer.server.port: "80"
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:80"]
-      interval: 30s
-      timeout: 3s
-      retries: 3
-    deploy:
-      resources:
-        limits:
-          memory: 256m
     security_opt:
       - no-new-privileges:true
 

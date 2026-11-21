@@ -47,7 +47,7 @@ services:
       - proxy
     environment:
       TZ: ${TZ}
-      CROWDSEC_BOUNCER_API_KEY: "${CROWDSEC_BOUNCER_API_KEY:-changeme_crowdsec_bouncer_key}"
+      CROWDSEC_BOUNCER_API_KEY: "${CROWDSEC_BOUNCER_API_KEY:?}"
       CROWDSEC_AGENT_HOST: "crowdsec:8080"
       GIN_MODE: "release"
     depends_on:

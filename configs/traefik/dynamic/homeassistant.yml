@@ -8,7 +8,7 @@ http:
       tls:
         certResolver: cloudflare
       middlewares:
-        - secure-headers
+        - secure-public@file
 
   services:
     homeassistant:

@@ -93,7 +93,8 @@ Bootstrap: `scripts/ci-vm/create.sh` builds the VM, then a 1Password service acc
 
 ## Security
 
-- Reachable on the LAN and over Tailscale only. Admin services sit behind Authentik with 2FA.
+- Port 443 is forwarded from the internet, but every route is LAN and tailnet only (`local-only` allowlist in the `secure` chains) unless it opts into `secure-public` (Jellyfin, Seerr, Home Assistant, Authentik) or `secure-mcp` (Hydra's MCP endpoint, OAuth checked by the app). Admin services also sit behind Authentik with 2FA.
+- Tailnet clients resolve `romulus.hu` through Tailscale split DNS to AdGuard on romulus's tailnet IP, which rewrites it to that IP.
 - Default-deny firewall, including between Docker networks. Most service networks are internal; the CI VM is fenced off the LAN.
 - CrowdSec in front of Traefik, TLS 1.3 only, HSTS everywhere.
 - Containers reach the Docker API only through read-only socket proxies.

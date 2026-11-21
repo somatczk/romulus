@@ -19,3 +19,7 @@ acme.json
 .DS_Store
 Thumbs.db
 **/ci.env
+
+# local agent state
+.claude/settings.local.json
+.remember/

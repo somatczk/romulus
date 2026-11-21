@@ -103,7 +103,6 @@ http:
     secure-admin-ak:
       chain:
         middlewares:
-          - local-only
           - crowdsec-bouncer
           - strip-auth-headers
           - authentik

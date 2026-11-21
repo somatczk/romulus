@@ -23,7 +23,7 @@ services:
       traefik.http.routers.logs.rule: Host(`logs.${DOMAIN}`)
       traefik.http.routers.logs.entrypoints: websecure
       traefik.http.routers.logs.tls.certresolver: cloudflare
-      traefik.http.routers.logs.middlewares: secure-admin-ak@file
+      traefik.http.routers.logs.middlewares: local-only@file,secure-admin-ak@file
       traefik.http.services.logs.loadbalancer.server.port: "8080"
     healthcheck:
       test: ["CMD", "/dozzle", "healthcheck"]

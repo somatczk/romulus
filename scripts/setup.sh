@@ -47,7 +47,6 @@ log_info "Creating directory structure..."
 SSD_DIRS=(
     # Core
     "${APPDATA}/core/traefik/dynamic"
-    "${APPDATA}/core/adguard"
     # Security
     "${APPDATA}/security/crowdsec/config"
     "${APPDATA}/security/crowdsec/db"

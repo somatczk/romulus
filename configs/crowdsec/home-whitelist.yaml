@@ -1,11 +1,11 @@
 # LAN clients reach Traefik through the router's NAT loopback, so the home public IP carries
 # all household traffic (67k requests in 28 days); a ban on it locks everyone out.
-# Static since at least 2026-10 (cloudflare-ddns); update here if the ISP changes it.
+# Not static: changed from 81.182.70.194 to 81.182.0.29 around 2026-11-18. Update here when cloudflare-ddns logs a new IP.
 name: romulus/home-whitelist
 description: "home public IP and tailnet"
 whitelist:
   reason: "home network"
   ip:
-    - "81.182.70.194"
+    - "81.182.0.29"
   cidr:
     - "100.64.0.0/10"

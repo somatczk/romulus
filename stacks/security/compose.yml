@@ -20,6 +20,7 @@ services:
       - ${APPDATA}/security/crowdsec/config:/etc/crowdsec
       - ../../configs/crowdsec/acquis.yaml:/etc/crowdsec/acquis.yaml:ro
       - ../../configs/crowdsec/home-whitelist.yaml:/etc/crowdsec/parsers/s02-enrich/home-whitelist.yaml:ro
+      - ../../configs/crowdsec/home-ip-whitelist.yaml:/etc/crowdsec/postoverflows/s01-whitelist/home-ip-whitelist.yaml:ro
       - ${APPDATA}/security/crowdsec/db:/var/lib/crowdsec/data
       - ${APPDATA}/security/crowdsec/hub:/etc/crowdsec/hub
       - /var/log:/var/log:ro

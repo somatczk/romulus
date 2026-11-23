@@ -1,1 +1,1 @@
-FROM ghcr.io/goauthentik/server:2026.8.5
+FROM ghcr.io/goauthentik/server:2026.8.6

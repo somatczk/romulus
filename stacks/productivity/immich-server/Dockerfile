@@ -1,1 +1,1 @@
-FROM ghcr.io/immich-app/immich-server:v3.4.1
+FROM ghcr.io/immich-app/immich-server:v3.4.2

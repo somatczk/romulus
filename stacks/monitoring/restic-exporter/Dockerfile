@@ -1,1 +1,1 @@
-FROM ngosang/restic-exporter:2.1.2
+FROM ngosang/restic-exporter:2.2.0
